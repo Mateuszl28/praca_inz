@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
@@ -17,43 +17,72 @@
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
                     colors: {
-                        primary: {
-                            50:  '#f6f7f6',
-                            100: '#e3e8e3',
-                            200: '#c7d0c7',
-                            300: '#a1b0a1',
-                            400: '#778977',
-                            500: '#5a6e5a',
-                            600: '#465746',
-                            700: '#394639',
-                            800: '#2f392f',
-                            900: '#283128',
+                        cream: {
+                            50:  '#fbf9f4',
+                            100: '#f5f1e7',
+                            200: '#ebe3d0',
                         },
+                        primary: {
+                            50:  '#f3f5f3',
+                            100: '#e0e7df',
+                            200: '#bfd0bd',
+                            300: '#94ae93',
+                            400: '#6a8a68',
+                            500: '#4c6b4a',
+                            600: '#3a553a',
+                            700: '#2e4430',
+                            800: '#253626',
+                            900: '#1a2719',
+                        },
+                        accent: {
+                            400: '#c9a96a',
+                            500: '#b08d48',
+                            600: '#8f7237',
+                        },
+                    },
+                    boxShadow: {
+                        'soft': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
+                        'lift': '0 10px 30px -12px rgb(30 42 30 / 0.15)',
                     },
                 },
             },
         };
     </script>
-    <style>body { font-family: 'Inter', sans-serif; }</style>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Cormorant Garamond', serif; letter-spacing: -0.01em; }
+        .ornament::before, .ornament::after {
+            content: '';
+            flex: 1;
+            border-top: 1px solid currentColor;
+            opacity: 0.3;
+        }
+        .ornament { display: flex; align-items: center; gap: 1rem; }
+        .ornament > span { flex: 0 0 auto; }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col bg-primary-50 text-primary-900">
+<body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">
 
-<header class="bg-primary-800 text-primary-50 shadow-md">
+<header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/90">
     <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <a href="{% url 'groby:home' %}" class="flex items-center gap-3 group">
-            <svg class="w-9 h-9 text-primary-100 group-hover:text-white transition" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2a5 5 0 0 0-5 5v5H5a1 1 0 0 0-1 1v9h16v-9a1 1 0 0 0-1-1h-2V7a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v5H9V7Z"/>
-            </svg>
-            <div>
-                <div class="font-serif text-xl leading-tight">Informator Cmentarny</div>
-                <div class="text-xs tracking-widest uppercase text-primary-200">Szydłów</div>
+            <div class="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center text-cream-50 group-hover:bg-primary-800 transition">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v8M8 6h8"/>
+                    <path d="M6 22V12a6 6 0 0 1 12 0v10"/>
+                    <path d="M4 22h16"/>
+                </svg>
+            </div>
+            <div class="leading-tight">
+                <div class="font-serif text-xl text-primary-900 leading-none">Informator Cmentarny</div>
+                <div class="text-[11px] tracking-[0.2em] uppercase text-accent-600 mt-1">Szydłów</div>
             </div>
         </a>
-        <nav class="hidden sm:flex items-center gap-6 text-sm">
-            <a href="{% url 'groby:home' %}" class="hover:text-white transition">Strona główna</a>
-            <a href="{% url 'groby:szukaj' %}" class="hover:text-white transition">Wyszukaj</a>
-            <a href="{% url 'groby:sektory_list' %}" class="hover:text-white transition">Sektory</a>
-            <a href="/admin/" class="px-3 py-1.5 rounded border border-primary-400 hover:bg-primary-700 transition">Panel admina</a>
+        <nav class="hidden sm:flex items-center gap-1 text-sm">
+            <a href="{% url 'groby:home' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Strona główna</a>
+            <a href="{% url 'groby:szukaj' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Wyszukaj</a>
+            <a href="{% url 'groby:sektory_list' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Sektory</a>
+            <a href="/admin/" class="ml-2 px-4 py-2 rounded-md bg-primary-700 text-cream-50 hover:bg-primary-800 transition text-sm">Panel admina</a>
         </nav>
     </div>
 </header>
@@ -62,10 +91,40 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="bg-primary-900 text-primary-200 mt-16">
-    <div class="max-w-6xl mx-auto px-4 py-6 text-sm flex flex-col sm:flex-row justify-between gap-2">
-        <div>© {% now "Y" %} Informator Cmentarny — Szydłów</div>
-        <div class="text-primary-400">Praca inżynierska</div>
+<footer class="bg-primary-900 text-primary-200 mt-20">
+    <div class="max-w-6xl mx-auto px-4 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-accent-500 flex items-center justify-center text-primary-900">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8M8 6h8"/><path d="M6 22V12a6 6 0 0 1 12 0v10"/></svg>
+                    </div>
+                    <div class="font-serif text-xl text-cream-50">Informator Cmentarny</div>
+                </div>
+                <p class="text-sm text-primary-300 leading-relaxed">
+                    Serwis pomocy w odnalezieniu miejsca pochówku na cmentarzu parafialnym w Szydłowie.
+                </p>
+            </div>
+            <div>
+                <div class="text-accent-400 text-sm uppercase tracking-wider mb-3">Nawigacja</div>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="{% url 'groby:home' %}" class="hover:text-cream-50 transition">Strona główna</a></li>
+                    <li><a href="{% url 'groby:szukaj' %}" class="hover:text-cream-50 transition">Wyszukaj osobę</a></li>
+                    <li><a href="{% url 'groby:sektory_list' %}" class="hover:text-cream-50 transition">Sektory cmentarza</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="text-accent-400 text-sm uppercase tracking-wider mb-3">Kontakt</div>
+                <p class="text-sm text-primary-300 leading-relaxed">
+                    Parafia pw. św. Władysława<br>
+                    Szydłów, woj. świętokrzyskie
+                </p>
+            </div>
+        </div>
+        <div class="border-t border-primary-700 pt-6 flex flex-col sm:flex-row justify-between text-xs text-primary-400 gap-2">
+            <div>© {% now "Y" %} Informator Cmentarny — Szydłów</div>
+            <div>Praca inżynierska</div>
+        </div>
     </div>
 </footer>
 

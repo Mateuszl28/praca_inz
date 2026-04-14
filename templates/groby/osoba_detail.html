@@ -3,54 +3,79 @@
 {% block title %}{{ osoba.imie }} {{ osoba.nazwisko }} — Informator Cmentarny Szydłów{% endblock %}
 
 {% block content %}
-<section class="max-w-4xl mx-auto px-4 py-10">
-    <nav class="text-sm text-primary-600 mb-4">
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <nav class="text-sm text-primary-500 mb-6">
         <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
         <span class="mx-2">/</span>
         <a href="{% url 'groby:szukaj' %}" class="hover:text-primary-800">Wyszukiwanie</a>
         <span class="mx-2">/</span>
-        <span>{{ osoba.imie }} {{ osoba.nazwisko }}</span>
+        <span class="text-primary-700">{{ osoba.imie }} {{ osoba.nazwisko }}</span>
     </nav>
 
-    <div class="bg-white rounded-lg shadow-sm border border-primary-100 p-8 mb-6">
-        <h1 class="font-serif text-4xl text-primary-900 mb-2">
-            {{ osoba.imie }}{% if osoba.drugie_imie %} {{ osoba.drugie_imie }}{% endif %} <strong>{{ osoba.nazwisko }}</strong>
-        </h1>
-        {% if osoba.nazwisko_rodowe %}
-            <div class="text-primary-600 italic mb-4">z domu {{ osoba.nazwisko_rodowe }}</div>
-        {% endif %}
+    <article class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+        <div class="bg-gradient-to-b from-cream-100 to-white px-10 py-12 text-center border-b border-cream-200">
+            <div class="ornament text-accent-500 mb-6">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2v8M8 6h8"/><path d="M6 22V12a6 6 0 0 1 12 0v10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
 
-        <div class="flex flex-wrap items-center gap-3 text-primary-700 mb-6 font-serif text-xl">
-            <span>{% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"j.n.Y" }}{% else %}?{% endif %}</span>
-            <span class="text-primary-400">—</span>
-            <span>{% if osoba.data_smierci %}{{ osoba.data_smierci|date:"j.n.Y" }}{% else %}?{% endif %}</span>
+            <h1 class="font-serif text-4xl sm:text-5xl text-primary-900 font-medium leading-tight">
+                {{ osoba.imie }}{% if osoba.drugie_imie %} {{ osoba.drugie_imie }}{% endif %}<br>
+                <span class="font-semibold">{{ osoba.nazwisko }}</span>
+            </h1>
+
+            {% if osoba.nazwisko_rodowe %}
+                <div class="font-serif italic text-primary-600 mt-2">z domu {{ osoba.nazwisko_rodowe }}</div>
+            {% endif %}
+
+            <div class="mt-8 inline-flex items-center gap-5 text-primary-700 font-serif">
+                <div class="text-center">
+                    <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Urodzony(a)</div>
+                    <div class="text-2xl">{% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"j.n.Y" }}{% else %}—{% endif %}</div>
+                </div>
+                <div class="w-10 h-px bg-accent-500"></div>
+                <div class="text-center">
+                    <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Zmarł(a)</div>
+                    <div class="text-2xl">{% if osoba.data_smierci %}{{ osoba.data_smierci|date:"j.n.Y" }}{% else %}—{% endif %}</div>
+                </div>
+            </div>
+
             {% if osoba.wiek %}
-                <span class="text-primary-500 text-base">· {{ osoba.wiek }} lat</span>
+                <div class="mt-4 text-sm text-primary-500">Żył(a) {{ osoba.wiek }} {{ osoba.wiek|pluralize:"rok,lata,lat" }}</div>
             {% endif %}
         </div>
 
-        {% if osoba.miejsce_urodzenia %}
-            <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm mb-4">
-                <dt class="text-primary-500">Miejsce urodzenia</dt>
-                <dd class="text-primary-900">{{ osoba.miejsce_urodzenia }}</dd>
-            </dl>
-        {% endif %}
+        {% if osoba.miejsce_urodzenia or osoba.biogram %}
+            <div class="px-10 py-10">
+                {% if osoba.miejsce_urodzenia %}
+                    <dl class="flex justify-center gap-3 mb-8 text-sm">
+                        <dt class="text-primary-500">Miejsce urodzenia:</dt>
+                        <dd class="text-primary-900 font-medium">{{ osoba.miejsce_urodzenia }}</dd>
+                    </dl>
+                {% endif %}
 
-        {% if osoba.biogram %}
-            <div class="mt-6 pt-6 border-t border-primary-100">
-                <h2 class="font-serif text-xl text-primary-800 mb-2">Biogram</h2>
-                <div class="text-primary-700 leading-relaxed">{{ osoba.biogram|linebreaks }}</div>
+                {% if osoba.biogram %}
+                    <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4">
+                        <span>Biogram</span>
+                    </div>
+                    <div class="text-primary-700 leading-relaxed font-serif text-lg text-center max-w-prose mx-auto">
+                        {{ osoba.biogram|linebreaks }}
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
-    </div>
+    </article>
 
-    <a href="{% url 'groby:grob_detail' osoba.grob.pk %}" class="block bg-primary-100 hover:bg-primary-200 transition rounded-lg p-6 border border-primary-200">
-        <div class="text-sm uppercase tracking-wider text-primary-600 mb-1">Lokalizacja grobu</div>
-        <div class="font-serif text-2xl text-primary-900">
-            Sektor {{ osoba.grob.sektor.nazwa }} · Grób nr {{ osoba.grob.numer }}
-            {% if osoba.grob.rzad %}· Rząd {{ osoba.grob.rzad }}{% endif %}
+    <a href="{% url 'groby:grob_detail' osoba.grob.pk %}" class="mt-6 block bg-primary-800 hover:bg-primary-900 text-cream-50 transition rounded-lg p-6 shadow-soft group">
+        <div class="flex items-center gap-5">
+            <div class="w-14 h-14 rounded-full bg-primary-700 group-hover:bg-accent-500 group-hover:text-primary-900 flex items-center justify-center transition flex-shrink-0">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div class="flex-1">
+                <div class="text-xs uppercase tracking-widest text-accent-400 mb-1">Lokalizacja grobu</div>
+                <div class="font-serif text-2xl">Sektor {{ osoba.grob.sektor.nazwa }} · Grób nr {{ osoba.grob.numer }}{% if osoba.grob.rzad %} · Rząd {{ osoba.grob.rzad }}{% endif %}</div>
+            </div>
+            <svg class="w-6 h-6 text-primary-300 group-hover:text-cream-50 group-hover:translate-x-1 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
         </div>
-        <div class="text-sm text-primary-600 mt-1">Kliknij, aby zobaczyć szczegóły grobu →</div>
     </a>
 </section>
 {% endblock %}

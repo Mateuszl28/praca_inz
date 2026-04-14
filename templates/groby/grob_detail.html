@@ -4,61 +4,85 @@
 
 {% block content %}
 <section class="max-w-4xl mx-auto px-4 py-10">
-    <nav class="text-sm text-primary-600 mb-4">
+    <nav class="text-sm text-primary-500 mb-6">
         <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
         <span class="mx-2">/</span>
-        <span>Grób {{ grob.sektor.nazwa }}/{{ grob.numer }}</span>
+        <a href="{% url 'groby:sektory_list' %}" class="hover:text-primary-800">Sektory</a>
+        <span class="mx-2">/</span>
+        <a href="{% url 'groby:sektor_detail' grob.sektor.pk %}" class="hover:text-primary-800">Sektor {{ grob.sektor.nazwa }}</a>
+        <span class="mx-2">/</span>
+        <span class="text-primary-700">Grób nr {{ grob.numer }}</span>
     </nav>
 
-    <div class="bg-white rounded-lg shadow-sm border border-primary-100 p-8 mb-8">
-        <div class="flex flex-col sm:flex-row gap-6">
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden mb-8">
+        <div class="flex flex-col md:flex-row">
             {% if grob.zdjecie %}
-                <img src="{{ grob.zdjecie.url }}" alt="Zdjęcie grobu" class="w-full sm:w-64 h-64 object-cover rounded-md">
+                <div class="md:w-80 flex-shrink-0 bg-cream-100">
+                    <img src="{{ grob.zdjecie.url }}" alt="Zdjęcie grobu" class="w-full h-full object-cover aspect-square md:aspect-auto">
+                </div>
             {% endif %}
-            <div class="flex-1">
-                <h1 class="font-serif text-3xl text-primary-900 mb-2">
-                    Grób nr {{ grob.numer }}
-                </h1>
-                <div class="text-primary-600 mb-4">Sektor {{ grob.sektor.nazwa }}{% if grob.rzad %} · Rząd {{ grob.rzad }}{% endif %}</div>
+            <div class="flex-1 p-8">
+                <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Grób</div>
+                <h1 class="font-serif text-4xl text-primary-900 mb-1">Nr {{ grob.numer }}</h1>
+                <div class="text-primary-600 mb-6">
+                    Sektor <strong>{{ grob.sektor.nazwa }}</strong>
+                    {% if grob.rzad %} · Rząd <strong>{{ grob.rzad }}</strong>{% endif %}
+                </div>
 
-                <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-                    <dt class="text-primary-500">Typ grobu</dt>
-                    <dd class="text-primary-900">{{ grob.get_typ_display }}</dd>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-8 gap-y-3 text-sm">
+                    <dt class="text-primary-500 uppercase tracking-wider text-xs self-center">Typ grobu</dt>
+                    <dd class="text-primary-900 font-medium">{{ grob.get_typ_display }}</dd>
+
+                    <dt class="text-primary-500 uppercase tracking-wider text-xs self-center">Liczba pochowanych</dt>
+                    <dd class="text-primary-900 font-medium">{{ grob.osoby.count }}</dd>
 
                     {% if grob.szerokosc_geo and grob.dlugosc_geo %}
-                        <dt class="text-primary-500">Współrzędne</dt>
-                        <dd class="text-primary-900">{{ grob.szerokosc_geo }}, {{ grob.dlugosc_geo }}</dd>
-                    {% endif %}
-
-                    {% if grob.uwagi %}
-                        <dt class="text-primary-500">Uwagi</dt>
-                        <dd class="text-primary-900">{{ grob.uwagi|linebreaksbr }}</dd>
+                        <dt class="text-primary-500 uppercase tracking-wider text-xs self-center">Współrzędne</dt>
+                        <dd class="text-primary-900 font-mono text-sm">{{ grob.szerokosc_geo }}, {{ grob.dlugosc_geo }}</dd>
                     {% endif %}
                 </dl>
+
+                {% if grob.uwagi %}
+                    <div class="mt-6 pt-6 border-t border-cream-200">
+                        <div class="text-xs uppercase tracking-widest text-primary-500 mb-2">Uwagi</div>
+                        <div class="text-primary-700 leading-relaxed">{{ grob.uwagi|linebreaks }}</div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <h2 class="font-serif text-2xl text-primary-800 mb-4">Osoby pochowane</h2>
+    <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-6">
+        <span>Osoby pochowane</span>
+    </div>
 
     {% if grob.osoby.all %}
-        <div class="bg-white rounded-lg shadow-sm border border-primary-100 divide-y divide-primary-100">
+        <div class="space-y-3">
             {% for osoba in grob.osoby.all %}
-                <a href="{% url 'groby:osoba_detail' osoba.pk %}" class="block p-5 hover:bg-primary-50 transition">
-                    <div class="font-serif text-lg text-primary-900">
-                        {{ osoba.imie }} <strong>{{ osoba.nazwisko }}</strong>
-                        {% if osoba.nazwisko_rodowe %}<span class="text-primary-500 text-sm">(z d. {{ osoba.nazwisko_rodowe }})</span>{% endif %}
+                <a href="{% url 'groby:osoba_detail' osoba.pk %}" class="flex items-center gap-4 bg-white hover:bg-cream-50 border border-cream-200 hover:border-primary-300 rounded-lg p-5 shadow-soft transition group">
+                    <div class="w-12 h-12 rounded-full bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center flex-shrink-0 transition">
+                        <span class="font-serif text-lg text-primary-700">{{ osoba.imie|first }}{{ osoba.nazwisko|first }}</span>
                     </div>
-                    <div class="text-sm text-primary-600 mt-1">
-                        {% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"j.n.Y" }}{% else %}?{% endif %}
-                        &nbsp;—&nbsp;
-                        {% if osoba.data_smierci %}{{ osoba.data_smierci|date:"j.n.Y" }}{% else %}?{% endif %}
+                    <div class="flex-1">
+                        <div class="font-serif text-xl text-primary-900">
+                            {{ osoba.imie }} <strong>{{ osoba.nazwisko }}</strong>
+                            {% if osoba.nazwisko_rodowe %}<span class="text-primary-500 text-sm italic">(z d. {{ osoba.nazwisko_rodowe }})</span>{% endif %}
+                        </div>
+                        <div class="text-sm text-primary-600">
+                            {% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"j.n.Y" }}{% else %}?{% endif %}
+                            <span class="mx-2 text-accent-500">—</span>
+                            {% if osoba.data_smierci %}{{ osoba.data_smierci|date:"j.n.Y" }}{% else %}?{% endif %}
+                            {% if osoba.wiek %}<span class="text-primary-400 ml-2">· {{ osoba.wiek }} lat</span>{% endif %}
+                        </div>
                     </div>
+                    <svg class="w-5 h-5 text-primary-300 group-hover:text-primary-700 group-hover:translate-x-1 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </a>
             {% endfor %}
         </div>
     {% else %}
-        <div class="text-primary-600">Brak zarejestrowanych osób dla tego grobu.</div>
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-primary-500 text-center">
+            Brak zarejestrowanych osób dla tego grobu.
+        </div>
     {% endif %}
 </section>
 {% endblock %}

@@ -4,46 +4,53 @@
 
 {% block content %}
 <section class="max-w-5xl mx-auto px-4 py-10">
-    <nav class="text-sm text-primary-600 mb-4">
+    <nav class="text-sm text-primary-500 mb-6">
         <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
         <span class="mx-2">/</span>
         <a href="{% url 'groby:sektory_list' %}" class="hover:text-primary-800">Sektory</a>
         <span class="mx-2">/</span>
-        <span>Sektor {{ sektor.nazwa }}</span>
+        <span class="text-primary-700">Sektor {{ sektor.nazwa }}</span>
     </nav>
 
-    <div class="bg-white rounded-lg shadow-sm border border-primary-100 p-8 mb-8">
-        <h1 class="font-serif text-4xl text-primary-900 mb-2">Sektor {{ sektor.nazwa }}</h1>
+    <div class="bg-gradient-to-br from-primary-800 to-primary-900 text-cream-50 rounded-lg p-10 mb-8 shadow-lift">
+        <div class="text-xs uppercase tracking-widest text-accent-400 mb-2">Sektor</div>
+        <h1 class="font-serif text-5xl mb-4">{{ sektor.nazwa }}</h1>
         {% if sektor.opis %}
-            <p class="text-primary-700 leading-relaxed">{{ sektor.opis|linebreaks }}</p>
+            <p class="text-primary-200 leading-relaxed max-w-2xl">{{ sektor.opis }}</p>
         {% endif %}
     </div>
 
-    <h2 class="font-serif text-2xl text-primary-800 mb-4">Groby w sektorze</h2>
+    <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-6">
+        <span>Groby w sektorze</span>
+    </div>
 
     {% if page.object_list %}
-        <div class="bg-white rounded-lg shadow-sm border border-primary-100 overflow-hidden">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
             <table class="w-full text-sm">
-                <thead class="bg-primary-100 text-primary-800 text-left">
+                <thead class="bg-cream-100 text-primary-700 text-left text-xs uppercase tracking-wider">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Nr grobu</th>
-                        <th class="px-4 py-3 font-medium">Rząd</th>
-                        <th class="px-4 py-3 font-medium">Typ</th>
-                        <th class="px-4 py-3 font-medium">Pochowani</th>
+                        <th class="px-5 py-4 font-semibold">Nr grobu</th>
+                        <th class="px-5 py-4 font-semibold">Rząd</th>
+                        <th class="px-5 py-4 font-semibold">Typ</th>
+                        <th class="px-5 py-4 font-semibold">Pochowani</th>
+                        <th class="px-5 py-4 w-10"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-primary-100">
+                <tbody class="divide-y divide-cream-200">
                     {% for grob in page.object_list %}
-                        <tr class="hover:bg-primary-50 transition cursor-pointer" onclick="window.location='{% url 'groby:grob_detail' grob.pk %}'">
-                            <td class="px-4 py-3 font-serif text-primary-900"><a href="{% url 'groby:grob_detail' grob.pk %}" class="hover:text-primary-700">{{ grob.numer }}</a></td>
-                            <td class="px-4 py-3 text-primary-700">{{ grob.rzad|default:"—" }}</td>
-                            <td class="px-4 py-3 text-primary-700">{{ grob.get_typ_display }}</td>
-                            <td class="px-4 py-3 text-primary-700">
+                        <tr class="hover:bg-cream-50 transition cursor-pointer group" onclick="window.location='{% url 'groby:grob_detail' grob.pk %}'">
+                            <td class="px-5 py-4 font-serif text-lg text-primary-900"><a href="{% url 'groby:grob_detail' grob.pk %}" class="hover:text-primary-700">{{ grob.numer }}</a></td>
+                            <td class="px-5 py-4 text-primary-700">{{ grob.rzad|default:"—" }}</td>
+                            <td class="px-5 py-4 text-primary-700">{{ grob.get_typ_display }}</td>
+                            <td class="px-5 py-4 text-primary-700">
                                 {% for osoba in grob.osoby.all %}
                                     {{ osoba.imie }} {{ osoba.nazwisko }}{% if not forloop.last %}, {% endif %}
                                 {% empty %}
-                                    <span class="text-primary-400">—</span>
+                                    <span class="text-primary-300">—</span>
                                 {% endfor %}
+                            </td>
+                            <td class="px-5 py-4 text-right">
+                                <svg class="w-4 h-4 text-primary-300 group-hover:text-primary-700 group-hover:translate-x-1 transition inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                             </td>
                         </tr>
                     {% endfor %}
@@ -54,16 +61,16 @@
         {% if page.paginator.num_pages > 1 %}
             <nav class="mt-6 flex items-center justify-center gap-2 text-sm">
                 {% if page.has_previous %}
-                    <a href="?page={{ page.previous_page_number }}" class="px-3 py-2 border border-primary-200 rounded-md hover:bg-primary-100 transition">← Poprzednia</a>
+                    <a href="?page={{ page.previous_page_number }}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">← Poprzednia</a>
                 {% endif %}
                 <span class="px-4 py-2 text-primary-700">Strona <strong>{{ page.number }}</strong> z <strong>{{ page.paginator.num_pages }}</strong></span>
                 {% if page.has_next %}
-                    <a href="?page={{ page.next_page_number }}" class="px-3 py-2 border border-primary-200 rounded-md hover:bg-primary-100 transition">Następna →</a>
+                    <a href="?page={{ page.next_page_number }}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">Następna →</a>
                 {% endif %}
             </nav>
         {% endif %}
     {% else %}
-        <div class="bg-white rounded-lg shadow-sm border border-primary-100 p-8 text-primary-600">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-10 text-center text-primary-500">
             Ten sektor nie zawiera jeszcze żadnych grobów.
         </div>
     {% endif %}

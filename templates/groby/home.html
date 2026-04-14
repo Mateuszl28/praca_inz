@@ -1,26 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="bg-gradient-to-b from-primary-800 to-primary-700 text-primary-50">
-    <div class="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h1 class="font-serif text-4xl sm:text-5xl font-semibold mb-4">Wyszukiwarka grobów</h1>
-        <p class="text-primary-200 text-lg mb-10 max-w-2xl mx-auto">
-            Pomożemy Ci odnaleźć grób bliskiej osoby na cmentarzu parafialnym w Szydłowie.
+
+<section class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900"></div>
+    <div class="absolute inset-0 opacity-[0.07]" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22%3E%3Cg fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%221%22%3E%3Cpath d=%22M30 10v20M20 20h20%22/%3E%3Ccircle cx=%2230%22 cy=%2245%22 r=%222%22/%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="relative max-w-4xl mx-auto px-4 py-24 sm:py-32 text-center text-cream-50">
+        <div class="inline-flex items-center gap-3 mb-8 text-accent-400">
+            <div class="h-px w-12 bg-accent-400/60"></div>
+            <span class="text-xs uppercase tracking-[0.3em]">Cmentarz parafialny</span>
+            <div class="h-px w-12 bg-accent-400/60"></div>
+        </div>
+
+        <h1 class="font-serif text-5xl sm:text-6xl lg:text-7xl font-light leading-tight mb-6">
+            Odnajdź miejsce<br><em class="text-accent-400 font-medium">pamięci</em> bliskich
+        </h1>
+
+        <p class="text-primary-200 text-lg max-w-2xl mx-auto mb-12 leading-relaxed font-light">
+            Wyszukiwarka grobów na cmentarzu parafialnym w Szydłowie.
+            Wpisz imię lub nazwisko, aby znaleźć lokalizację grobu.
         </p>
 
         <form action="{% url 'groby:szukaj' %}" method="get" class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-lg p-2 shadow-lg">
-                <input
-                    type="text"
-                    name="q"
-                    placeholder="Wpisz imię lub nazwisko…"
-                    class="flex-1 px-4 py-3 text-primary-900 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    autofocus
-                >
-                <button
-                    type="submit"
-                    class="px-6 py-3 bg-primary-700 hover:bg-primary-800 text-white rounded-md font-medium transition"
-                >
+            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-lg p-2 shadow-lift">
+                <div class="flex-1 flex items-center gap-3 px-4">
+                    <svg class="w-5 h-5 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input
+                        type="text"
+                        name="q"
+                        placeholder="Wpisz imię lub nazwisko…"
+                        class="flex-1 py-3 text-primary-900 bg-transparent focus:outline-none text-base"
+                        autofocus
+                    >
+                </div>
+                <button type="submit" class="px-8 py-3 bg-primary-700 hover:bg-primary-800 text-cream-50 rounded-md font-medium transition">
                     Szukaj
                 </button>
             </div>
@@ -28,31 +42,121 @@
     </div>
 </section>
 
-<section class="max-w-5xl mx-auto px-4 py-16">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-primary-100 text-center">
-            <div class="font-serif text-4xl text-primary-700 mb-2">{{ liczba_osob }}</div>
-            <div class="text-sm uppercase tracking-wider text-primary-600">Zarejestrowanych osób</div>
+<section class="max-w-5xl mx-auto px-4 -mt-14 relative z-10">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-lg p-8 shadow-lift border border-cream-200 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-primary-100 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="font-serif text-5xl text-primary-800 mb-1">{{ liczba_osob }}</div>
+            <div class="text-xs uppercase tracking-widest text-primary-500">Osób w rejestrze</div>
         </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-primary-100 text-center">
-            <div class="font-serif text-4xl text-primary-700 mb-2">{{ liczba_grobow }}</div>
-            <div class="text-sm uppercase tracking-wider text-primary-600">Grobów w bazie</div>
+        <div class="bg-white rounded-lg p-8 shadow-lift border border-cream-200 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-primary-100 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v8M8 6h8"/><path d="M6 22V12a6 6 0 0 1 12 0v10"/><path d="M4 22h16"/></svg>
+            </div>
+            <div class="font-serif text-5xl text-primary-800 mb-1">{{ liczba_grobow }}</div>
+            <div class="text-xs uppercase tracking-widest text-primary-500">Zarejestrowanych grobów</div>
         </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-primary-100 text-center">
-            <div class="font-serif text-4xl text-primary-700 mb-2">{{ liczba_sektorow }}</div>
-            <div class="text-sm uppercase tracking-wider text-primary-600">Sektorów cmentarza</div>
+        <div class="bg-white rounded-lg p-8 shadow-lift border border-cream-200 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-primary-100 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13 6-3m-6 3V7m6 10 4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m-6 3 6-3"/></svg>
+            </div>
+            <div class="font-serif text-5xl text-primary-800 mb-1">{{ liczba_sektorow }}</div>
+            <div class="text-xs uppercase tracking-widest text-primary-500">Sektorów cmentarza</div>
         </div>
     </div>
 </section>
 
-<section class="max-w-4xl mx-auto px-4 pb-16">
-    <div class="bg-white rounded-lg p-8 shadow-sm border border-primary-100">
-        <h2 class="font-serif text-2xl text-primary-800 mb-3">O informatorze</h2>
-        <p class="text-primary-700 leading-relaxed">
-            Serwis umożliwia wyszukanie miejsca pochówku osoby na podstawie imienia, nazwiska lub
-            nazwiska rodowego. Dla każdego grobu dostępna jest informacja o jego lokalizacji w obrębie
-            cmentarza (sektor, numer) oraz lista osób pochowanych.
-        </p>
+<section class="max-w-5xl mx-auto px-4 py-20">
+    <div class="text-center mb-12">
+        <div class="ornament text-accent-500 font-serif italic text-sm uppercase tracking-widest mb-4">
+            <span>Jak korzystać</span>
+        </div>
+        <h2 class="font-serif text-4xl text-primary-900">Trzy proste kroki</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+            <div class="relative inline-block mb-5">
+                <div class="w-20 h-20 rounded-full bg-cream-100 border-2 border-primary-200 flex items-center justify-center">
+                    <svg class="w-9 h-9 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                </div>
+                <div class="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-accent-500 text-primary-900 font-serif text-lg flex items-center justify-center">1</div>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Wyszukaj</h3>
+            <p class="text-primary-600 text-sm leading-relaxed">Wpisz imię lub nazwisko osoby, której grobu szukasz.</p>
+        </div>
+
+        <div class="text-center">
+            <div class="relative inline-block mb-5">
+                <div class="w-20 h-20 rounded-full bg-cream-100 border-2 border-primary-200 flex items-center justify-center">
+                    <svg class="w-9 h-9 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+                </div>
+                <div class="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-accent-500 text-primary-900 font-serif text-lg flex items-center justify-center">2</div>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Wybierz z listy</h3>
+            <p class="text-primary-600 text-sm leading-relaxed">Przejrzyj wyniki i kliknij w pasującą osobę.</p>
+        </div>
+
+        <div class="text-center">
+            <div class="relative inline-block mb-5">
+                <div class="w-20 h-20 rounded-full bg-cream-100 border-2 border-primary-200 flex items-center justify-center">
+                    <svg class="w-9 h-9 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <div class="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-accent-500 text-primary-900 font-serif text-lg flex items-center justify-center">3</div>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Odnajdź miejsce</h3>
+            <p class="text-primary-600 text-sm leading-relaxed">Zobacz sektor i numer grobu oraz dodatkowe informacje.</p>
+        </div>
     </div>
 </section>
+
+<section class="bg-cream-100 border-y border-cream-200 py-20">
+    <div class="max-w-3xl mx-auto px-4 text-center">
+        <svg class="w-10 h-10 mx-auto text-accent-500 mb-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21c3 0 6-2 7-5-2 0-4 0-5-2-1-2 0-5 3-5 2 0 3 2 3 4 0 6-4 8-8 8zm12 0c3 0 6-2 7-5-2 0-4 0-5-2-1-2 0-5 3-5 2 0 3 2 3 4 0 6-4 8-8 8z"/></svg>
+        <p class="font-serif italic text-2xl sm:text-3xl text-primary-800 leading-relaxed mb-4">
+            „Śpieszmy się kochać ludzi, tak szybko odchodzą…"
+        </p>
+        <p class="text-sm uppercase tracking-widest text-primary-500">ks. Jan Twardowski</p>
+    </div>
+</section>
+
+<section class="max-w-5xl mx-auto px-4 py-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div>
+            <div class="text-accent-600 text-xs uppercase tracking-widest mb-3">O serwisie</div>
+            <h2 class="font-serif text-4xl text-primary-900 mb-5">Pamięć, która trwa</h2>
+            <p class="text-primary-700 leading-relaxed mb-4">
+                Informator cmentarny to cyfrowe źródło wiedzy o osobach pochowanych na cmentarzu parafialnym
+                w Szydłowie. Zebrane w nim dane umożliwiają szybkie odnalezienie grobu bliskiej osoby
+                oraz poznanie podstawowych informacji o niej.
+            </p>
+            <p class="text-primary-700 leading-relaxed">
+                Każdy grób zawiera informacje o jego lokalizacji (sektor, numer),
+                listę osób pochowanych oraz — tam, gdzie to możliwe — zdjęcie i krótki biogram.
+            </p>
+        </div>
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8">
+            <h3 class="font-serif text-2xl text-primary-900 mb-4">Przydatne linki</h3>
+            <div class="space-y-3">
+                <a href="{% url 'groby:szukaj' %}" class="flex items-center justify-between p-4 rounded-md border border-cream-200 hover:border-primary-300 hover:bg-cream-50 transition group">
+                    <div>
+                        <div class="font-medium text-primary-900">Zaawansowane wyszukiwanie</div>
+                        <div class="text-sm text-primary-500">Filtry po sektorze, dacie, typie grobu</div>
+                    </div>
+                    <svg class="w-5 h-5 text-primary-400 group-hover:text-primary-700 group-hover:translate-x-1 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                <a href="{% url 'groby:sektory_list' %}" class="flex items-center justify-between p-4 rounded-md border border-cream-200 hover:border-primary-300 hover:bg-cream-50 transition group">
+                    <div>
+                        <div class="font-medium text-primary-900">Przegląd sektorów</div>
+                        <div class="text-sm text-primary-500">Lista wszystkich sektorów cmentarza</div>
+                    </div>
+                    <svg class="w-5 h-5 text-primary-400 group-hover:text-primary-700 group-hover:translate-x-1 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock %}
