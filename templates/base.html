@@ -126,6 +126,10 @@
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span>Mapa</span>
             </a>
+            <a href="{% url 'groby:statystyki' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-8"/></svg>
+                <span>Statystyki</span>
+            </a>
 
             <button id="theme-toggle" type="button" aria-label="Przełącz motyw" class="ml-2 p-2 rounded-md text-primary-700 hover:bg-cream-100 hover:text-primary-900 transition">
                 <svg class="w-5 h-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -165,6 +169,7 @@
                     <li><a href="{% url 'groby:szukaj' %}" class="hover:text-cream-50 transition">Wyszukaj osobę</a></li>
                     <li><a href="{% url 'groby:sektory_list' %}" class="hover:text-cream-50 transition">Sektory cmentarza</a></li>
                     <li><a href="{% url 'groby:mapa' %}" class="hover:text-cream-50 transition">Mapa cmentarza</a></li>
+                    <li><a href="{% url 'groby:statystyki' %}" class="hover:text-cream-50 transition">Statystyki</a></li>
                 </ul>
             </div>
             <div>

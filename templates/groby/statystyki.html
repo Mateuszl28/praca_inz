@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Statystyki — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <div class="mb-10">
+        <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Statystyki</div>
+        <h1 class="font-serif text-4xl text-primary-900 mb-2">Dane w liczbach</h1>
+        <p class="text-primary-600">Analiza zebranych informacji o cmentarzu parafialnym w Szydłowie.</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Osób</div>
+            <div class="font-serif text-4xl text-primary-900">{{ liczba_osob }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Grobów</div>
+            <div class="font-serif text-4xl text-primary-900">{{ liczba_grobow }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Sektorów</div>
+            <div class="font-serif text-4xl text-primary-900">{{ liczba_sektorow }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-widest text-primary-500 mb-1">Średni wiek</div>
+            <div class="font-serif text-4xl text-primary-900">{{ sredni_wiek }} <span class="text-lg text-primary-500">lat</span></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <h2 class="font-serif text-2xl text-primary-900 mb-1">Zgony według dekad</h2>
+            <p class="text-sm text-primary-500 mb-4">Liczba osób zmarłych w danej dekadzie</p>
+            <div style="height: 300px;"><canvas id="chart-dekady"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <h2 class="font-serif text-2xl text-primary-900 mb-1">Typy grobów</h2>
+            <p class="text-sm text-primary-500 mb-4">Rozkład grobów według rodzaju</p>
+            <div style="height: 300px;"><canvas id="chart-typy"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <h2 class="font-serif text-2xl text-primary-900 mb-1">Groby w sektorach</h2>
+            <p class="text-sm text-primary-500 mb-4">Liczba grobów w każdym sektorze</p>
+            <div style="height: 300px;"><canvas id="chart-sektory"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-lg p-6 shadow-soft border border-cream-200">
+            <h2 class="font-serif text-2xl text-primary-900 mb-1">Osoby przypadające na grób</h2>
+            <p class="text-sm text-primary-500 mb-4">Ile grobów zawiera daną liczbę osób</p>
+            <div style="height: 300px;"><canvas id="chart-osob-na-grob"></canvas></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="bg-gradient-to-br from-primary-800 to-primary-900 text-cream-50 rounded-lg p-6 shadow-soft">
+            <div class="text-xs uppercase tracking-widest text-accent-400 mb-2">Najstarsza zarejestrowana osoba</div>
+            <div class="font-serif text-5xl">{{ najstarsza }} <span class="text-xl text-primary-300">{{ najstarsza|odmien:"rok,lata,lat" }}</span></div>
+        </div>
+        <div class="bg-gradient-to-br from-primary-800 to-primary-900 text-cream-50 rounded-lg p-6 shadow-soft">
+            <div class="text-xs uppercase tracking-widest text-accent-400 mb-2">Najmłodsza zarejestrowana osoba</div>
+            <div class="font-serif text-5xl">{{ najmlodsza }} <span class="text-xl text-primary-300">{{ najmlodsza|odmien:"rok,lata,lat" }}</span></div>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const typy = {{ typy_json|safe }};
+    const sektory = {{ sektory_json|safe }};
+    const dekady = {{ dekady_json|safe }};
+    const osobNaGrob = {{ osob_na_grob_json|safe }};
+
+    const kolorPodstawowy = '#2e4430';
+    const kolorAkcent = '#b08d48';
+    const palette = ['#2e4430', '#4c6b4a', '#6a8a68', '#94ae93', '#b08d48', '#c9a96a', '#8f7237'];
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#465744';
+
+    new Chart(document.getElementById('chart-dekady'), {
+        type: 'bar',
+        data: {
+            labels: dekady.map(d => d.label),
+            datasets: [{
+                label: 'Zgony',
+                data: dekady.map(d => d.value),
+                backgroundColor: kolorPodstawowy,
+                borderRadius: 4,
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+    });
+
+    new Chart(document.getElementById('chart-typy'), {
+        type: 'doughnut',
+        data: {
+            labels: typy.map(t => t.label),
+            datasets: [{ data: typy.map(t => t.value), backgroundColor: palette }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+        },
+    });
+
+    new Chart(document.getElementById('chart-sektory'), {
+        type: 'bar',
+        data: {
+            labels: sektory.map(s => s.label),
+            datasets: [{
+                label: 'Groby',
+                data: sektory.map(s => s.value),
+                backgroundColor: kolorAkcent,
+                borderRadius: 4,
+            }],
+        },
+        options: {
+            indexAxis: 'y',
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+    });
+
+    new Chart(document.getElementById('chart-osob-na-grob'), {
+        type: 'bar',
+        data: {
+            labels: osobNaGrob.map(o => o.label),
+            datasets: [{
+                label: 'Liczba grobów',
+                data: osobNaGrob.map(o => o.value),
+                backgroundColor: palette,
+                borderRadius: 4,
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+    });
+</script>
+{% endblock %}

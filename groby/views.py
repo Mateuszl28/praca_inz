@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
@@ -89,6 +90,49 @@ def sektor_detail(request, pk):
 def grob_detail(request, pk):
     grob = get_object_or_404(Grob.objects.select_related('sektor').prefetch_related('osoby'), pk=pk)
     return render(request, 'groby/grob_detail.html', {'grob': grob})
+
+
+def statystyki(request):
+    typy_labels = dict(Grob.TYP_CHOICES)
+    typy_qs = Grob.objects.values('typ').annotate(c=Count('id')).order_by('-c')
+    typy = [{'label': typy_labels.get(t['typ'], t['typ']), 'value': t['c']} for t in typy_qs]
+
+    sektor_qs = Sektor.objects.annotate(liczba=Count('groby')).values('nazwa', 'liczba').order_by('nazwa')
+    sektory_dane = [{'label': f"Sektor {s['nazwa']}", 'value': s['liczba']} for s in sektor_qs]
+
+    dekady_counter = Counter()
+    for ds in Osoba.objects.filter(data_smierci__isnull=False).values_list('data_smierci', flat=True):
+        dekady_counter[(ds.year // 10) * 10] += 1
+    dekady = [{'label': f'{d}.', 'value': v} for d, v in sorted(dekady_counter.items())]
+
+    wieki = []
+    for o in Osoba.objects.filter(data_urodzenia__isnull=False, data_smierci__isnull=False):
+        w = o.wiek
+        if w is not None and w >= 0:
+            wieki.append(w)
+
+    sredni_wiek = round(sum(wieki) / len(wieki), 1) if wieki else 0
+    najstarsza = max(wieki) if wieki else 0
+    najmlodsza = min(wieki) if wieki else 0
+
+    osob_na_grob_counter = Counter()
+    for g in Grob.objects.annotate(lo=Count('osoby')).values_list('lo', flat=True):
+        osob_na_grob_counter[g] += 1
+    osob_na_grob = [{'label': f'{k} osoba' if k == 1 else f'{k} osób', 'value': v} for k, v in sorted(osob_na_grob_counter.items())]
+
+    context = {
+        'typy_json': json.dumps(typy, ensure_ascii=False),
+        'sektory_json': json.dumps(sektory_dane, ensure_ascii=False),
+        'dekady_json': json.dumps(dekady, ensure_ascii=False),
+        'osob_na_grob_json': json.dumps(osob_na_grob, ensure_ascii=False),
+        'sredni_wiek': sredni_wiek,
+        'najstarsza': najstarsza,
+        'najmlodsza': najmlodsza,
+        'liczba_osob': Osoba.objects.count(),
+        'liczba_grobow': Grob.objects.count(),
+        'liczba_sektorow': Sektor.objects.count(),
+    }
+    return render(request, 'groby/statystyki.html', context)
 
 
 def mapa(request):
