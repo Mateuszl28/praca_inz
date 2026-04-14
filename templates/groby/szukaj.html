@@ -3,139 +3,136 @@
 {% block title %}Wyszukiwanie — Informator Cmentarny Szydłów{% endblock %}
 
 {% block content %}
-<section class="max-w-6xl mx-auto px-4 py-10">
+<section class="max-w-5xl mx-auto px-4 py-10">
     <div class="mb-8">
         <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Wyszukiwanie</div>
         <h1 class="font-serif text-4xl text-primary-900">Znajdź osobę w rejestrze</h1>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
+    <form action="{% url 'groby:szukaj' %}" method="get" class="bg-white rounded-lg shadow-soft border border-cream-200 p-5 mb-8">
+        <div class="flex flex-col sm:flex-row gap-2 mb-4">
+            <div class="flex-1 relative">
+                <svg class="w-5 h-5 text-primary-400 absolute left-4 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Wpisz imię lub nazwisko…"
+                    class="w-full pl-11 pr-4 py-3 border border-cream-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
+                    autofocus
+                >
+            </div>
+            <button type="submit" class="px-8 py-3 bg-primary-700 hover:bg-primary-800 text-cream-50 rounded-md font-medium transition whitespace-nowrap">
+                Szukaj
+            </button>
+        </div>
 
-        <aside class="lg:sticky lg:top-24 lg:self-start">
-            <form action="{% url 'groby:szukaj' %}" method="get" class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 space-y-5">
-                <div>
-                    <label class="block text-xs uppercase tracking-wider font-medium text-primary-600 mb-2">Imię lub nazwisko</label>
-                    <div class="relative">
-                        <svg class="w-4 h-4 text-primary-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        <input
-                            type="text"
-                            name="q"
-                            value="{{ query }}"
-                            placeholder="np. Kowalski"
-                            class="w-full pl-9 pr-3 py-2 border border-cream-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        >
-                    </div>
+        <div class="flex flex-wrap items-end gap-3 pt-4 border-t border-cream-200">
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-[11px] uppercase tracking-wider font-medium text-primary-600 mb-1">Sektor</label>
+                <select name="sektor" class="w-full px-3 py-2 border border-cream-200 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <option value="">— wszystkie —</option>
+                    {% for s in sektory %}
+                        <option value="{{ s.id }}" {% if sektor_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nazwa }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-[11px] uppercase tracking-wider font-medium text-primary-600 mb-1">Typ grobu</label>
+                <select name="typ" class="w-full px-3 py-2 border border-cream-200 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <option value="">— wszystkie —</option>
+                    {% for val, label in typy %}
+                        <option value="{{ val }}" {% if typ == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex-1 min-w-[160px]">
+                <label class="block text-[11px] uppercase tracking-wider font-medium text-primary-600 mb-1">Rok śmierci</label>
+                <div class="flex gap-2">
+                    <input type="number" name="rok_od" value="{{ rok_od }}" placeholder="od" min="1800" max="2100" class="w-1/2 px-3 py-2 border border-cream-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <input type="number" name="rok_do" value="{{ rok_do }}" placeholder="do" min="1800" max="2100" class="w-1/2 px-3 py-2 border border-cream-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-xs uppercase tracking-wider font-medium text-primary-600 mb-2">Sektor</label>
-                    <select name="sektor" class="w-full px-3 py-2 border border-cream-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <option value="">— wszystkie —</option>
-                        {% for s in sektory %}
-                            <option value="{{ s.id }}" {% if sektor_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nazwa }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase tracking-wider font-medium text-primary-600 mb-2">Typ grobu</label>
-                    <select name="typ" class="w-full px-3 py-2 border border-cream-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <option value="">— wszystkie —</option>
-                        {% for val, label in typy %}
-                            <option value="{{ val }}" {% if typ == val %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase tracking-wider font-medium text-primary-600 mb-2">Rok śmierci</label>
-                    <div class="flex gap-2">
-                        <input type="number" name="rok_od" value="{{ rok_od }}" placeholder="od" min="1800" max="2100" class="w-1/2 px-3 py-2 border border-cream-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <input type="number" name="rok_do" value="{{ rok_do }}" placeholder="do" min="1800" max="2100" class="w-1/2 px-3 py-2 border border-cream-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                    </div>
-                </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-1 px-4 py-2.5 bg-primary-700 hover:bg-primary-800 text-cream-50 rounded-md font-medium transition">Filtruj</button>
-                    {% if aktywne_filtry %}
-                        <a href="{% url 'groby:szukaj' %}" class="px-4 py-2.5 border border-cream-200 text-primary-700 hover:bg-cream-100 rounded-md transition">Wyczyść</a>
-                    {% endif %}
-                </div>
-            </form>
-        </aside>
-
-        <div>
             {% if aktywne_filtry %}
-                <div class="mb-5 flex items-center justify-between text-sm">
-                    <div class="text-primary-600">
-                        {% if total %}
-                            Znaleziono <strong class="text-primary-900">{{ total }}</strong> {{ total|pluralize:"wynik,wyniki,wyników" }}
-                        {% else %}
-                            <span class="text-primary-500">Brak wyników dla wybranych kryteriów</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                {% if page.object_list %}
-                    <div class="space-y-3">
-                        {% for osoba in page.object_list %}
-                            <a href="{% url 'groby:osoba_detail' osoba.pk %}" class="flex items-center gap-4 bg-white hover:bg-cream-50 border border-cream-200 hover:border-primary-300 rounded-lg p-5 shadow-soft transition group">
-                                <div class="w-12 h-12 rounded-full bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center flex-shrink-0 transition">
-                                    <span class="font-serif text-lg text-primary-700">{{ osoba.imie|first }}{{ osoba.nazwisko|first }}</span>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-serif text-xl text-primary-900 truncate">
-                                        {{ osoba.imie }}{% if osoba.drugie_imie %} {{ osoba.drugie_imie }}{% endif %} <strong>{{ osoba.nazwisko }}</strong>
-                                        {% if osoba.nazwisko_rodowe %}<span class="text-primary-500 text-sm italic">(z d. {{ osoba.nazwisko_rodowe }})</span>{% endif %}
-                                    </div>
-                                    <div class="text-sm text-primary-600 mt-0.5">
-                                        {% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"Y" }}{% else %}?{% endif %}
-                                        <span class="mx-2 text-accent-500">—</span>
-                                        {% if osoba.data_smierci %}{{ osoba.data_smierci|date:"Y" }}{% else %}?{% endif %}
-                                        {% if osoba.wiek %}<span class="text-primary-400 ml-2">· {{ osoba.wiek }} lat</span>{% endif %}
-                                    </div>
-                                </div>
-                                <div class="hidden sm:block text-xs text-primary-700 bg-cream-100 px-3 py-1.5 rounded-full flex-shrink-0">
-                                    Sektor {{ osoba.grob.sektor.nazwa }} · nr {{ osoba.grob.numer }}
-                                </div>
-                                <svg class="w-5 h-5 text-primary-300 group-hover:text-primary-700 group-hover:translate-x-1 transition flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                            </a>
-                        {% endfor %}
-                    </div>
-
-                    {% if page.paginator.num_pages > 1 %}
-                        <nav class="mt-8 flex items-center justify-center gap-2 text-sm">
-                            {% if page.has_previous %}
-                                <a href="?page={{ page.previous_page_number }}{% if querystring_bez_page %}&{{ querystring_bez_page }}{% endif %}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">← Poprzednia</a>
-                            {% else %}
-                                <span class="px-4 py-2 border border-cream-100 rounded-md text-primary-300">← Poprzednia</span>
-                            {% endif %}
-
-                            <span class="px-5 py-2 text-primary-700">
-                                <strong>{{ page.number }}</strong> / {{ page.paginator.num_pages }}
-                            </span>
-
-                            {% if page.has_next %}
-                                <a href="?page={{ page.next_page_number }}{% if querystring_bez_page %}&{{ querystring_bez_page }}{% endif %}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">Następna →</a>
-                            {% else %}
-                                <span class="px-4 py-2 border border-cream-100 rounded-md text-primary-300">Następna →</span>
-                            {% endif %}
-                        </nav>
-                    {% endif %}
-                {% else %}
-                    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-10 text-center">
-                        <svg class="w-12 h-12 mx-auto text-primary-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        <div class="text-primary-600">Spróbuj zmienić kryteria wyszukiwania.</div>
-                    </div>
-                {% endif %}
-            {% else %}
-                <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-12 text-center">
-                    <svg class="w-14 h-14 mx-auto text-primary-300 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <h3 class="font-serif text-2xl text-primary-900 mb-2">Rozpocznij wyszukiwanie</h3>
-                    <p class="text-primary-600 max-w-md mx-auto">Wpisz frazę w pole po lewej lub skorzystaj z filtrów, aby przeszukać rejestr.</p>
-                </div>
+                <a href="{% url 'groby:szukaj' %}" class="px-4 py-2 border border-cream-200 text-primary-700 hover:bg-cream-100 rounded-md transition text-sm whitespace-nowrap">
+                    ✕ Wyczyść
+                </a>
             {% endif %}
         </div>
-    </div>
+    </form>
+
+    {% if aktywne_filtry %}
+        <div class="mb-5 text-sm">
+            <div class="text-primary-600">
+                {% if total %}
+                    Znaleziono <strong class="text-primary-900">{{ total }}</strong> {{ total|pluralize:"wynik,wyniki,wyników" }}
+                {% else %}
+                    <span class="text-primary-500">Brak wyników dla wybranych kryteriów</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if page.object_list %}
+            <div class="space-y-3">
+                {% for osoba in page.object_list %}
+                    <a href="{% url 'groby:osoba_detail' osoba.pk %}" class="flex items-center gap-4 bg-white hover:bg-cream-50 border border-cream-200 hover:border-primary-300 rounded-lg p-5 shadow-soft transition group">
+                        <div class="w-12 h-12 rounded-full bg-primary-100 group-hover:bg-primary-200 flex items-center justify-center flex-shrink-0 transition">
+                            <span class="font-serif text-lg text-primary-700">{{ osoba.imie|first }}{{ osoba.nazwisko|first }}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-serif text-xl text-primary-900 truncate">
+                                {{ osoba.imie }}{% if osoba.drugie_imie %} {{ osoba.drugie_imie }}{% endif %} <strong>{{ osoba.nazwisko }}</strong>
+                                {% if osoba.nazwisko_rodowe %}<span class="text-primary-500 text-sm italic">(z d. {{ osoba.nazwisko_rodowe }})</span>{% endif %}
+                            </div>
+                            <div class="text-sm text-primary-600 mt-0.5">
+                                {% if osoba.data_urodzenia %}{{ osoba.data_urodzenia|date:"Y" }}{% else %}?{% endif %}
+                                <span class="mx-2 text-accent-500">—</span>
+                                {% if osoba.data_smierci %}{{ osoba.data_smierci|date:"Y" }}{% else %}?{% endif %}
+                                {% if osoba.wiek %}<span class="text-primary-400 ml-2">· {{ osoba.wiek }} lat</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="hidden sm:block text-xs text-primary-700 bg-cream-100 px-3 py-1.5 rounded-full flex-shrink-0">
+                            Sektor {{ osoba.grob.sektor.nazwa }} · nr {{ osoba.grob.numer }}
+                        </div>
+                        <svg class="w-5 h-5 text-primary-300 group-hover:text-primary-700 group-hover:translate-x-1 transition flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                {% endfor %}
+            </div>
+
+            {% if page.paginator.num_pages > 1 %}
+                <nav class="mt-8 flex items-center justify-center gap-2 text-sm">
+                    {% if page.has_previous %}
+                        <a href="?page={{ page.previous_page_number }}{% if querystring_bez_page %}&{{ querystring_bez_page }}{% endif %}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">← Poprzednia</a>
+                    {% else %}
+                        <span class="px-4 py-2 border border-cream-100 rounded-md text-primary-300">← Poprzednia</span>
+                    {% endif %}
+
+                    <span class="px-5 py-2 text-primary-700">
+                        <strong>{{ page.number }}</strong> / {{ page.paginator.num_pages }}
+                    </span>
+
+                    {% if page.has_next %}
+                        <a href="?page={{ page.next_page_number }}{% if querystring_bez_page %}&{{ querystring_bez_page }}{% endif %}" class="px-4 py-2 border border-cream-200 rounded-md hover:bg-cream-100 transition">Następna →</a>
+                    {% else %}
+                        <span class="px-4 py-2 border border-cream-100 rounded-md text-primary-300">Następna →</span>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-10 text-center">
+                <svg class="w-12 h-12 mx-auto text-primary-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <div class="text-primary-600">Spróbuj zmienić kryteria wyszukiwania.</div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-12 text-center">
+            <svg class="w-14 h-14 mx-auto text-primary-300 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <h3 class="font-serif text-2xl text-primary-900 mb-2">Rozpocznij wyszukiwanie</h3>
+            <p class="text-primary-600 max-w-md mx-auto">Wpisz frazę w pole wyszukiwania lub skorzystaj z filtrów, aby przeszukać rejestr.</p>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}
