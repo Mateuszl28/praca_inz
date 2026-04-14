@@ -1,0 +1,7 @@
+Django>=5.2,<6.0
+pillow
+pandas
+openpyxl
+python-dotenv
+gunicorn
+psycopg2-binary
