@@ -165,6 +165,8 @@ def statystyki(request):
 
 
 def mapa(request):
+    from django.conf import settings
+
     groby = Grob.objects.filter(
         szerokosc_geo__isnull=False,
         dlugosc_geo__isnull=False,
@@ -186,11 +188,26 @@ def mapa(request):
             'url': reverse('groby:grob_detail', args=[g.pk]),
         })
 
+    # Opcjonalny podkład — plan cmentarza (obraz na mapie)
+    plan_url = plan_bounds = None
+    if settings.PLAN_IMAGE and settings.PLAN_BOUNDS_RAW:
+        try:
+            sw, ne = settings.PLAN_BOUNDS_RAW.split(';')
+            sw_lat, sw_lng = [float(x) for x in sw.split(',')]
+            ne_lat, ne_lng = [float(x) for x in ne.split(',')]
+            plan_bounds = [[sw_lat, sw_lng], [ne_lat, ne_lng]]
+            plan_url = settings.MEDIA_URL + settings.PLAN_IMAGE
+        except (ValueError, AttributeError):
+            plan_bounds = None
+
     context = {
         'groby_json': json.dumps(dane, ensure_ascii=False),
         'liczba': len(dane),
         'centrum_lat': SZYDLOW_CENTRUM[0],
         'centrum_lng': SZYDLOW_CENTRUM[1],
+        'plan_url': plan_url,
+        'plan_bounds_json': json.dumps(plan_bounds) if plan_bounds else 'null',
+        'plan_opacity': settings.PLAN_OPACITY,
     }
     return render(request, 'groby/mapa.html', context)
 

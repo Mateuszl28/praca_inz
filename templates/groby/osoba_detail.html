@@ -5,13 +5,19 @@
 
 {% block content %}
 <section class="max-w-3xl mx-auto px-4 py-10">
-    <nav class="text-sm text-primary-500 mb-6">
-        <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
-        <span class="mx-2">/</span>
-        <a href="{% url 'groby:szukaj' %}" class="hover:text-primary-800">Wyszukiwanie</a>
-        <span class="mx-2">/</span>
-        <span class="text-primary-700">{{ osoba.imie }} {{ osoba.nazwisko }}</span>
-    </nav>
+    <div class="flex items-center justify-between mb-6">
+        <nav class="text-sm text-primary-500">
+            <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
+            <span class="mx-2">/</span>
+            <a href="{% url 'groby:szukaj' %}" class="hover:text-primary-800">Wyszukiwanie</a>
+            <span class="mx-2">/</span>
+            <span class="text-primary-700">{{ osoba.imie }} {{ osoba.nazwisko }}</span>
+        </nav>
+        <button type="button" onclick="window.print()" class="no-print flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Drukuj lub zapisz jako PDF">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <span>Drukuj</span>
+        </button>
+    </div>
 
     <article class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
         <div class="bg-gradient-to-b from-cream-100 to-white px-10 py-12 text-center border-b border-cream-200">

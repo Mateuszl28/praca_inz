@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load l10n polish %}
+{% load static %}
 
 {% block title %}Mapa cmentarza — Informator Cmentarny Szydłów{% endblock %}
 
@@ -42,10 +43,27 @@
         maxZoom: 20,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
         maxZoom: 20,
-    }).addTo(mapa);
+    });
+
+    const planBounds = {{ plan_bounds_json|safe }};
+    const planUrl = {% if plan_url %}'{{ plan_url }}'{% else %}null{% endif %};
+
+    let planLayer = null;
+    if (planBounds && planUrl) {
+        planLayer = L.imageOverlay(planUrl, planBounds, { opacity: {{ plan_opacity|unlocalize }} });
+        planLayer.addTo(mapa);
+        osmLayer.addTo(mapa);
+        L.control.layers(
+            { 'Plan cmentarza': planLayer, 'OpenStreetMap': osmLayer },
+            {},
+            { position: 'topright', collapsed: false }
+        ).addTo(mapa);
+    } else {
+        osmLayer.addTo(mapa);
+    }
 
     const ikonaGrobu = L.divIcon({
         className: 'marker-grob',

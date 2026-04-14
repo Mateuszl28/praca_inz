@@ -76,3 +76,12 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Opcjonalny podkład mapy — skan planu cmentarza.
+# Aby użyć własnego planu, umieść obraz w katalogu media/plan_cmentarza/ i ustaw w .env:
+#   PLAN_IMAGE=plan_cmentarza/nazwa.jpg
+#   PLAN_BOUNDS=50.5841,20.8315;50.5855,20.8340    (SW_lat,SW_lng;NE_lat,NE_lng)
+# Gdy zmienne nie są ustawione, mapa pokazuje standardowe kafelki OpenStreetMap.
+PLAN_IMAGE = os.getenv('PLAN_IMAGE', '').strip()
+PLAN_BOUNDS_RAW = os.getenv('PLAN_BOUNDS', '').strip()
+PLAN_OPACITY = float(os.getenv('PLAN_OPACITY', '0.85'))

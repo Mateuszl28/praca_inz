@@ -90,11 +90,28 @@
         html.dark .hover\:bg-cream-100:hover { background-color: #2e4430 !important; }
         html.dark input, html.dark select, html.dark textarea { background-color: #1a2719 !important; color: #e0e7df !important; border-color: #2e4430 !important; }
         html.dark input::placeholder { color: #6a8a68 !important; }
+
+        /* Wydruk — ukrywa nawigację, stopkę, przyciski; oczyszcza tło i cienie */
+        @media print {
+            html.dark body { background: #fff !important; color: #000 !important; }
+            header, footer, .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+            a { color: #000 !important; text-decoration: none !important; }
+            .shadow-soft, .shadow-lift { box-shadow: none !important; }
+            .bg-white, .bg-cream-50, .bg-cream-100, .bg-cream-200, .bg-primary-50, .bg-primary-100 { background: #fff !important; }
+            .bg-primary-700, .bg-primary-800, .bg-primary-900, .bg-gradient-to-b, .bg-gradient-to-br { background: #fff !important; color: #000 !important; }
+            .border-cream-100, .border-cream-200 { border-color: #999 !important; }
+            .text-primary-900, .text-primary-800, .text-primary-700, .text-primary-600, .text-primary-500, .text-cream-50, .text-accent-400, .text-accent-500, .text-accent-600 { color: #000 !important; }
+            section { page-break-inside: avoid; padding: 0.5rem 0 !important; }
+            main { padding: 0 !important; }
+        }
+        .print-only { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">
 
-<header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/90">
+<header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/90 no-print">
     <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <a href="{% url 'groby:home' %}" class="flex items-center gap-3 group">
             <div class="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center text-cream-50 group-hover:bg-primary-800 transition">
@@ -152,7 +169,7 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="bg-primary-900 text-primary-200 mt-20">
+<footer class="bg-primary-900 text-primary-200 mt-20 no-print">
     <div class="max-w-6xl mx-auto px-4 py-12">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
