@@ -22,23 +22,10 @@
             Wpisz imię lub nazwisko, aby znaleźć lokalizację grobu.
         </p>
 
-        <form action="{% url 'groby:szukaj' %}" method="get" class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-lg p-2 shadow-lift">
-                <div class="flex-1 flex items-center gap-3 px-4">
-                    <svg class="w-5 h-5 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <input
-                        type="text"
-                        name="q"
-                        placeholder="Wpisz imię lub nazwisko…"
-                        class="flex-1 py-3 text-primary-900 bg-transparent focus:outline-none text-base"
-                        autofocus
-                    >
-                </div>
-                <button type="submit" class="px-8 py-3 bg-primary-700 hover:bg-primary-800 text-cream-50 rounded-md font-medium transition">
-                    Szukaj
-                </button>
-            </div>
-        </form>
+        <a href="{% url 'groby:szukaj' %}" class="inline-flex items-center gap-3 px-8 py-4 bg-accent-500 hover:bg-accent-600 text-primary-900 rounded-md font-medium transition shadow-lift">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Przejdź do wyszukiwarki
+        </a>
     </div>
 </section>
 
