@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Sektory — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-800 mb-2">Sektory cmentarza</h1>
+    <p class="text-primary-600 mb-8">Wybierz sektor, aby zobaczyć listę znajdujących się w nim grobów.</p>
+
+    {% if sektory %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for s in sektory %}
+                <a href="{% url 'groby:sektor_detail' s.pk %}" class="bg-white rounded-lg border border-primary-100 p-6 shadow-sm hover:shadow-md hover:border-primary-300 transition group">
+                    <div class="flex items-baseline justify-between mb-3">
+                        <div class="font-serif text-3xl text-primary-900 group-hover:text-primary-700">{{ s.nazwa }}</div>
+                        <svg class="w-5 h-5 text-primary-400 group-hover:text-primary-700 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    {% if s.opis %}
+                        <div class="text-sm text-primary-600 mb-4 line-clamp-2">{{ s.opis }}</div>
+                    {% endif %}
+                    <div class="flex gap-4 text-sm text-primary-700">
+                        <div><strong>{{ s.liczba_grobow }}</strong> {{ s.liczba_grobow|pluralize:"grób,groby,grobów" }}</div>
+                        <div><strong>{{ s.liczba_osob }}</strong> {{ s.liczba_osob|pluralize:"osoba,osoby,osób" }}</div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-sm border border-primary-100 p-8 text-primary-600">
+            Brak sektorów. Dodaj pierwszy w <a href="/admin/groby/sektor/add/" class="text-primary-800 underline">panelu admina</a>.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
