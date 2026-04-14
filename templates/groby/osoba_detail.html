@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load polish %}
 
 {% block title %}{{ osoba.imie }} {{ osoba.nazwisko }} — Informator Cmentarny Szydłów{% endblock %}
 
@@ -40,7 +41,7 @@
             </div>
 
             {% if osoba.wiek %}
-                <div class="mt-4 text-sm text-primary-500">Żył(a) {{ osoba.wiek }} {{ osoba.wiek|pluralize:"rok,lata,lat" }}</div>
+                <div class="mt-4 text-sm text-primary-500">Żył(a) {{ osoba.wiek }} {{ osoba.wiek|odmien:"rok,lata,lat" }}</div>
             {% endif %}
         </div>
 

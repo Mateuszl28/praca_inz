@@ -16,11 +16,22 @@
 
     <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden mb-8">
         <div class="flex flex-col md:flex-row">
-            {% if grob.zdjecie %}
-                <div class="md:w-80 flex-shrink-0 bg-cream-100">
+            <div class="md:w-80 flex-shrink-0 bg-cream-100 relative overflow-hidden">
+                {% if grob.zdjecie %}
                     <img src="{{ grob.zdjecie.url }}" alt="Zdjęcie grobu" class="w-full h-full object-cover aspect-square md:aspect-auto">
-                </div>
-            {% endif %}
+                {% else %}
+                    <div class="aspect-square md:aspect-auto md:h-full flex items-center justify-center bg-gradient-to-b from-cream-100 to-cream-200 text-primary-300">
+                        <svg class="w-24 h-24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v8M8 6h8"/>
+                            <path d="M6 22V12a6 6 0 0 1 12 0v10"/>
+                            <path d="M4 22h16"/>
+                        </svg>
+                    </div>
+                    <div class="absolute bottom-2 left-0 right-0 text-center text-[11px] uppercase tracking-widest text-primary-400">
+                        Brak zdjęcia
+                    </div>
+                {% endif %}
+            </div>
             <div class="flex-1 p-8">
                 <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Grób</div>
                 <h1 class="font-serif text-4xl text-primary-900 mb-1">Nr {{ grob.numer }}</h1>

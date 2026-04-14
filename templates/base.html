@@ -9,7 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
@@ -59,6 +65,31 @@
         }
         .ornament { display: flex; align-items: center; gap: 1rem; }
         .ornament > span { flex: 0 0 auto; }
+
+        /* Ciemny motyw — pragmatyczne nadpisania kluczowych powierzchni */
+        html.dark body { background-color: #141f13; color: #e0e7df; }
+        html.dark .bg-cream-50 { background-color: #141f13 !important; }
+        html.dark .bg-cream-100 { background-color: #1a2719 !important; }
+        html.dark .bg-cream-200 { background-color: #253626 !important; }
+        html.dark .bg-white { background-color: #1f2d1e !important; }
+        html.dark .bg-white\/90 { background-color: rgba(31, 45, 30, 0.92) !important; }
+        html.dark .border-cream-100 { border-color: #253626 !important; }
+        html.dark .border-cream-200 { border-color: #2e4430 !important; }
+        html.dark .text-primary-900 { color: #f5f1e7 !important; }
+        html.dark .text-primary-800 { color: #e0e7df !important; }
+        html.dark .text-primary-700 { color: #bfd0bd !important; }
+        html.dark .text-primary-600 { color: #a8bfa6 !important; }
+        html.dark .text-primary-500 { color: #94ae93 !important; }
+        html.dark .text-primary-400 { color: #7d9c7b !important; }
+        html.dark .text-primary-300 { color: #6a8a68 !important; }
+        html.dark .shadow-soft { box-shadow: 0 1px 3px 0 rgba(0,0,0,.35), 0 1px 2px -1px rgba(0,0,0,.3) !important; }
+        html.dark .shadow-lift { box-shadow: 0 10px 30px -12px rgba(0,0,0,.6) !important; }
+        html.dark .bg-primary-100 { background-color: #2e4430 !important; }
+        html.dark .bg-primary-50 { background-color: #253626 !important; }
+        html.dark .hover\:bg-cream-50:hover { background-color: #253626 !important; }
+        html.dark .hover\:bg-cream-100:hover { background-color: #2e4430 !important; }
+        html.dark input, html.dark select, html.dark textarea { background-color: #1a2719 !important; color: #e0e7df !important; border-color: #2e4430 !important; }
+        html.dark input::placeholder { color: #6a8a68 !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">
@@ -79,11 +110,32 @@
             </div>
         </a>
         <nav class="hidden sm:flex items-center gap-1 text-sm">
-            <a href="{% url 'groby:home' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Strona główna</a>
-            <a href="{% url 'groby:szukaj' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Wyszukaj</a>
-            <a href="{% url 'groby:sektory_list' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Sektory</a>
-            <a href="{% url 'groby:mapa' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 transition">Mapa</a>
-            <a href="/admin/" class="ml-2 px-4 py-2 rounded-md bg-primary-700 text-cream-50 hover:bg-primary-800 transition text-sm">Panel admina</a>
+            <a href="{% url 'groby:home' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Strona główna</span>
+            </a>
+            <a href="{% url 'groby:szukaj' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>Wyszukaj</span>
+            </a>
+            <a href="{% url 'groby:sektory_list' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span>Sektory</span>
+            </a>
+            <a href="{% url 'groby:mapa' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Mapa</span>
+            </a>
+
+            <button id="theme-toggle" type="button" aria-label="Przełącz motyw" class="ml-2 p-2 rounded-md text-primary-700 hover:bg-cream-100 hover:text-primary-900 transition">
+                <svg class="w-5 h-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            </button>
+
+            <a href="/admin/" class="ml-1 flex items-center gap-2 px-4 py-2 rounded-md bg-primary-700 text-cream-50 hover:bg-primary-800 transition text-sm">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+                <span>Panel admina</span>
+            </a>
         </nav>
     </div>
 </header>
@@ -129,6 +181,17 @@
         </div>
     </div>
 </footer>
+
+<script>
+    (function() {
+        const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+        });
+    })();
+</script>
 
 </body>
 </html>

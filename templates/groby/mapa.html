@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n polish %}
 
 {% block title %}Mapa cmentarza — Informator Cmentarny Szydłów{% endblock %}
 
@@ -26,7 +27,7 @@
     </div>
 
     <div class="text-sm text-primary-500">
-        Wyświetlono <strong class="text-primary-800">{{ liczba }}</strong> {{ liczba|pluralize:"grób,groby,grobów" }} z zarejestrowaną lokalizacją.
+        Wyświetlono <strong class="text-primary-800">{{ liczba }}</strong> {{ liczba|odmien:"grób,groby,grobów" }} z zarejestrowaną lokalizacją.
     </div>
 </section>
 
@@ -35,7 +36,7 @@
     const groby = {{ groby_json|safe }};
 
     const mapa = L.map('mapa', {
-        center: [{{ centrum_lat }}, {{ centrum_lng }}],
+        center: [{{ centrum_lat|unlocalize }}, {{ centrum_lng|unlocalize }}],
         zoom: 18,
         minZoom: 15,
         maxZoom: 20,

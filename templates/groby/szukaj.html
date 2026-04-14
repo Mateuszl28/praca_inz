@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load polish %}
 
 {% block title %}Wyszukiwanie — Informator Cmentarny Szydłów{% endblock %}
 
@@ -65,7 +66,7 @@
         <div class="mb-5 text-sm">
             <div class="text-primary-600">
                 {% if total %}
-                    Znaleziono <strong class="text-primary-900">{{ total }}</strong> {{ total|pluralize:"wynik,wyniki,wyników" }}
+                    Znaleziono <strong class="text-primary-900">{{ total }}</strong> {{ total|odmien:"wynik,wyniki,wyników" }}
                 {% else %}
                     <span class="text-primary-500">Brak wyników dla wybranych kryteriów</span>
                 {% endif %}
