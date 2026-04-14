@@ -1,7 +1,12 @@
+import json
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
+from django.urls import reverse
 from .models import Osoba, Grob, Sektor
+
+
+SZYDLOW_CENTRUM = (50.5847, 20.8327)
 
 
 def home(request):
@@ -84,6 +89,37 @@ def sektor_detail(request, pk):
 def grob_detail(request, pk):
     grob = get_object_or_404(Grob.objects.select_related('sektor').prefetch_related('osoby'), pk=pk)
     return render(request, 'groby/grob_detail.html', {'grob': grob})
+
+
+def mapa(request):
+    groby = Grob.objects.filter(
+        szerokosc_geo__isnull=False,
+        dlugosc_geo__isnull=False,
+    ).select_related('sektor').prefetch_related('osoby')
+
+    dane = []
+    for g in groby:
+        osoby_str = [
+            f'{o.imie} {o.nazwisko}' + (f' (z d. {o.nazwisko_rodowe})' if o.nazwisko_rodowe else '')
+            for o in g.osoby.all()
+        ]
+        dane.append({
+            'lat': g.szerokosc_geo,
+            'lng': g.dlugosc_geo,
+            'sektor': g.sektor.nazwa,
+            'numer': g.numer,
+            'typ': g.get_typ_display(),
+            'osoby': osoby_str,
+            'url': reverse('groby:grob_detail', args=[g.pk]),
+        })
+
+    context = {
+        'groby_json': json.dumps(dane, ensure_ascii=False),
+        'liczba': len(dane),
+        'centrum_lat': SZYDLOW_CENTRUM[0],
+        'centrum_lng': SZYDLOW_CENTRUM[1],
+    }
+    return render(request, 'groby/mapa.html', context)
 
 
 def osoba_detail(request, pk):
