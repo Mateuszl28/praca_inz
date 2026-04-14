@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}O cmentarzu — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900"></div>
+    <div class="relative max-w-4xl mx-auto px-4 py-20 text-center text-cream-50">
+        <div class="inline-flex items-center gap-3 mb-6 text-accent-400">
+            <div class="h-px w-10 bg-accent-400/60"></div>
+            <span class="text-xs uppercase tracking-[0.3em]">O cmentarzu</span>
+            <div class="h-px w-10 bg-accent-400/60"></div>
+        </div>
+        <h1 class="font-serif text-5xl sm:text-6xl font-light leading-tight mb-4">
+            Cmentarz parafialny<br><em class="text-accent-400 font-medium">w Szydłowie</em>
+        </h1>
+        <p class="text-primary-200 text-lg max-w-2xl mx-auto font-light">
+            Miejsce pamięci mieszkańców Szydłowa — historycznego miasteczka
+            na ziemi świętokrzyskiej, zwanego „polskim Carcassonne".
+        </p>
+    </div>
+</section>
+
+<section class="max-w-4xl mx-auto px-4 py-16">
+    <div class="prose-none">
+        <div class="text-accent-600 text-xs uppercase tracking-widest mb-3">Historia</div>
+        <h2 class="font-serif text-4xl text-primary-900 mb-6">Ślad minionych pokoleń</h2>
+        <div class="space-y-5 text-primary-700 text-lg leading-relaxed font-light">
+            <p>
+                Szydłów to jedno z najstarszych miasteczek w regionie świętokrzyskim, z tradycjami sięgającymi
+                średniowiecza. Prawa miejskie otrzymał w XIV wieku od króla Kazimierza Wielkiego,
+                a jego zachowane mury obronne czynią go jednym z najlepiej zachowanych zespołów obronnych
+                w Polsce.
+            </p>
+            <p>
+                Cmentarz parafialny, związany z kościołem pod wezwaniem świętego Władysława, od pokoleń
+                stanowi miejsce spoczynku mieszkańców. Znajdują się na nim nagrobki dokumentujące
+                losy lokalnych rodzin — obok współczesnych grobów zachowały się również pomniki świadczące
+                o dawniejszych wiekach historii miasteczka.
+            </p>
+            <p class="italic text-primary-500 text-base">
+                Szczegółowy rys historyczny zostanie uzupełniony w ramach prac nad niniejszym serwisem.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="bg-cream-100 border-y border-cream-200 py-16">
+    <div class="max-w-5xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-accent-600 mb-1">Adres</div>
+                        <h3 class="font-serif text-2xl text-primary-900 mb-3">Parafia św. Władysława</h3>
+                        <address class="not-italic text-primary-700 leading-relaxed">
+                            ul. Kościelna<br>
+                            28-225 Szydłów<br>
+                            woj. świętokrzyskie
+                        </address>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-accent-600 mb-1">Godziny otwarcia</div>
+                        <h3 class="font-serif text-2xl text-primary-900 mb-3">Cmentarz</h3>
+                        <dl class="text-primary-700 leading-relaxed space-y-1">
+                            <div class="flex justify-between gap-8"><dt>Poniedziałek — piątek</dt><dd>8:00 — 20:00</dd></div>
+                            <div class="flex justify-between gap-8"><dt>Sobota — niedziela</dt><dd>7:00 — 20:00</dd></div>
+                            <div class="flex justify-between gap-8 text-primary-500 text-sm pt-2"><dt>Wszystkich Świętych</dt><dd>całodobowo</dd></div>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="max-w-5xl mx-auto px-4 py-16">
+    <div class="text-center mb-10">
+        <div class="text-accent-600 text-xs uppercase tracking-widest mb-2">Informacje praktyczne</div>
+        <h2 class="font-serif text-4xl text-primary-900">Przed wizytą na cmentarzu</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+                <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Wyszukaj online</h3>
+            <p class="text-primary-600 text-sm leading-relaxed mb-4">
+                Zanim odwiedzisz cmentarz, skorzystaj z wyszukiwarki aby szybko zlokalizować grób bliskiej osoby.
+            </p>
+            <a href="{% url 'groby:szukaj' %}" class="text-primary-700 hover:text-primary-900 text-sm font-medium">Przejdź do wyszukiwarki →</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+                <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Zobacz lokalizację</h3>
+            <p class="text-primary-600 text-sm leading-relaxed mb-4">
+                Mapa interaktywna z zaznaczeniem wszystkich grobów pomoże dotrzeć na miejsce bez błądzenia.
+            </p>
+            <a href="{% url 'groby:mapa' %}" class="text-primary-700 hover:text-primary-900 text-sm font-medium">Otwórz mapę →</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+                <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12h6M9 16h6M9 8h6"/><rect x="5" y="3" width="14" height="18" rx="2"/></svg>
+            </div>
+            <h3 class="font-serif text-xl text-primary-900 mb-2">Regulamin</h3>
+            <p class="text-primary-600 text-sm leading-relaxed mb-2">
+                Prosimy o zachowanie ciszy, szacunku dla miejsca oraz niewprowadzanie zwierząt bez uzasadnionej potrzeby.
+                Pielęgnacja grobów i dekoracji pozostawiana jest rodzinom.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="max-w-4xl mx-auto px-4 pb-20">
+    <div class="ornament text-accent-500 text-center mb-6">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2v8M8 6h8"/><path d="M6 22V12a6 6 0 0 1 12 0v10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+    </div>
+    <p class="font-serif italic text-2xl text-center text-primary-700 leading-relaxed">
+        „Umarli żyją tak długo, dopóki pamiętają o nich żywi."
+    </p>
+</section>
+{% endblock %}

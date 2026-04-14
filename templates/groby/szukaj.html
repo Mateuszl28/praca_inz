@@ -15,13 +15,16 @@
             <div class="flex-1 min-w-[220px] relative">
                 <svg class="w-5 h-5 text-primary-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input
+                    id="q-input"
                     type="text"
                     name="q"
                     value="{{ query }}"
                     placeholder="Imię lub nazwisko…"
                     class="w-full h-11 pl-10 pr-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
+                    autocomplete="off"
                     autofocus
                 >
+                <div id="sugestie" class="hidden absolute left-0 right-0 top-[calc(100%+4px)] bg-white border border-cream-200 rounded-md shadow-lift z-50 overflow-hidden"></div>
             </div>
 
             <div class="h-11 w-px bg-cream-200 hidden lg:block self-center"></div>
@@ -133,4 +136,77 @@
         </div>
     {% endif %}
 </section>
+
+<script>
+    (function() {
+        const input = document.getElementById('q-input');
+        const box = document.getElementById('sugestie');
+        if (!input || !box) return;
+
+        let debounceTimer = null;
+        let activeIndex = -1;
+        let wyniki = [];
+
+        function zamknij() {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            activeIndex = -1;
+            wyniki = [];
+        }
+
+        function render() {
+            if (!wyniki.length) { zamknij(); return; }
+            box.innerHTML = wyniki.map(function(r, i) {
+                return '<a href="' + r.url + '" data-idx="' + i + '" class="flex items-center gap-3 px-4 py-3 hover:bg-cream-50 border-b border-cream-100 last:border-0 transition' + (i === activeIndex ? ' bg-cream-50' : '') + '">'
+                    + '<div class="flex-1 min-w-0">'
+                    + '<div class="font-serif text-base text-primary-900 truncate">' + r.nazwa + '</div>'
+                    + '<div class="text-xs text-primary-500">' + r.lata + '</div>'
+                    + '</div>'
+                    + '<div class="text-xs text-primary-600 bg-cream-100 px-2 py-1 rounded-full flex-shrink-0">' + r.grob + '</div>'
+                    + '</a>';
+            }).join('');
+            box.classList.remove('hidden');
+        }
+
+        function pobierz(q) {
+            fetch('{% url "groby:sugestie" %}?q=' + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    wyniki = data.results || [];
+                    activeIndex = -1;
+                    render();
+                })
+                .catch(function() { zamknij(); });
+        }
+
+        input.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const q = input.value.trim();
+            if (q.length < 2) { zamknij(); return; }
+            debounceTimer = setTimeout(function() { pobierz(q); }, 180);
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (!wyniki.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % wyniki.length;
+                render();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + wyniki.length) % wyniki.length;
+                render();
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                window.location.href = wyniki[activeIndex].url;
+            } else if (e.key === 'Escape') {
+                zamknij();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !box.contains(e.target)) zamknij();
+        });
+    })();
+</script>
 {% endblock %}

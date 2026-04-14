@@ -3,6 +3,7 @@ from collections import Counter
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.urls import reverse
 from .models import Osoba, Grob, Sektor
 
@@ -90,6 +91,34 @@ def sektor_detail(request, pk):
 def grob_detail(request, pk):
     grob = get_object_or_404(Grob.objects.select_related('sektor').prefetch_related('osoby'), pk=pk)
     return render(request, 'groby/grob_detail.html', {'grob': grob})
+
+
+def o_cmentarzu(request):
+    return render(request, 'groby/o_cmentarzu.html')
+
+
+def sugestie(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'results': []})
+    osoby = (
+        Osoba.objects
+        .filter(Q(nazwisko__istartswith=q) | Q(imie__istartswith=q) | Q(nazwisko_rodowe__istartswith=q))
+        .select_related('grob', 'grob__sektor')
+        .order_by('nazwisko', 'imie')[:8]
+    )
+    data = []
+    for o in osoby:
+        rodowe = f' (z d. {o.nazwisko_rodowe})' if o.nazwisko_rodowe else ''
+        rok_ur = o.data_urodzenia.year if o.data_urodzenia else '?'
+        rok_sm = o.data_smierci.year if o.data_smierci else '?'
+        data.append({
+            'nazwa': f'{o.imie} {o.nazwisko}{rodowe}',
+            'lata': f'{rok_ur} — {rok_sm}',
+            'grob': f'Sektor {o.grob.sektor.nazwa} · nr {o.grob.numer}',
+            'url': reverse('groby:osoba_detail', args=[o.pk]),
+        })
+    return JsonResponse({'results': data})
 
 
 def statystyki(request):
