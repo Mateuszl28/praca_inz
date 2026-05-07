@@ -43,10 +43,11 @@ else
 fi
 
 # --- Klon / pull repo ---
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 if [ ! -d "$APP_DIR/.git" ]; then
     echo "[2/7] Klonuje repo do $APP_DIR..."
     rm -rf "$APP_DIR"
-    git clone --depth 1 "$REPO_URL" "$APP_DIR"
+    git clone "$REPO_URL" "$APP_DIR"
 else
     echo "[2/7] Aktualizuje repo (git pull)..."
     cd "$APP_DIR"
