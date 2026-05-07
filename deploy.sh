@@ -101,6 +101,21 @@ if [ "$EMPTY_DB" = "1" ] && [ -f "$APP_DIR/data/dump.json" ]; then
     "$APP_DIR/venv/bin/python" manage.py loaddata data/dump.json
 fi
 
+# Utworz konto admina (idempotentne).
+"$APP_DIR/venv/bin/python" manage.py shell <<'PY'
+from django.contrib.auth import get_user_model
+U = get_user_model()
+u, created = U.objects.get_or_create(
+    username='admin',
+    defaults={'email': 'admin@example.com', 'is_staff': True, 'is_superuser': True},
+)
+u.is_staff = True
+u.is_superuser = True
+u.set_password('admin123')
+u.save()
+print('Admin:', 'utworzono' if created else 'zaktualizowano', 'login=admin haslo=admin123')
+PY
+
 # Skopiuj plan jesli go nie ma w media
 if [ ! -f "$APP_DIR/media/plan_cmentarza/scan_oznaczenia.jpg" ] \
    && [ -f "$APP_DIR/data/plan_cmentarza/scan_oznaczenia.jpg" ]; then
