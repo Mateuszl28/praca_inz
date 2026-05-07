@@ -32,11 +32,11 @@ urlpatterns = [
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 
-    # QR naklejki do druku (staff)
+    # Panel staffu
+    path('staff/', views.dashboard_staff, name='dashboard'),
     path('staff/qr-naklejki/', views.qr_naklejki, name='qr_naklejki'),
-
-    # Historia zmian (staff)
     path('staff/historia/', views.historia_zmian, name='historia'),
+    path('staff/duplikaty/', views.duplikaty, name='duplikaty'),
 
     # Konta użytkowników
     path('rejestracja/', views.rejestracja, name='rejestracja'),

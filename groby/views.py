@@ -94,6 +94,10 @@ def szukaj(request):
     osoby = osoby.order_by('nazwisko', 'imie')
     total = osoby.count()
 
+    sugestia = None
+    if query and total == 0:
+        sugestia = _zaproponuj_nazwisko(query)
+
     paginator = Paginator(osoby, 20)
     page = paginator.get_page(request.GET.get('page'))
 
@@ -115,8 +119,29 @@ def szukaj(request):
         'typy': Grob.TYP_CHOICES,
         'aktywne_filtry': aktywne_filtry,
         'querystring_bez_page': querystring_bez_page,
+        'sugestia': sugestia,
     }
     return render(request, 'groby/szukaj.html', context)
+
+
+def _zaproponuj_nazwisko(query):
+    """Najbliższe nazwisko/imie do zapytania, używając difflib."""
+    import difflib
+    fraza = query.strip().lower()
+    if len(fraza) < 3:
+        return None
+    nazwiska = set()
+    for n, i in Osoba.objects.values_list('nazwisko', 'imie'):
+        if n: nazwiska.add(n)
+        if i: nazwiska.add(i)
+    bliskie = difflib.get_close_matches(fraza, [n.lower() for n in nazwiska], n=1, cutoff=0.7)
+    if not bliskie:
+        return None
+    bliska_lower = bliskie[0]
+    for n in nazwiska:
+        if n.lower() == bliska_lower:
+            return n
+    return None
 
 
 def sektory_list(request):
@@ -369,6 +394,8 @@ def zapal_swiece(request, pk):
     from datetime import timedelta
     from django.utils import timezone
     osoba = get_object_or_404(Osoba, pk=pk)
+    if _antybot(request):
+        return redirect('groby:osoba_detail', pk=pk)
     granica = timezone.now() - timedelta(minutes=10)
     iph = _hash_ip(request)
     if Swieca.objects.filter(osoba=osoba, ip_hash=iph, data_zapalenia__gte=granica).exists():
@@ -832,6 +859,54 @@ def przelacz_obserwacje(request, cel, pk):
         else:
             profil_obj.obserwowane_osoby.add(obj)
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def dashboard_staff(request):
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    metryki = {
+        'zgloszenia_nowe': Zgloszenie.objects.filter(status='nowe').count(),
+        'wspomnienia_oczekujace': Wspomnienie.objects.filter(status='oczekuje').count(),
+        'groby_bez_pozycji': Grob.objects.filter(plan_x__isnull=True).count(),
+        'groby_bez_osob': Grob.objects.annotate(_n=Count('osoby')).filter(_n=0).count(),
+        'osoby_bez_dat': Osoba.objects.filter(data_smierci__isnull=True).count(),
+        'liczba_zdjec': Zdjecie.objects.count(),
+        'aktywne_swiece_24h': Swieca.objects.filter(data_zapalenia__gte=_now_minus_hours(24)).count(),
+        'liczba_userow': __import__('django.contrib.auth', fromlist=['get_user_model']).get_user_model().objects.count(),
+        'ostatnie_zmiany': HistoriaZmian.objects.select_related('user').order_by('-data')[:10],
+        'najnowsze_zgloszenia': Zgloszenie.objects.select_related('grob__sektor', 'osoba').order_by('-data_dodania')[:5],
+        'najnowsze_wspomnienia': Wspomnienie.objects.filter(status='oczekuje').select_related('osoba')[:5],
+    }
+    return render(request, 'groby/dashboard.html', metryki)
+
+
+def _now_minus_hours(h):
+    from datetime import timedelta
+    from django.utils import timezone
+    return timezone.now() - timedelta(hours=h)
+
+
+def duplikaty(request):
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    klucze = defaultdict(list)
+    for o in Osoba.objects.select_related('grob__sektor').all():
+        klucz = (o.imie.lower().strip(), o.nazwisko.lower().strip(),
+                 o.data_smierci.year if o.data_smierci else None)
+        klucze[klucz].append(o)
+    grupy = []
+    for klucz, lista in klucze.items():
+        if len(lista) > 1:
+            grupy.append({
+                'imie': klucz[0].title(),
+                'nazwisko': klucz[1].title(),
+                'rok': klucz[2],
+                'osoby': sorted(lista, key=lambda o: o.pk),
+            })
+    grupy.sort(key=lambda g: (g['nazwisko'], g['imie']))
+    return render(request, 'groby/duplikaty.html', {
+        'grupy': grupy,
+    })
 
 
 def historia_zmian(request):

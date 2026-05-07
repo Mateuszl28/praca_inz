@@ -133,6 +133,12 @@
             <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-10 text-center">
                 <svg class="w-12 h-12 mx-auto text-primary-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <div class="text-primary-600">Spróbuj zmienić kryteria wyszukiwania.</div>
+                {% if sugestia %}
+                    <div class="mt-4 text-primary-700">
+                        Czy chodziło o:
+                        <a href="?q={{ sugestia|urlencode }}" class="text-accent-600 font-semibold hover:underline">{{ sugestia }}</a>?
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
     {% else %}

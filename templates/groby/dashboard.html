@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard administratora — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Panel staffu</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Dashboard</h1>
+    <p class="text-primary-600 mb-8">Bieżący stan danych i kolejek do moderacji.</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <a href="/admin/groby/zgloszenie/?status__exact=nowe" class="block bg-white rounded-lg p-5 shadow-soft border border-cream-200 hover:border-accent-400 transition">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Nowe zgłoszenia</div>
+            <div class="font-serif text-4xl {% if zgloszenia_nowe %}text-accent-600{% else %}text-primary-300{% endif %}">{{ zgloszenia_nowe }}</div>
+        </a>
+        <a href="/admin/groby/wspomnienie/?status__exact=oczekuje" class="block bg-white rounded-lg p-5 shadow-soft border border-cream-200 hover:border-accent-400 transition">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Wspomnienia w kolejce</div>
+            <div class="font-serif text-4xl {% if wspomnienia_oczekujace %}text-accent-600{% else %}text-primary-300{% endif %}">{{ wspomnienia_oczekujace }}</div>
+        </a>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Groby bez pozycji</div>
+            <div class="font-serif text-4xl text-primary-700">{{ groby_bez_pozycji }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Groby bez osób</div>
+            <div class="font-serif text-4xl text-primary-700">{{ groby_bez_osob }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Osoby bez daty śmierci</div>
+            <div class="font-serif text-4xl text-primary-700">{{ osoby_bez_dat }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Zdjęć w galerii</div>
+            <div class="font-serif text-4xl text-primary-700">{{ liczba_zdjec }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Aktywne świeczki (24h)</div>
+            <div class="font-serif text-4xl text-accent-600">{{ aktywne_swiece_24h }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-5 shadow-soft border border-cream-200">
+            <div class="text-xs uppercase tracking-wider text-primary-500 mb-1">Użytkownicy</div>
+            <div class="font-serif text-4xl text-primary-700">{{ liczba_userow }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4 flex items-center justify-between">
+                <span>Ostatnie zgłoszenia</span>
+                <a href="/admin/groby/zgloszenie/" class="text-sm text-primary-600 hover:underline">Wszystkie →</a>
+            </h2>
+            {% if najnowsze_zgloszenia %}
+                <ul class="divide-y divide-cream-100">
+                    {% for z in najnowsze_zgloszenia %}
+                        <li class="py-3">
+                            <div class="flex items-center justify-between text-xs uppercase tracking-wider mb-1">
+                                <span class="{% if z.status == 'nowe' %}text-accent-600{% else %}text-primary-500{% endif %}">{{ z.get_status_display }}</span>
+                                <span class="text-primary-400">{{ z.data_dodania|date:"j.n.Y H:i" }}</span>
+                            </div>
+                            <a href="/admin/groby/zgloszenie/{{ z.pk }}/change/" class="text-primary-800 hover:underline text-sm">
+                                {{ z.tresc|truncatechars:120 }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-primary-500 text-sm">Brak zgłoszeń.</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4 flex items-center justify-between">
+                <span>Wspomnienia oczekujące</span>
+                <a href="/admin/groby/wspomnienie/?status__exact=oczekuje" class="text-sm text-primary-600 hover:underline">Wszystkie →</a>
+            </h2>
+            {% if najnowsze_wspomnienia %}
+                <ul class="divide-y divide-cream-100">
+                    {% for w in najnowsze_wspomnienia %}
+                        <li class="py-3">
+                            <div class="text-xs text-primary-500 mb-1">{{ w.osoba }} · {{ w.data_dodania|date:"j.n.Y H:i" }}</div>
+                            <a href="/admin/groby/wspomnienie/{{ w.pk }}/change/" class="text-primary-800 hover:underline text-sm">
+                                „{{ w.tresc|truncatechars:120 }}"
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-primary-500 text-sm">Brak wspomnień do moderacji.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4 flex items-center justify-between">
+            <span>Ostatnie zmiany danych</span>
+            <a href="{% url 'groby:historia' %}" class="text-sm text-primary-600 hover:underline">Pełna historia →</a>
+        </h2>
+        {% if ostatnie_zmiany %}
+            <ul class="divide-y divide-cream-100 text-sm">
+                {% for h in ostatnie_zmiany %}
+                    <li class="py-2 flex items-center gap-3">
+                        <span class="text-xs px-2 py-0.5 rounded {% if h.akcja == 'dodano' %}bg-primary-100 text-primary-800{% elif h.akcja == 'usunieto' %}bg-red-100 text-red-800{% else %}bg-accent-400/20 text-accent-600{% endif %}">{{ h.get_akcja_display }}</span>
+                        <span class="text-primary-700 flex-1 truncate">{{ h.model }} · {{ h.obiekt_repr }}</span>
+                        <span class="text-xs text-primary-500">{{ h.user|default:"—" }}</span>
+                        <span class="text-xs text-primary-400">{{ h.data|date:"j.n.Y H:i" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500 text-sm">Brak zmian.</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 flex flex-wrap gap-3 items-center">
+        <span class="text-xs uppercase tracking-wider text-primary-700">Skróty:</span>
+        <a href="{% url 'groby:qr_naklejki' %}" class="text-primary-800 hover:underline text-sm">QR — naklejki</a>
+        <a href="{% url 'groby:duplikaty' %}" class="text-primary-800 hover:underline text-sm">Duplikaty osób</a>
+        <a href="{% url 'groby:historia' %}" class="text-primary-800 hover:underline text-sm">Historia zmian</a>
+        <a href="/admin/" class="text-primary-800 hover:underline text-sm">Panel Django</a>
+    </div>
+</section>
+{% endblock %}
