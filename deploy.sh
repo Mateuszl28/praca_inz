@@ -82,20 +82,40 @@ fi
 
 # --- Migracje, collectstatic ---
 echo "[5/7] Migracje bazy + collectstatic..."
-mkdir -p "$APP_DIR/static" "$APP_DIR/media" "$APP_DIR/staticfiles"
+mkdir -p "$APP_DIR/static" "$APP_DIR/media/plan_cmentarza" "$APP_DIR/staticfiles"
 "$APP_DIR/venv/bin/python" manage.py migrate --noinput
 "$APP_DIR/venv/bin/python" manage.py collectstatic --noinput >/dev/null
 
-# Pierwszy uruchomienie: rozmiesc groby na planie jesli ich nie ma.
-if "$APP_DIR/venv/bin/python" - <<'PY'
+# --- Pierwsze uruchomienie: zaladuj fixture + skopiuj plan ---
+EMPTY_DB=$("$APP_DIR/venv/bin/python" -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+from groby.models import Osoba
+print('1' if Osoba.objects.count() == 0 else '0')
+")
+
+if [ "$EMPTY_DB" = "1" ] && [ -f "$APP_DIR/data/dump.json" ]; then
+    echo "  - baza pusta, laduje fixture data/dump.json..."
+    "$APP_DIR/venv/bin/python" manage.py loaddata data/dump.json
+fi
+
+# Skopiuj plan jesli go nie ma w media
+if [ ! -f "$APP_DIR/media/plan_cmentarza/scan_oznaczenia.jpg" ] \
+   && [ -f "$APP_DIR/data/plan_cmentarza/scan_oznaczenia.jpg" ]; then
+    cp "$APP_DIR/data/plan_cmentarza/scan_oznaczenia.jpg" "$APP_DIR/media/plan_cmentarza/"
+fi
+# (W repo plan zawsze siedzi w media/, wiec po git pull bedzie na miejscu.)
+
+# Rozmiesc groby na planie tylko jesli nie maja jeszcze pozycji.
+NEEDS_LAYOUT=$("$APP_DIR/venv/bin/python" -c "
 import django, os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 from groby.models import Grob
-import sys
-sys.exit(0 if Grob.objects.filter(plan_x__isnull=True).exists() else 1)
-PY
-then
+print('1' if Grob.objects.filter(plan_x__isnull=True).exists() else '0')
+")
+if [ "$NEEDS_LAYOUT" = "1" ]; then
     echo "  - rozmieszczam groby na planie..."
     "$APP_DIR/venv/bin/python" manage.py rozmiesc_groby \
         --x-min 730 --x-max 1290 --y-min 100 --y-max 3950 || true
