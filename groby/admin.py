@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Sektor, Grob, Osoba
+from .models import Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca
 
 
 admin.site.site_header = 'Informator Cmentarny — Szydłów'
@@ -11,6 +11,12 @@ class OsobaInline(admin.TabularInline):
     model = Osoba
     extra = 1
     fields = ('imie', 'nazwisko', 'nazwisko_rodowe', 'data_urodzenia', 'data_smierci')
+
+
+class ZdjecieInline(admin.TabularInline):
+    model = Zdjecie
+    extra = 1
+    fields = ('plik', 'podpis', 'kolejnosc')
 
 
 @admin.register(Sektor)
@@ -28,7 +34,7 @@ class GrobAdmin(admin.ModelAdmin):
     list_display = ('sektor', 'numer', 'rzad', 'typ', 'liczba_osob', 'data_modyfikacji')
     list_filter = ('sektor', 'typ')
     search_fields = ('numer', 'sektor__nazwa', 'osoby__nazwisko', 'osoby__imie')
-    inlines = [OsobaInline]
+    inlines = [OsobaInline, ZdjecieInline]
     readonly_fields = ('data_dodania', 'data_modyfikacji')
     fieldsets = (
         ('Lokalizacja', {'fields': ('sektor', 'numer', 'rzad', 'typ')}),
@@ -55,3 +61,86 @@ class OsobaAdmin(admin.ModelAdmin):
         ('Grób', {'fields': ('grob',)}),
         ('Biogram', {'fields': ('biogram',)}),
     )
+
+
+@admin.register(Zdjecie)
+class ZdjecieAdmin(admin.ModelAdmin):
+    list_display = ('grob', 'podpis', 'kolejnosc', 'data_dodania')
+    list_filter = ('grob__sektor',)
+    search_fields = ('grob__numer', 'podpis')
+    autocomplete_fields = ('grob',)
+
+
+@admin.register(Relacja)
+class RelacjaAdmin(admin.ModelAdmin):
+    list_display = ('osoba_a', 'typ', 'osoba_b')
+    list_filter = ('typ',)
+    autocomplete_fields = ('osoba_a', 'osoba_b')
+    search_fields = ('osoba_a__nazwisko', 'osoba_b__nazwisko')
+
+
+@admin.register(Zgloszenie)
+class ZgloszenieAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cel_str', 'autor_imie', 'status', 'data_dodania')
+    list_filter = ('status', 'typ')
+    search_fields = ('tresc', 'autor_imie', 'autor_email')
+    readonly_fields = ('data_dodania', 'data_modyfikacji', 'autor_user')
+    autocomplete_fields = ('grob', 'osoba')
+    fieldsets = (
+        ('Cel zgłoszenia', {'fields': ('grob', 'osoba')}),
+        ('Treść', {'fields': ('typ', 'tresc')}),
+        ('Autor', {'fields': ('autor_imie', 'autor_email', 'autor_user')}),
+        ('Moderacja', {'fields': ('status', 'odpowiedz')}),
+        ('Metadane', {'fields': ('data_dodania', 'data_modyfikacji'), 'classes': ('collapse',)}),
+    )
+
+    @admin.display(description='Cel')
+    def cel_str(self, obj):
+        if obj.osoba:
+            return f'Osoba: {obj.osoba}'
+        if obj.grob:
+            return f'Grób: {obj.grob}'
+        return '—'
+
+
+@admin.register(Profil)
+class ProfilAdmin(admin.ModelAdmin):
+    list_display = ('user', 'pokrewienstwo', 'data_utworzenia')
+    search_fields = ('user__username', 'user__email', 'pokrewienstwo')
+    filter_horizontal = ('obserwowane_groby', 'obserwowane_osoby')
+
+
+@admin.register(Wspomnienie)
+class WspomnienieAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'autor_str', 'status', 'data_dodania')
+    list_filter = ('status',)
+    search_fields = ('tresc', 'autor_imie', 'osoba__nazwisko')
+    autocomplete_fields = ('osoba',)
+    actions = ['zaakceptuj', 'odrzuc']
+    readonly_fields = ('data_dodania', 'autor_user')
+
+    @admin.action(description='Zaakceptuj wybrane wspomnienia')
+    def zaakceptuj(self, request, queryset):
+        for w in queryset:
+            w.status = 'zaakceptowane'
+            w.save()
+
+    @admin.action(description='Odrzuć wybrane wspomnienia')
+    def odrzuc(self, request, queryset):
+        queryset.update(status='odrzucone')
+
+
+@admin.register(Swieca)
+class SwiecaAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'intencja', 'autor_user', 'data_zapalenia')
+    search_fields = ('osoba__nazwisko', 'intencja')
+    readonly_fields = ('ip_hash', 'data_zapalenia')
+
+
+@admin.register(HistoriaZmian)
+class HistoriaZmianAdmin(admin.ModelAdmin):
+    list_display = ('data', 'akcja', 'model', 'obiekt_repr', 'user')
+    list_filter = ('akcja', 'model')
+    search_fields = ('obiekt_repr',)
+    readonly_fields = ('model', 'obiekt_id', 'obiekt_repr', 'akcja', 'pola', 'user', 'data')
+    date_hierarchy = 'data'

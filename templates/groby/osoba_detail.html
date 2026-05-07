@@ -72,6 +72,116 @@
         {% endif %}
     </article>
 
+    {# Świeczki #}
+    <div class="mt-8 bg-white rounded-lg shadow-soft border border-cream-200 p-6 no-print">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+                <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest"><span>Pamięć</span></div>
+                <div class="text-primary-700 mt-2">Aktywnych świeczek: <strong>{{ liczba_swiec }}</strong></div>
+            </div>
+            <form method="post" action="{% url 'groby:zapal_swiece' osoba.pk %}" class="flex flex-wrap items-center gap-2">
+                {% csrf_token %}
+                <input type="text" name="intencja" maxlength="200" placeholder="Intencja (opcjonalnie)" class="px-3 py-2 border border-cream-200 rounded text-sm">
+                <button type="submit" class="px-4 py-2 bg-accent-400 hover:bg-accent-500 text-primary-900 rounded font-medium">🕯 Zapal świeczkę</button>
+            </form>
+        </div>
+        {% if liczba_swiec %}
+            <div class="flex flex-wrap gap-3 mt-3">
+                {% for s in ostatnie_swiece %}
+                    <div class="flex items-center gap-2 bg-cream-50 border border-cream-200 rounded px-3 py-2 text-sm">
+                        <svg class="w-5 h-7 text-accent-500" viewBox="0 0 20 28" fill="currentColor"><ellipse cx="10" cy="6" rx="3" ry="5" fill="#f59e0b"><animate attributeName="ry" values="5;6;5" dur="1.2s" repeatCount="indefinite"/></ellipse><rect x="7" y="11" width="6" height="14" rx="1" fill="#fbf3d6" stroke="#c9a96a" stroke-width="0.5"/></svg>
+                        <div>
+                            <div class="text-primary-800">{{ s.intencja|default:"— bez intencji —" }}</div>
+                            <div class="text-xs text-primary-500">{{ s.data_zapalenia|timesince }} temu</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-primary-500 text-sm">Bądź pierwszą osobą, która zapali świeczkę. Pali się przez 24 godziny.</p>
+        {% endif %}
+    </div>
+
+    {# Wspomnienia #}
+    <div class="mt-6 bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+        <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4"><span>Wspomnienia</span></div>
+        {% if wspomnienia %}
+            <ul class="space-y-4 mb-6">
+                {% for w in wspomnienia %}
+                    <li class="border-l-2 border-accent-400 pl-4">
+                        <div class="text-primary-800 leading-relaxed font-serif italic">„{{ w.tresc|linebreaksbr }}"</div>
+                        <div class="mt-2 text-xs text-primary-500">— {{ w.autor_str }}, {{ w.data_dodania|date:"j.n.Y" }}</div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500 text-sm mb-4">Brak wspomnień. Bądź pierwszą osobą, która podzieli się wspomnieniem.</p>
+        {% endif %}
+        <details class="no-print">
+            <summary class="cursor-pointer text-primary-700 hover:text-primary-900 text-sm">Dodaj wspomnienie</summary>
+            <form method="post" action="{% url 'groby:dodaj_wspomnienie' osoba.pk %}" class="mt-3 space-y-3">
+                {% csrf_token %}
+                <textarea name="tresc" required rows="4" maxlength="5000" class="w-full px-3 py-2 border border-cream-200 rounded" placeholder="Twoje wspomnienie…"></textarea>
+                {% if not request.user.is_authenticated %}
+                    <input type="text" name="autor_imie" maxlength="100" placeholder="Twoje imię (opcjonalnie)" class="w-full px-3 py-2 border border-cream-200 rounded">
+                {% endif %}
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Wyślij</button>
+                    <span class="text-xs text-primary-500">Wspomnienie pojawi się po akceptacji moderatora.</span>
+                </div>
+            </form>
+        </details>
+    </div>
+
+    {% if relacje %}
+        <div class="mt-6 bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest"><span>Relacje rodzinne</span></div>
+                <a href="{% url 'groby:drzewo' osoba.pk %}" class="text-sm text-primary-700 hover:underline">Pokaż drzewo →</a>
+            </div>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {% for r in relacje %}
+                    <li class="flex items-center gap-3 p-2 rounded hover:bg-cream-50">
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-800 whitespace-nowrap">{{ r.etykieta }}</span>
+                        <a href="{% url 'groby:osoba_detail' r.osoba.pk %}" class="text-primary-800 hover:underline">
+                            {{ r.osoba.imie }} {{ r.osoba.nazwisko }}
+                            {% if r.osoba.data_urodzenia or r.osoba.data_smierci %}
+                                <span class="text-primary-500 text-xs ml-1">
+                                    ({{ r.osoba.data_urodzenia|date:"Y"|default:"?" }}—{{ r.osoba.data_smierci|date:"Y"|default:"?" }})
+                                </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <div class="mt-6 flex flex-wrap gap-3 no-print">
+        {% if request.user.is_authenticated %}
+            <form method="post" action="{% url 'groby:przelacz_obserwacje' 'osoba' osoba.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 rounded border {% if obserwuje %}bg-accent-400 border-accent-500 text-primary-900{% else %}border-cream-200 text-primary-700 hover:bg-cream-100{% endif %}">
+                    {% if obserwuje %}★ Obserwujesz{% else %}☆ Obserwuj{% endif %}
+                </button>
+            </form>
+        {% endif %}
+        <button type="button" onclick="document.getElementById('zglos-osoba').classList.toggle('hidden')" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Zgłoś poprawkę</button>
+    </div>
+
+    <form id="zglos-osoba" method="post" action="{% url 'groby:zglos_poprawke' 'osoba' osoba.pk %}" class="hidden mt-4 bg-cream-50 border border-cream-200 rounded-lg p-4 space-y-3 no-print">
+        {% csrf_token %}
+        <div class="text-sm text-primary-700">Opisz, co należy poprawić lub uzupełnić. Zgłoszenie trafia do administratora.</div>
+        <textarea name="tresc" required rows="4" class="w-full px-3 py-2 border border-cream-200 rounded" placeholder="Treść zgłoszenia"></textarea>
+        {% if not request.user.is_authenticated %}
+            <div class="grid sm:grid-cols-2 gap-3">
+                <input type="text" name="autor_imie" placeholder="Imię i nazwisko (opcjonalnie)" class="px-3 py-2 border border-cream-200 rounded">
+                <input type="email" name="autor_email" placeholder="E-mail (opcjonalnie)" class="px-3 py-2 border border-cream-200 rounded">
+            </div>
+        {% endif %}
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Wyślij zgłoszenie</button>
+    </form>
+
     <a href="{% url 'groby:grob_detail' osoba.grob.pk %}" class="mt-6 block bg-primary-800 hover:bg-primary-900 text-cream-50 transition rounded-lg p-6 shadow-soft group">
         <div class="flex items-center gap-5">
             <div class="w-14 h-14 rounded-full bg-primary-700 group-hover:bg-accent-500 group-hover:text-primary-900 flex items-center justify-center transition flex-shrink-0">

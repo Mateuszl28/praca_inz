@@ -66,7 +66,7 @@
     </form>
 
     {% if aktywne_filtry %}
-        <div class="mb-5 text-sm">
+        <div class="mb-5 flex items-center justify-between gap-3 flex-wrap text-sm">
             <div class="text-primary-600">
                 {% if total %}
                     Znaleziono <strong class="text-primary-900">{{ total }}</strong> {{ total|odmien:"wynik,wyniki,wyników" }}
@@ -74,6 +74,13 @@
                     <span class="text-primary-500">Brak wyników dla wybranych kryteriów</span>
                 {% endif %}
             </div>
+            {% if total %}
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'groby:eksport_pdf' %}?{{ querystring_bez_page }}" class="flex items-center gap-2 px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition">📄 PDF</a>
+                    <a href="{% url 'groby:eksport_csv' %}?{{ querystring_bez_page }}" class="flex items-center gap-2 px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition">📋 CSV</a>
+                    <a href="{% url 'groby:eksport_xlsx' %}?{{ querystring_bez_page }}" class="flex items-center gap-2 px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition">📊 XLSX</a>
+                </div>
+            {% endif %}
         </div>
 
         {% if page.object_list %}

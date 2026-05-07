@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}QR — naklejki — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        header, footer, .no-print { display: none !important; }
+        .naklejka { break-inside: avoid; page-break-inside: avoid; }
+        body { background: #fff !important; }
+    }
+    .naklejka {
+        border: 1px dashed #aaa;
+        border-radius: 4px;
+        padding: 8px;
+        text-align: center;
+        background: #fff;
+    }
+    .naklejka img { display: block; margin: 0 auto 4px; max-width: 100%; height: auto; }
+    .naklejka .tytul { font-family: 'Cormorant Garamond', serif; font-size: 11pt; font-weight: 600; color: #1a2719; }
+    .naklejka .meta { font-size: 8pt; color: #4c6b4a; }
+    .siatka { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    @media print { .siatka { grid-template-columns: repeat(4, 1fr); gap: 4mm; } }
+</style>
+
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <div class="mb-6 no-print">
+        <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Wydruk QR</div>
+        <h1 class="font-serif text-4xl text-primary-900 mb-2">Naklejki QR dla grobów</h1>
+        <p class="text-primary-600">Każdy QR prowadzi do strony grobu. Wybierz sektor i wydrukuj. Karta A4, 4 kolumny.</p>
+    </div>
+
+    <form method="get" class="no-print bg-white border border-cream-200 rounded-lg p-4 mb-6 flex flex-wrap items-end gap-3">
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Sektor</span>
+            <select name="sektor" class="mt-1 block px-3 py-2 border border-cream-200 rounded">
+                <option value="">— wszystkie —</option>
+                {% for s in sektory %}
+                    <option value="{{ s.pk }}" {% if wybrany_sektor == s.pk|stringformat:"s" %}selected{% endif %}>Sektor {{ s.nazwa }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Filtruj</button>
+        <button type="button" onclick="window.print()" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100">Drukuj</button>
+        <span class="text-sm text-primary-500 ml-auto">Liczba grobów: {{ groby|length }}</span>
+    </form>
+
+    <div class="siatka">
+        {% for g in groby %}
+            <div class="naklejka">
+                <img src="{% url 'groby:grob_qr' g.pk %}" alt="QR" width="120" height="120" loading="lazy">
+                <div class="tytul">{{ g.sektor.nazwa }}{% if g.rzad %}/{{ g.rzad }}{% endif %}/{{ g.numer }}</div>
+                <div class="meta">{{ g.get_typ_display }}</div>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -12,12 +12,18 @@
         <span class="text-primary-700">Sektor {{ sektor.nazwa }}</span>
     </nav>
 
-    <div class="bg-gradient-to-br from-primary-800 to-primary-900 text-cream-50 rounded-lg p-10 mb-8 shadow-lift">
-        <div class="text-xs uppercase tracking-widest text-accent-400 mb-2">Sektor</div>
-        <h1 class="font-serif text-5xl mb-4">{{ sektor.nazwa }}</h1>
-        {% if sektor.opis %}
-            <p class="text-primary-200 leading-relaxed max-w-2xl">{{ sektor.opis }}</p>
-        {% endif %}
+    <div class="bg-gradient-to-br from-primary-800 to-primary-900 text-cream-50 rounded-lg p-10 mb-8 shadow-lift flex flex-col sm:flex-row sm:items-end gap-6 justify-between">
+        <div>
+            <div class="text-xs uppercase tracking-widest text-accent-400 mb-2">Sektor</div>
+            <h1 class="font-serif text-5xl mb-4">{{ sektor.nazwa }}</h1>
+            {% if sektor.opis %}
+                <p class="text-primary-200 leading-relaxed max-w-2xl">{{ sektor.opis }}</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'groby:mapa' %}?sektor={{ sektor.pk }}" class="inline-flex items-center gap-2 px-4 py-2 bg-accent-400 text-primary-900 rounded hover:bg-accent-500 transition self-start sm:self-end">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Pokaż na mapie
+        </a>
     </div>
 
     <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-6">

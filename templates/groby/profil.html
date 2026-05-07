@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Mój profil — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Profil</div>
+            <h1 class="font-serif text-4xl text-primary-900">{{ request.user.username }}</h1>
+            <p class="text-primary-600 mt-1">{{ request.user.email }}</p>
+        </div>
+        <form method="post" action="{% url 'groby:wylogowanie' %}">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700">Wyloguj</button>
+        </form>
+    </div>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="mb-4 p-3 rounded text-sm {% if m.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% else %}bg-primary-50 border border-primary-200 text-primary-800{% endif %}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if request.user.is_staff %}
+        <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-center">
+            <span class="text-xs uppercase tracking-wider text-primary-700">Narzędzia administratora:</span>
+            <a href="{% url 'groby:qr_naklejki' %}" class="text-primary-800 hover:underline text-sm">QR — naklejki</a>
+            <a href="{% url 'groby:historia' %}" class="text-primary-800 hover:underline text-sm">Historia zmian</a>
+            <a href="/admin/groby/zgloszenie/" class="text-primary-800 hover:underline text-sm">Zgłoszenia</a>
+        </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">Dane profilu</h2>
+        <form method="post" class="flex flex-wrap items-end gap-3">
+            {% csrf_token %}
+            <label class="block flex-1 min-w-[200px]">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Pokrewieństwo / opis</span>
+                <input type="text" name="pokrewienstwo" value="{{ profil.pokrewienstwo }}" maxlength="200" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Zapisz</button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">Obserwowane groby ({{ obserwowane_groby.count }})</h2>
+        {% if obserwowane_groby %}
+            <ul class="divide-y divide-cream-100">
+                {% for g in obserwowane_groby %}
+                    <li class="py-3 flex items-center justify-between">
+                        <a href="{% url 'groby:grob_detail' g.pk %}" class="text-primary-800 hover:underline">
+                            Sektor {{ g.sektor.nazwa }}{% if g.rzad %}/{{ g.rzad }}{% endif %}/{{ g.numer }}
+                            <span class="text-primary-500 text-sm ml-2">({{ g.osoby.count }} os.)</span>
+                        </a>
+                        <form method="post" action="{% url 'groby:przelacz_obserwacje' 'grob' g.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs text-red-700 hover:underline">Przestań obserwować</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500">Nie obserwujesz jeszcze żadnych grobów.</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">Obserwowane osoby ({{ obserwowane_osoby.count }})</h2>
+        {% if obserwowane_osoby %}
+            <ul class="divide-y divide-cream-100">
+                {% for o in obserwowane_osoby %}
+                    <li class="py-3 flex items-center justify-between">
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="text-primary-800 hover:underline">
+                            {{ o.imie }} {{ o.nazwisko }}{% if o.nazwisko_rodowe %} <span class="italic text-primary-500 text-sm">(z d. {{ o.nazwisko_rodowe }})</span>{% endif %}
+                        </a>
+                        <form method="post" action="{% url 'groby:przelacz_obserwacje' 'osoba' o.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs text-red-700 hover:underline">Przestań obserwować</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500">Nie obserwujesz jeszcze żadnych osób.</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">Moje zgłoszenia ({{ moje_zgloszenia|length }})</h2>
+        {% if moje_zgloszenia %}
+            <ul class="divide-y divide-cream-100">
+                {% for z in moje_zgloszenia %}
+                    <li class="py-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs uppercase tracking-wider {% if z.status == 'zaakceptowane' %}text-primary-700{% elif z.status == 'odrzucone' %}text-red-700{% else %}text-accent-600{% endif %}">{{ z.get_status_display }}</span>
+                            <span class="text-xs text-primary-500">{{ z.data_dodania|date:"j.n.Y H:i" }}</span>
+                        </div>
+                        <div class="text-sm text-primary-700">{{ z.tresc|truncatechars:200 }}</div>
+                        {% if z.odpowiedz %}
+                            <div class="mt-2 text-sm text-primary-800 bg-cream-50 border-l-2 border-accent-400 pl-3 py-1">{{ z.odpowiedz }}</div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500">Brak zgłoszeń.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

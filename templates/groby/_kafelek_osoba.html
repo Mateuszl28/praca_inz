@@ -1,0 +1,7 @@
+{# Mały kafelek osoby do drzewa. Wymaga zmiennej `o` (Osoba). #}
+<a href="{% url 'groby:osoba_detail' o.pk %}" class="block px-4 py-3 rounded-lg bg-cream-100 border border-cream-200 hover:bg-primary-50 hover:border-primary-300 transition text-center min-w-[160px]">
+    <div class="font-serif text-base text-primary-900">{{ o.imie }} {{ o.nazwisko }}</div>
+    {% if o.data_urodzenia or o.data_smierci %}
+        <div class="text-xs text-primary-500">{{ o.data_urodzenia|date:"Y"|default:"?" }} — {{ o.data_smierci|date:"Y"|default:"?" }}</div>
+    {% endif %}
+</a>

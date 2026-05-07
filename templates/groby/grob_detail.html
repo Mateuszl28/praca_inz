@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load antybot %}
 
 {% block title %}Grób {{ grob.sektor.nazwa }}/{{ grob.numer }} — Informator Cmentarny Szydłów{% endblock %}
 
@@ -14,10 +15,25 @@
             <span class="mx-2">/</span>
             <span class="text-primary-700">Grób nr {{ grob.numer }}</span>
         </nav>
-        <button type="button" onclick="window.print()" class="no-print flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Drukuj lub zapisz jako PDF">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            <span>Drukuj</span>
-        </button>
+        <div class="flex gap-2 no-print">
+            <button type="button" onclick="document.getElementById('qr-modal').classList.toggle('hidden')" class="flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Pokaż kod QR">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14h1v1h-1zM14 20h3v1h-3zM20 20h1v1h-1z"/></svg>
+                <span>QR</span>
+            </button>
+            <button type="button" onclick="window.print()" class="flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Drukuj lub zapisz jako PDF">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                <span>Drukuj</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="qr-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 no-print" onclick="this.classList.add('hidden')">
+        <div class="bg-white rounded-lg p-6 max-w-sm text-center" onclick="event.stopPropagation()">
+            <h3 class="font-serif text-xl text-primary-900 mb-3">Kod QR — {{ grob.sektor.nazwa }}{% if grob.rzad %}/{{ grob.rzad }}{% endif %}/{{ grob.numer }}</h3>
+            <img src="{% url 'groby:grob_qr' grob.pk %}" alt="QR" class="mx-auto mb-3 max-w-full" width="280" height="280">
+            <p class="text-xs text-primary-600 mb-4">Zeskanowanie otworzy tę stronę.</p>
+            <a href="{% url 'groby:grob_qr' grob.pk %}" download="qr-grob-{{ grob.pk }}.png" class="text-primary-800 underline text-sm">Pobierz PNG</a>
+        </div>
     </div>
 
     <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden mb-8">
@@ -69,6 +85,27 @@
         </div>
     </div>
 
+    {% if zdjecia %}
+        <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-6">
+            <span>Galeria</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-10">
+            {% for z in zdjecia %}
+                <a href="{{ z.plik.url }}" data-galeria="grob" class="group block aspect-square bg-cream-100 rounded-md overflow-hidden border border-cream-200 hover:border-primary-300 transition relative">
+                    <img src="{{ z.plik.url }}" alt="{{ z.podpis|default:'Zdjęcie grobu' }}" class="w-full h-full object-cover group-hover:scale-105 transition">
+                    {% if z.podpis %}
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-cream-50 text-xs p-2 opacity-0 group-hover:opacity-100 transition">{{ z.podpis }}</div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+
+        <div id="lightbox" class="hidden fixed inset-0 bg-black/85 z-50 items-center justify-center p-4 cursor-zoom-out">
+            <img id="lightbox-img" src="" alt="" class="max-w-full max-h-full rounded shadow-lift cursor-default" onclick="event.stopPropagation();">
+            <button type="button" id="lightbox-close" class="absolute top-4 right-4 text-cream-50 text-3xl leading-none w-10 h-10 rounded-full bg-black/40 hover:bg-black/60" aria-label="Zamknij">&times;</button>
+        </div>
+    {% endif %}
+
     <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-6">
         <span>Osoby pochowane</span>
     </div>
@@ -101,5 +138,57 @@
             Brak zarejestrowanych osób dla tego grobu.
         </div>
     {% endif %}
+
+    <div class="mt-8 flex flex-wrap gap-3 no-print">
+        {% if request.user.is_authenticated %}
+            <form method="post" action="{% url 'groby:przelacz_obserwacje' 'grob' grob.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 rounded border {% if obserwuje %}bg-accent-400 border-accent-500 text-primary-900{% else %}border-cream-200 text-primary-700 hover:bg-cream-100{% endif %}">
+                    {% if obserwuje %}★ Obserwujesz{% else %}☆ Obserwuj grób{% endif %}
+                </button>
+            </form>
+        {% else %}
+            <a href="{% url 'groby:logowanie' %}?next={{ request.path }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">☆ Zaloguj się, aby obserwować</a>
+        {% endif %}
+        <button type="button" onclick="document.getElementById('zglos-grob').classList.toggle('hidden')" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Zgłoś poprawkę</button>
+        {% if grob.plan_x and grob.plan_y %}
+            <a href="{% url 'groby:mapa' %}?sektor={{ grob.sektor.pk }}#g{{ grob.pk }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Pokaż na mapie</a>
+        {% endif %}
+    </div>
+
+    <form id="zglos-grob" method="post" action="{% url 'groby:zglos_poprawke' 'grob' grob.pk %}" class="hidden mt-4 bg-cream-50 border border-cream-200 rounded-lg p-4 space-y-3 no-print">
+        {% csrf_token %}
+        {% antybot_pola %}
+        <div class="text-sm text-primary-700">Opisz, co należy poprawić lub uzupełnić. Zgłoszenie trafia do administratora.</div>
+        <textarea name="tresc" required rows="4" class="w-full px-3 py-2 border border-cream-200 rounded" placeholder="Treść zgłoszenia"></textarea>
+        {% if not request.user.is_authenticated %}
+            <div class="grid sm:grid-cols-2 gap-3">
+                <input type="text" name="autor_imie" placeholder="Imię i nazwisko (opcjonalnie)" class="px-3 py-2 border border-cream-200 rounded">
+                <input type="email" name="autor_email" placeholder="E-mail (opcjonalnie)" class="px-3 py-2 border border-cream-200 rounded">
+            </div>
+        {% endif %}
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Wyślij zgłoszenie</button>
+    </form>
 </section>
+
+<script>
+(function () {
+    const lb = document.getElementById('lightbox');
+    if (!lb) return;
+    const img = document.getElementById('lightbox-img');
+    const close = document.getElementById('lightbox-close');
+    document.querySelectorAll('a[data-galeria]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            img.src = a.getAttribute('href');
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+        });
+    });
+    function ukryj() { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+    lb.addEventListener('click', ukryj);
+    close.addEventListener('click', e => { e.stopPropagation(); ukryj(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') ukryj(); });
+})();
+</script>
 {% endblock %}

@@ -28,7 +28,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'groby.middleware.BiezacyUzytkownikMiddleware',
 ]
+
+LOGIN_URL = 'groby:logowanie'
+LOGIN_REDIRECT_URL = 'groby:profil'
+LOGOUT_REDIRECT_URL = 'groby:home'
+
+EMAIL_BACKEND = os.getenv('DJANGO_EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@cmentarz.szydlow.pl')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -77,11 +85,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Opcjonalny podkład mapy — skan planu cmentarza.
-# Aby użyć własnego planu, umieść obraz w katalogu media/plan_cmentarza/ i ustaw w .env:
-#   PLAN_IMAGE=plan_cmentarza/nazwa.jpg
-#   PLAN_BOUNDS=50.5841,20.8315;50.5855,20.8340    (SW_lat,SW_lng;NE_lat,NE_lng)
-# Gdy zmienne nie są ustawione, mapa pokazuje standardowe kafelki OpenStreetMap.
-PLAN_IMAGE = os.getenv('PLAN_IMAGE', '').strip()
+# Skan planu cmentarza wyświetlany na zakładce „Mapa”.
+# Domyślnie używamy zeskanowanego planu z oznaczeniami sektorów/rzędów.
+PLAN_IMAGE = os.getenv('PLAN_IMAGE', 'plan_cmentarza/scan_oznaczenia.jpg').strip()
 PLAN_BOUNDS_RAW = os.getenv('PLAN_BOUNDS', '').strip()
-PLAN_OPACITY = float(os.getenv('PLAN_OPACITY', '0.85'))
+PLAN_OPACITY = float(os.getenv('PLAN_OPACITY', '1.0'))

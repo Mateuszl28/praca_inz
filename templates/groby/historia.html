@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Historia zmian — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Audyt</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-6">Historia zmian</h1>
+
+    <form method="get" class="flex flex-wrap gap-3 items-end mb-6 bg-white border border-cream-200 rounded-lg p-4">
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Model</span>
+            <select name="model" class="mt-1 block px-3 py-2 border border-cream-200 rounded">
+                <option value="">— wszystkie —</option>
+                <option value="Grob" {% if model_filtr == 'Grob' %}selected{% endif %}>Grób</option>
+                <option value="Osoba" {% if model_filtr == 'Osoba' %}selected{% endif %}>Osoba</option>
+            </select>
+        </label>
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Filtruj</button>
+    </form>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-cream-100 text-primary-700 text-xs uppercase tracking-wider">
+                <tr>
+                    <th class="px-4 py-2 text-left">Data</th>
+                    <th class="px-4 py-2 text-left">Akcja</th>
+                    <th class="px-4 py-2 text-left">Obiekt</th>
+                    <th class="px-4 py-2 text-left">Użytkownik</th>
+                    <th class="px-4 py-2 text-left">Pola</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-cream-100">
+                {% for h in page %}
+                    <tr>
+                        <td class="px-4 py-2 text-primary-700 whitespace-nowrap">{{ h.data|date:"j.n.Y H:i:s" }}</td>
+                        <td class="px-4 py-2">
+                            <span class="text-xs px-2 py-0.5 rounded {% if h.akcja == 'dodano' %}bg-primary-100 text-primary-800{% elif h.akcja == 'usunieto' %}bg-red-100 text-red-800{% else %}bg-accent-400/20 text-accent-600{% endif %}">{{ h.get_akcja_display }}</span>
+                        </td>
+                        <td class="px-4 py-2 text-primary-800">{{ h.model }} <span class="text-primary-500">·</span> {{ h.obiekt_repr }}</td>
+                        <td class="px-4 py-2 text-primary-600">{{ h.user|default:"—" }}</td>
+                        <td class="px-4 py-2 text-xs text-primary-600">
+                            {% for k, v in h.pola.items %}
+                                <div><strong>{{ k }}</strong>: {{ v.przed|truncatechars:30 }} → {{ v.po|truncatechars:30 }}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-primary-500">Brak wpisów.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page.paginator.num_pages > 1 %}
+        <div class="mt-4 flex gap-2 text-sm">
+            {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if model_filtr %}&model={{ model_filtr }}{% endif %}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">‹ Poprzednia</a>{% endif %}
+            <span class="px-3 py-1 text-primary-600">Strona {{ page.number }} z {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if model_filtr %}&model={{ model_filtr }}{% endif %}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">Następna ›</a>{% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load l10n polish %}
+{% load polish %}
 {% load static %}
 
 {% block title %}Mapa cmentarza — Informator Cmentarny Szydłów{% endblock %}
@@ -7,91 +7,171 @@
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
-    #mapa { height: 75vh; border-radius: 0.5rem; }
+    #mapa { height: 78vh; border-radius: 0.5rem; background: #f4eede; }
+    .leaflet-container { background: #f4eede; }
     .leaflet-popup-content-wrapper { border-radius: 0.5rem; }
     .leaflet-popup-content { margin: 0.75rem 1rem; font-family: 'Inter', sans-serif; }
     .leaflet-popup-content .grob-popup-tytul { font-family: 'Cormorant Garamond', serif; font-size: 1.125rem; color: #1a2719; font-weight: 600; }
     .leaflet-popup-content .grob-popup-meta { font-size: 0.8125rem; color: #4c6b4a; margin-top: 2px; }
     .leaflet-popup-content .grob-popup-osoby { font-size: 0.8125rem; color: #2d3b2c; margin-top: 6px; border-top: 1px solid #ebe3d0; padding-top: 6px; }
     .leaflet-popup-content a { color: #2e4430; text-decoration: underline; font-size: 0.8125rem; display: inline-block; margin-top: 6px; }
+    .edytor-pasek { background: #fff5d6; border: 1px solid #e6c97a; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 0.75rem; font-size: 0.875rem; }
+    .edytor-pasek .pole { margin-right: 0.75rem; }
+    .edytor-pasek input { padding: 0.25rem 0.5rem; border: 1px solid #c9a96a; border-radius: 0.25rem; font-family: 'Inter', sans-serif; }
+    .edytor-pasek button { padding: 0.25rem 0.75rem; background: #2e4430; color: white; border-radius: 0.25rem; cursor: pointer; }
+    .edytor-pasek .status { margin-left: 0.75rem; color: #4c6b4a; }
 </style>
 
 <section class="max-w-6xl mx-auto px-4 py-10">
-    <div class="mb-8">
+    <div class="mb-6">
         <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Mapa</div>
         <h1 class="font-serif text-4xl text-primary-900 mb-2">Plan cmentarza</h1>
-        <p class="text-primary-600">Kliknij marker, aby zobaczyć szczegóły grobu.</p>
+        <p class="text-primary-600">Skan planu z oznaczeniami sektorów i rzędów. Kliknij marker, aby zobaczyć szczegóły grobu.</p>
     </div>
+
+    <form method="get" class="bg-white border border-cream-200 rounded-lg p-4 mb-4 flex flex-wrap items-end gap-3 no-print">
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Sektor</span>
+            <select name="sektor" class="mt-1 block px-3 py-2 border border-cream-200 rounded">
+                <option value="">— wszystkie —</option>
+                {% for s in sektory %}
+                    <option value="{{ s.pk }}" {% if sektor_id == s.pk|stringformat:"s" %}selected{% endif %}>Sektor {{ s.nazwa }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Typ grobu</span>
+            <select name="typ" class="mt-1 block px-3 py-2 border border-cream-200 rounded">
+                <option value="">— wszystkie —</option>
+                {% for k, v in typy %}
+                    <option value="{{ k }}" {% if typ == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Rok śmierci od</span>
+            <input type="number" name="rok_od" value="{{ rok_od }}" min="1700" max="2100" class="mt-1 block w-28 px-3 py-2 border border-cream-200 rounded">
+        </label>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">do</span>
+            <input type="number" name="rok_do" value="{{ rok_do }}" min="1700" max="2100" class="mt-1 block w-28 px-3 py-2 border border-cream-200 rounded">
+        </label>
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Filtruj</button>
+        {% if aktywne_filtry %}<a href="{% url 'groby:mapa' %}" class="px-3 py-2 text-primary-700 hover:underline">Wyczyść</a>{% endif %}
+    </form>
+
+    {% if tryb_edycji %}
+    <div class="edytor-pasek">
+        <strong>Tryb edycji:</strong>
+        <span class="pole">ID grobu: <input type="number" id="grob-id" min="1" placeholder="np. 12" style="width: 90px;"></span>
+        <span class="pole"><label><input type="checkbox" id="tryb-klikania"> klikaj, aby zaznaczyć</label></span>
+        <span class="status" id="edytor-status">Wpisz ID grobu i włącz klikanie. Każde kliknięcie zapisuje pozycję.</span>
+    </div>
+    {% endif %}
 
     <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-3 mb-4">
         <div id="mapa"></div>
     </div>
 
     <div class="text-sm text-primary-500">
-        Wyświetlono <strong class="text-primary-800">{{ liczba }}</strong> {{ liczba|odmien:"grób,groby,grobów" }} z zarejestrowaną lokalizacją.
+        Zaznaczono <strong class="text-primary-800">{{ liczba }}</strong> z {{ liczba_wszystkich }} {{ liczba_wszystkich|odmien:"grobu,grobów,grobów" }}.
+        {% if liczba == 0 and tryb_edycji %}
+            <span class="text-accent-700">Włącz tryb edycji powyżej i kliknij na planie, aby przypisać pozycję wybranemu grobowi.</span>
+        {% endif %}
     </div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     const groby = {{ groby_json|safe }};
+    const planUrl  = {% if plan_url %}'{{ plan_url }}'{% else %}null{% endif %};
+    const planW    = {{ plan_w|default:0 }};
+    const planH    = {{ plan_h|default:0 }};
+    const trybEdycji = {{ tryb_edycji|yesno:"true,false" }};
 
     const mapa = L.map('mapa', {
-        center: [{{ centrum_lat|unlocalize }}, {{ centrum_lng|unlocalize }}],
-        zoom: 18,
-        minZoom: 15,
-        maxZoom: 20,
+        crs: L.CRS.Simple,
+        minZoom: -3,
+        maxZoom: 3,
+        zoomSnap: 0.25,
+        attributionControl: false,
     });
 
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 20,
-    });
-
-    const planBounds = {{ plan_bounds_json|safe }};
-    const planUrl = {% if plan_url %}'{{ plan_url }}'{% else %}null{% endif %};
-
-    let planLayer = null;
-    if (planBounds && planUrl) {
-        planLayer = L.imageOverlay(planUrl, planBounds, { opacity: {{ plan_opacity|unlocalize }} });
-        planLayer.addTo(mapa);
-        osmLayer.addTo(mapa);
-        L.control.layers(
-            { 'Plan cmentarza': planLayer, 'OpenStreetMap': osmLayer },
-            {},
-            { position: 'topright', collapsed: false }
-        ).addTo(mapa);
+    if (planUrl && planW && planH) {
+        // CRS.Simple używa współrzędnych [y, x]; górny-lewy = (0, 0).
+        const bounds = [[0, 0], [planH, planW]];
+        L.imageOverlay(planUrl, bounds).addTo(mapa);
+        mapa.setMaxBounds([[-planH * 0.2, -planW * 0.2], [planH * 1.2, planW * 1.2]]);
+        mapa.fitBounds(bounds);
     } else {
-        osmLayer.addTo(mapa);
+        mapa.setView([0, 0], 0);
     }
 
     const ikonaGrobu = L.divIcon({
         className: 'marker-grob',
-        html: '<div style="width:14px;height:14px;border-radius:50%;background:#2e4430;border:2px solid #c9a96a;box-shadow:0 2px 4px rgba(0,0,0,.3);"></div>',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#b3261e;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.4);"></div>',
         iconSize: [18, 18],
         iconAnchor: [9, 9],
     });
 
     const grupa = L.featureGroup();
-
     groby.forEach(function(g) {
-        const marker = L.marker([g.lat, g.lng], { icon: ikonaGrobu });
+        // g.x = poziomo (kolumna), g.y = pionowo (wiersz). W CRS.Simple [lat, lng] = [y, x].
+        const marker = L.marker([g.y, g.x], { icon: ikonaGrobu });
         const osobyHtml = g.osoby.length
-            ? '<div class="grob-popup-osoby">' + g.osoby.map(function(o) { return o; }).join('<br>') + '</div>'
+            ? '<div class="grob-popup-osoby">' + g.osoby.join('<br>') + '</div>'
             : '';
+        const tytul = 'Grób ' + g.sektor + (g.rzad ? '/' + g.rzad : '') + '/' + g.numer;
         marker.bindPopup(
-            '<div class="grob-popup-tytul">Grób ' + g.sektor + '/' + g.numer + '</div>' +
+            '<div class="grob-popup-tytul">' + tytul + '</div>' +
             '<div class="grob-popup-meta">' + g.typ + '</div>' +
             osobyHtml +
             '<a href="' + g.url + '">Zobacz szczegóły →</a>'
         );
         grupa.addLayer(marker);
     });
-
     grupa.addTo(mapa);
 
-    if (groby.length > 0) {
-        mapa.fitBounds(grupa.getBounds(), { padding: [40, 40] });
+    // Skok do konkretnego grobu po hashu, np. #g123
+    (function () {
+        const m = (location.hash || '').match(/^#g(\d+)/);
+        if (!m) return;
+        const id = parseInt(m[1], 10);
+        const cel = groby.find(g => g.id === id);
+        if (!cel) return;
+        mapa.setView([cel.y, cel.x], 1);
+        grupa.eachLayer(function (l) {
+            if (l.getLatLng && Math.abs(l.getLatLng().lat - cel.y) < 0.01 && Math.abs(l.getLatLng().lng - cel.x) < 0.01) {
+                l.openPopup();
+            }
+        });
+    })();
+
+    if (trybEdycji) {
+        const csrf = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        const status = document.getElementById('edytor-status');
+        const idInput = document.getElementById('grob-id');
+        const tryb = document.getElementById('tryb-klikania');
+
+        mapa.on('click', function(e) {
+            if (!tryb.checked) return;
+            const id = parseInt(idInput.value, 10);
+            if (!id) { status.textContent = 'Najpierw wpisz ID grobu.'; return; }
+            const x = e.latlng.lng, y = e.latlng.lat;
+            status.textContent = 'Zapisuję pozycję grobu ' + id + '…';
+            fetch('{% url "groby:zapisz_pozycje" %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+                body: JSON.stringify({grob_id: id, x: x, y: y}),
+            }).then(r => r.json()).then(d => {
+                if (d.ok) {
+                    status.textContent = 'Zapisano: ' + d.tytul + '. Wpisz kolejne ID i klikaj.';
+                    L.marker([y, x], { icon: ikonaGrobu }).addTo(grupa).bindPopup(d.tytul);
+                } else {
+                    status.textContent = 'Błąd: ' + (d.error || 'nieznany');
+                }
+            }).catch(err => { status.textContent = 'Błąd sieci: ' + err; });
+        });
     }
 </script>
 {% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Rejestracja — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-md mx-auto px-4 py-16">
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8">
+        <h1 class="font-serif text-3xl text-primary-900 mb-2">Załóż konto</h1>
+        <p class="text-primary-600 text-sm mb-6">Konto pozwala obserwować groby bliskich osób i zgłaszać poprawki.</p>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+                <label class="block">
+                    <span class="text-xs text-primary-600 uppercase tracking-wider">{{ field.label }}</span>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="block text-primary-500 mt-1">{{ field.help_text|safe }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                        <div class="text-red-700 text-xs mt-1">{{ field.errors|join:", " }}</div>
+                    {% endif %}
+                </label>
+            {% endfor %}
+            <button type="submit" class="w-full px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Zarejestruj</button>
+        </form>
+
+        <div class="mt-6 text-sm text-primary-600 text-center">
+            Masz już konto? <a href="{% url 'groby:logowanie' %}" class="text-primary-800 underline">Zaloguj się</a>
+        </div>
+    </div>
+</section>
+
+<style>
+    section input[type=text], section input[type=password], section input[type=email] {
+        margin-top: 0.25rem; display: block; width: 100%; padding: 0.5rem 0.75rem;
+        border: 1px solid #ebe3d0; border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}

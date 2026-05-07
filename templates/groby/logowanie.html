@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Logowanie — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-md mx-auto px-4 py-16">
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8">
+        <h1 class="font-serif text-3xl text-primary-900 mb-6">Zaloguj się</h1>
+
+        {% if form.errors %}
+            <div class="bg-red-50 border border-red-200 text-red-800 rounded p-3 mb-4 text-sm">
+                Nieprawidłowy login lub hasło.
+            </div>
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Login</span>
+                <input type="text" name="username" required class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Hasło</span>
+                <input type="password" name="password" required class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="w-full px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Zaloguj</button>
+        </form>
+
+        <div class="mt-6 text-sm text-primary-600 text-center">
+            Nie masz konta? <a href="{% url 'groby:rejestracja' %}" class="text-primary-800 underline">Zarejestruj się</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

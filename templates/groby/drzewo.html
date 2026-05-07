@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Drzewo genealogiczne — {{ osoba.imie }} {{ osoba.nazwisko }}{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <nav class="text-sm text-primary-500 mb-6">
+        <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
+        <span class="mx-2">/</span>
+        <a href="{% url 'groby:osoba_detail' osoba.pk %}" class="hover:text-primary-800">{{ osoba.imie }} {{ osoba.nazwisko }}</a>
+        <span class="mx-2">/</span>
+        <span class="text-primary-700">Drzewo</span>
+    </nav>
+
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Drzewo genealogiczne</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-8">{{ osoba.imie }} {{ osoba.nazwisko }}</h1>
+
+    <div class="bg-white border border-cream-200 rounded-lg p-8 overflow-x-auto">
+        <div class="min-w-[640px] flex flex-col items-center gap-6">
+            {% if rodzice %}
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-primary-500 text-center mb-2">Rodzice</div>
+                    <div class="flex justify-center gap-4 flex-wrap">
+                        {% for r in rodzice %}
+                            {% include 'groby/_kafelek_osoba.html' with o=r %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <svg width="2" height="40" class="text-primary-300"><line x1="1" y1="0" x2="1" y2="40" stroke="currentColor" stroke-width="2"/></svg>
+            {% endif %}
+
+            <div class="flex items-center justify-center gap-3 flex-wrap">
+                {% for m in malzonkowie %}
+                    {% include 'groby/_kafelek_osoba.html' with o=m %}
+                    <svg width="40" height="2" class="text-accent-500"><line x1="0" y1="1" x2="40" y2="1" stroke="currentColor" stroke-width="2"/></svg>
+                {% endfor %}
+                <div class="px-5 py-4 rounded-lg bg-primary-700 text-cream-50 shadow-lift">
+                    <div class="font-serif text-xl">{{ osoba.imie }} {{ osoba.nazwisko }}</div>
+                    {% if osoba.data_urodzenia or osoba.data_smierci %}
+                        <div class="text-xs text-cream-100/80">
+                            {{ osoba.data_urodzenia|date:"Y"|default:"?" }} — {{ osoba.data_smierci|date:"Y"|default:"?" }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if rodzenstwo %}
+                <div class="mt-2">
+                    <div class="text-xs uppercase tracking-wider text-primary-500 text-center mb-2">Rodzeństwo</div>
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        {% for r in rodzenstwo %}
+                            {% include 'groby/_kafelek_osoba.html' with o=r %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if dzieci %}
+                <svg width="2" height="40" class="text-primary-300"><line x1="1" y1="0" x2="1" y2="40" stroke="currentColor" stroke-width="2"/></svg>
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-primary-500 text-center mb-2">Dzieci</div>
+                    <div class="flex justify-center gap-4 flex-wrap">
+                        {% for d in dzieci %}
+                            {% include 'groby/_kafelek_osoba.html' with o=d %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if not rodzice and not dzieci and not malzonkowie and not rodzenstwo %}
+                <p class="text-primary-500 mt-4">Brak zdefiniowanych relacji rodzinnych. Dodaj je w panelu administratora.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
