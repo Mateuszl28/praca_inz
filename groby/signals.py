@@ -8,7 +8,7 @@ from django.core.mail import send_mail
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.urls import reverse
-from .models import Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian
+from .models import Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian, Swieca, Relacja, Trasa, Wpis, Odznaka, UzytkownikOdznaka
 
 
 _local = threading.local()
@@ -112,6 +112,40 @@ def _powiadom_wspomnienie(sender, instance, created, **kwargs):
             f'Nowe wspomnienie — {osoba}',
             f'Pod profilem {osoba} pojawiło się nowe wspomnienie.\n'
             f'Zobacz: ' + reverse('groby:osoba_detail', args=[osoba.pk]))
+
+
+def _przyznaj_odznake(user, kod):
+    if not user or not user.is_authenticated:
+        return
+    odznaka = Odznaka.objects.filter(kod=kod).first()
+    if odznaka:
+        UzytkownikOdznaka.objects.get_or_create(user=user, odznaka=odznaka)
+
+
+@receiver(post_save, sender=Swieca)
+def _odznaka_strazn(sender, instance, created, **kwargs):
+    if created and instance.autor_user_id:
+        if Swieca.objects.filter(autor_user=instance.autor_user).count() >= 10:
+            _przyznaj_odznake(instance.autor_user, 'strazn')
+
+
+@receiver(post_save, sender=Wspomnienie)
+def _odznaka_kron(sender, instance, **kwargs):
+    if instance.status == 'zaakceptowane' and instance.autor_user_id:
+        if Wspomnienie.objects.filter(autor_user=instance.autor_user, status='zaakceptowane').count() >= 5:
+            _przyznaj_odznake(instance.autor_user, 'kron')
+
+
+@receiver(post_save, sender=Trasa)
+def _odznaka_prze(sender, instance, **kwargs):
+    if instance.opublikowana and instance.autor_id:
+        _przyznaj_odznake(instance.autor, 'prze')
+
+
+@receiver(post_save, sender=Wpis)
+def _odznaka_hist(sender, instance, **kwargs):
+    if instance.opublikowany and instance.autor_id:
+        _przyznaj_odznake(instance.autor, 'hist')
 
 
 @receiver(post_save, sender=Zgloszenie)

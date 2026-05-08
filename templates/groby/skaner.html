@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Skaner QR — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-md mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Skaner</div>
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Skaner QR</h1>
+    <p class="text-primary-600 mb-6">Skieruj kamerę telefonu na kod QR przy nagrobku — strona grobu otworzy się automatycznie.</p>
+
+    <div class="bg-black rounded-lg overflow-hidden mb-4 relative aspect-square">
+        <video id="kamera" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <canvas id="canvas" class="hidden"></canvas>
+        <div class="absolute inset-0 border-4 border-accent-400 pointer-events-none rounded-lg"
+             style="border-radius: 0.5rem; box-shadow: 0 0 0 2000px rgba(0,0,0,0.4) inset; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 25%, 25% 25%, 25% 75%, 75% 75%, 75% 25%, 0 25%);"></div>
+    </div>
+
+    <div id="status" class="text-sm text-primary-600 mb-3">Inicjalizacja kamery...</div>
+    <button id="start-btn" type="button" class="w-full px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Uruchom skaner</button>
+
+    <p class="text-xs text-primary-500 mt-4">
+        Wymaga zgody na dostęp do kamery. Kod nie jest wysyłany na serwer — wszystko dzieje się w przeglądarce.
+    </p>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(function () {
+    const video = document.getElementById('kamera');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+    const btn = document.getElementById('start-btn');
+    let stream = null;
+    let scanning = false;
+
+    async function start() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            video.srcObject = stream;
+            await video.play();
+            scanning = true;
+            status.textContent = 'Skanowanie aktywne — skieruj na kod QR';
+            btn.textContent = 'Zatrzymaj';
+            requestAnimationFrame(scan);
+        } catch (e) {
+            status.textContent = 'Błąd: ' + e.message;
+        }
+    }
+
+    function stop() {
+        scanning = false;
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        btn.textContent = 'Uruchom skaner';
+        status.textContent = 'Skaner zatrzymany.';
+    }
+
+    function scan() {
+        if (!scanning) return;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            if (code) {
+                scanning = false;
+                status.textContent = 'Znaleziono: ' + code.data;
+                if (code.data.startsWith('http')) {
+                    setTimeout(() => { window.location.href = code.data; }, 500);
+                }
+                return;
+            }
+        }
+        requestAnimationFrame(scan);
+    }
+
+    btn.addEventListener('click', () => {
+        if (scanning) stop();
+        else start();
+    });
+    start();
+})();
+</script>
+{% endblock %}

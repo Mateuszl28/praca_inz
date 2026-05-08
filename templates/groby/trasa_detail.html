@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ trasa.nazwa }} — Trasa zwiedzania{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <nav class="text-sm text-primary-500 mb-4">
+        <a href="{% url 'groby:trasy' %}" class="hover:text-primary-800">Trasy</a>
+        <span class="mx-2">/</span>
+        <span class="text-primary-700">{{ trasa.nazwa }}</span>
+    </nav>
+
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">{{ trasa.nazwa }}</h1>
+    {% if trasa.opis %}<p class="text-primary-600 mb-6">{{ trasa.opis|linebreaks }}</p>{% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-soft border border-cream-200 p-3">
+            <div id="mapa-trasa" style="height: 60vh; border-radius: 0.5rem;"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-4">
+            <ol class="space-y-3">
+                {% for p in punkty %}
+                    <li class="border-l-2 border-accent-400 pl-3">
+                        <a href="{% url 'groby:grob_detail' p.grob.pk %}" class="font-medium text-primary-800 hover:underline">
+                            {{ p.kolejnosc }}. Sektor {{ p.grob.sektor.nazwa }} · grób {{ p.grob.numer }}
+                        </a>
+                        {% if p.podpis %}<div class="text-sm text-primary-600 mt-1">{{ p.podpis }}</div>{% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+    const punkty = {{ dane_json|safe }};
+    const mapa = L.map('mapa-trasa', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 3, attributionControl: false });
+    {# Plan jako overlay można dorzucić, na razie zoom dopasowany do markerów #}
+    const grupa = L.featureGroup();
+    const wsp = punkty.filter(p => p.plan_x && p.plan_y);
+    wsp.forEach((p, i) => {
+        const m = L.marker([p.plan_y, p.plan_x], {
+            icon: L.divIcon({
+                className: 'm-trasa',
+                html: `<div style="background:#2e4430;color:#fbf9f4;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;">${p.kolejnosc}</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+            }),
+        });
+        m.bindPopup(`<strong>${p.kolejnosc}. ${p.sektor}/${p.numer}</strong><br>${p.osoby}<br><a href="/grob/${p.grob_id}/">Otwórz →</a>`);
+        grupa.addLayer(m);
+    });
+    if (wsp.length >= 2) {
+        L.polyline(wsp.map(p => [p.plan_y, p.plan_x]), { color: '#b08d48', weight: 3, dashArray: '6 4' }).addTo(mapa);
+    }
+    grupa.addTo(mapa);
+    if (wsp.length) mapa.fitBounds(grupa.getBounds().pad(0.1));
+    else mapa.setView([0, 0], 0);
+</script>
+{% endblock %}

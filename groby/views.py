@@ -15,6 +15,7 @@ from .models import (
     Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
+    Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
 )
 
 
@@ -1086,6 +1087,159 @@ def dodaj_komentarz(request, wspomnienie_id):
     return redirect('groby:osoba_detail', pk=w.osoba_id)
 
 
+def karta_grobu_pdf(request, pk):
+    """Pełen PDF z kartą grobu: foto, dane, osoby, QR, lokalizacja."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
+    from pathlib import Path
+    import qrcode
+
+    grob = get_object_or_404(Grob.objects.select_related('sektor').prefetch_related('osoby', 'zdjecia'), pk=pk)
+
+    czcionka = 'Helvetica'
+    for k in (r'C:\Windows\Fonts\arial.ttf',):
+        if Path(k).exists():
+            try:
+                pdfmetrics.registerFont(TTFont('Polska', k))
+                czcionka = 'Polska'
+                break
+            except Exception:
+                pass
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    sty = getSampleStyleSheet()
+    h1 = ParagraphStyle('h1', fontName=czcionka, fontSize=22, leading=26, spaceAfter=8, textColor=colors.HexColor('#2e4430'))
+    h2 = ParagraphStyle('h2', fontName=czcionka, fontSize=14, leading=18, spaceAfter=4, textColor=colors.HexColor('#3a553a'))
+    body = ParagraphStyle('b', fontName=czcionka, fontSize=10, leading=14)
+    meta = ParagraphStyle('m', fontName=czcionka, fontSize=9, leading=12, textColor=colors.HexColor('#4c6b4a'))
+
+    elementy = []
+    elementy.append(Paragraph('Karta grobu', meta))
+    tytul = f'Sektor {grob.sektor.nazwa}{" / Rząd " + grob.rzad if grob.rzad else ""} / Grób nr {grob.numer}'
+    elementy.append(Paragraph(tytul, h1))
+    elementy.append(Paragraph(f'Typ: {grob.get_typ_display()}', body))
+    elementy.append(Spacer(1, 0.5*cm))
+
+    # QR po prawej, foto po lewej (Tabela)
+    url = request.build_absolute_uri(reverse('groby:grob_detail', args=[grob.pk]))
+    qr_img = qrcode.make(url)
+    qr_buf = io.BytesIO()
+    qr_img.save(qr_buf, format='PNG')
+    qr_buf.seek(0)
+
+    foto = None
+    if grob.zdjecia.exists():
+        z = grob.zdjecia.first()
+        try:
+            foto = Image(z.plik.path, width=8*cm, height=8*cm, kind='proportional')
+        except Exception:
+            foto = None
+    qr = Image(qr_buf, width=4*cm, height=4*cm)
+
+    if foto:
+        tab = Table([[foto, qr]], colWidths=[10*cm, 4*cm])
+    else:
+        tab = Table([[Paragraph('Brak zdjęcia', meta), qr]], colWidths=[10*cm, 4*cm])
+    tab.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
+    elementy.append(tab)
+    elementy.append(Spacer(1, 0.5*cm))
+
+    elementy.append(Paragraph('Osoby pochowane:', h2))
+    if grob.osoby.exists():
+        for o in grob.osoby.all():
+            ur = o.data_urodzenia.strftime('%d.%m.%Y') if o.data_urodzenia else '?'
+            sm = o.data_smierci.strftime('%d.%m.%Y') if o.data_smierci else '?'
+            tekst = f'<b>{o.nazwisko} {o.imie}</b>'
+            if o.nazwisko_rodowe:
+                tekst += f' (z d. {o.nazwisko_rodowe})'
+            tekst += f' — ur. {ur}, zm. {sm}'
+            if o.wiek:
+                tekst += f', żył(a) {o.wiek} lat'
+            elementy.append(Paragraph(tekst, body))
+            if o.miejsce_urodzenia:
+                elementy.append(Paragraph(f'  Miejsce ur.: {o.miejsce_urodzenia}', meta))
+            elementy.append(Spacer(1, 0.2*cm))
+    else:
+        elementy.append(Paragraph('Brak zarejestrowanych osób.', meta))
+
+    elementy.append(Spacer(1, 0.5*cm))
+    elementy.append(Paragraph('Cmentarz parafialny w Szydłowie · ' + url, meta))
+
+    doc.build(elementy)
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'inline; filename="grob-{grob.sektor.nazwa}-{grob.numer}.pdf"'
+    return resp
+
+
+def kronika(request):
+    """Publiczna kronika ostatnich zmian (zdjęć, biogramów, wspomnień)."""
+    zmiany = HistoriaZmian.objects.select_related('user').order_by('-data')[:50]
+    nowe_zdjecia = Zdjecie.objects.select_related('grob__sektor').order_by('-data_dodania')[:20]
+    nowe_wspomnienia = Wspomnienie.objects.filter(status='zaakceptowane').select_related('osoba__grob__sektor').order_by('-data_dodania')[:20]
+    return render(request, 'groby/kronika.html', {
+        'zmiany': zmiany,
+        'nowe_zdjecia': nowe_zdjecia,
+        'nowe_wspomnienia': nowe_wspomnienia,
+    })
+
+
+def lista_tras(request):
+    trasy = Trasa.objects.filter(opublikowana=True).prefetch_related('punkty__grob__sektor')
+    return render(request, 'groby/trasy_lista.html', {'trasy': trasy})
+
+
+def trasa_detail(request, slug):
+    trasa = get_object_or_404(Trasa, slug=slug, opublikowana=True)
+    punkty = trasa.punkty.select_related('grob__sektor').prefetch_related('grob__osoby')
+    dane = [{
+        'kolejnosc': p.kolejnosc, 'podpis': p.podpis,
+        'grob_id': p.grob.pk, 'sektor': p.grob.sektor.nazwa, 'numer': p.grob.numer,
+        'plan_x': p.grob.plan_x, 'plan_y': p.grob.plan_y,
+        'osoby': ', '.join(f'{o.imie} {o.nazwisko}' for o in p.grob.osoby.all()[:3]),
+    } for p in punkty]
+    return render(request, 'groby/trasa_detail.html', {
+        'trasa': trasa, 'punkty': punkty, 'dane_json': json.dumps(dane, ensure_ascii=False),
+    })
+
+
+def skaner_qr(request):
+    return render(request, 'groby/skaner.html')
+
+
+def newsletter_zapis(request):
+    if request.method == 'POST':
+        if _antybot(request):
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+        email = (request.POST.get('email') or '').strip().lower()[:150]
+        if email:
+            import secrets
+            token = secrets.token_urlsafe(32)
+            Newsletter.objects.update_or_create(
+                email=email,
+                defaults={'aktywny': True, 'token_anulowania': token},
+            )
+            messages.success(request, f'Zapisano {email} do newslettera.')
+        else:
+            messages.error(request, 'Podaj e-mail.')
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def newsletter_anuluj(request, token):
+    n = Newsletter.objects.filter(token_anulowania=token).first()
+    if n:
+        n.aktywny = False
+        n.save(update_fields=['aktywny'])
+        messages.success(request, f'Anulowano subskrypcję {n.email}.')
+    return redirect('groby:home')
+
+
 def manifest(request):
     data = {
         "name": "Informator Cmentarny — Szydłów",
@@ -1306,6 +1460,7 @@ def profil(request):
         'obserwowane_osoby': profil_obj.obserwowane_osoby.select_related('grob__sektor'),
         'moje_zgloszenia': Zgloszenie.objects.filter(autor_user=request.user).select_related('grob__sektor', 'osoba__grob__sektor')[:20],
         'zapisane_szukania': request.user.zapisane_szukania.all()[:20],
+        'moje_odznaki': request.user.odznaki.select_related('odznaka'),
     })
 
 

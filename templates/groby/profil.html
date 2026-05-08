@@ -133,6 +133,20 @@
     })();
     </script>
 
+    {% if moje_odznaki %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4">Moje odznaki ({{ moje_odznaki|length }})</h2>
+            <div class="flex flex-wrap gap-3">
+                {% for u in moje_odznaki %}
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-full bg-accent-400/15 border border-accent-400 text-sm text-primary-800" title="{{ u.odznaka.opis }}">
+                        <span class="text-2xl">{{ u.odznaka.ikona }}</span>
+                        <span>{{ u.odznaka.nazwa }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     {% if zapisane_szukania %}
         <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
             <h2 class="font-serif text-2xl text-primary-900 mb-4">Zapisane wyszukiwania ({{ zapisane_szukania|length }})</h2>

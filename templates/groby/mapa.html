@@ -137,6 +137,40 @@
     });
     grupa.addTo(mapa);
 
+    // Geolokalizacja: cmentarz w Szydłowie ~ 50.5847, 20.8327
+    // Mapowanie GPS → CRS.Simple jest przybliżone (cmentarz < 100 m)
+    const SZYDLOW_LAT = 50.5847, SZYDLOW_LNG = 20.8327;
+    const PLAN_W = planW, PLAN_H = planH;
+    L.Control.Geo = L.Control.extend({
+        onAdd: function () {
+            const btn = L.DomUtil.create('div', 'leaflet-bar');
+            btn.innerHTML = '<a href="#" title="Pokaż moją pozycję" style="font-size:18px;line-height:30px;width:30px;display:block;text-align:center;">📍</a>';
+            btn.onclick = function (e) {
+                e.preventDefault();
+                if (!navigator.geolocation) { alert('Brak obsługi GPS w przeglądarce.'); return; }
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const dlat = pos.coords.latitude - SZYDLOW_LAT;
+                    const dlng = pos.coords.longitude - SZYDLOW_LNG;
+                    // 1 stopień szerokości ≈ 111000 m, długości ≈ 70000 m na 50°N
+                    const dy = -dlat * 111000;
+                    const dx = dlng * 70000;
+                    // Przyjmujemy 1 px planu ≈ 0.1 m (dostosuj jeśli inny rozmiar)
+                    const px = PLAN_W / 2 + dx * 10;
+                    const py = PLAN_H / 2 + dy * 10;
+                    const me = L.circleMarker([py, px], {
+                        radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 0.9,
+                    }).addTo(mapa).bindPopup('Jesteś tu (przybliżona pozycja).');
+                    mapa.setView([py, px], 0.5);
+                    me.openPopup();
+                }, err => alert('Błąd GPS: ' + err.message));
+                return false;
+            };
+            return btn;
+        },
+        onRemove: function () {},
+    });
+    new L.Control.Geo({ position: 'topright' }).addTo(mapa);
+
     // Skok do konkretnego grobu po hashu, np. #g123
     (function () {
         const m = (location.hash || '').match(/^#g(\d+)/);

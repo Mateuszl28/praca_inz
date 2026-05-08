@@ -3,6 +3,7 @@ from .models import (
     Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
+    Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
 )
 
 
@@ -228,6 +229,42 @@ class TokenLogowaniaAdmin(admin.ModelAdmin):
     list_display = ('user', 'wykorzystany', 'data_utworzenia', 'data_wygasniecia')
     list_filter = ('wykorzystany',)
     readonly_fields = ('token', 'data_utworzenia')
+
+
+class TrasaPunktInline(admin.TabularInline):
+    model = TrasaPunkt
+    extra = 1
+    autocomplete_fields = ('grob',)
+    fields = ('kolejnosc', 'grob', 'podpis')
+
+
+@admin.register(Trasa)
+class TrasaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'opublikowana', 'data_dodania', 'autor')
+    list_filter = ('opublikowana',)
+    search_fields = ('nazwa', 'opis')
+    prepopulated_fields = {'slug': ('nazwa',)}
+    inlines = [TrasaPunktInline]
+
+
+@admin.register(Odznaka)
+class OdznakaAdmin(admin.ModelAdmin):
+    list_display = ('ikona', 'nazwa', 'kod')
+    search_fields = ('nazwa',)
+
+
+@admin.register(UzytkownikOdznaka)
+class UzytkownikOdznakaAdmin(admin.ModelAdmin):
+    list_display = ('user', 'odznaka', 'data_zdobycia')
+    list_filter = ('odznaka',)
+    autocomplete_fields = ('user',)
+
+
+@admin.register(Newsletter)
+class NewsletterAdmin(admin.ModelAdmin):
+    list_display = ('email', 'aktywny', 'data_dodania', 'ostatnia_wysylka')
+    list_filter = ('aktywny',)
+    search_fields = ('email',)
 
 
 @admin.register(HistoriaZmian)

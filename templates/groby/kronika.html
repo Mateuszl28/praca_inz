@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Kronika — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Aktualności</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Kronika cmentarza</h1>
+    <p class="text-primary-600 mb-8">Najnowsze zmiany — dodane zdjęcia, opublikowane wspomnienia, uzupełnione biogramy.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4">Nowe zdjęcia ({{ nowe_zdjecia|length }})</h2>
+            {% if nowe_zdjecia %}
+                <ul class="space-y-3">
+                    {% for z in nowe_zdjecia %}
+                        <li class="flex items-center gap-3">
+                            <a href="{% url 'groby:grob_detail' z.grob.pk %}" class="flex-shrink-0 w-14 h-14 rounded overflow-hidden bg-cream-100">
+                                <img src="{{ z.plik.url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+                            </a>
+                            <div class="flex-1 min-w-0">
+                                <a href="{% url 'groby:grob_detail' z.grob.pk %}" class="text-primary-800 hover:underline">
+                                    Sektor {{ z.grob.sektor.nazwa }} · grób {{ z.grob.numer }}
+                                </a>
+                                <div class="text-xs text-primary-500">{{ z.data_dodania|timesince }} temu</div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-primary-500 text-sm">Brak nowych zdjęć.</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4">Nowe wspomnienia ({{ nowe_wspomnienia|length }})</h2>
+            {% if nowe_wspomnienia %}
+                <ul class="space-y-3">
+                    {% for w in nowe_wspomnienia %}
+                        <li>
+                            <a href="{% url 'groby:osoba_detail' w.osoba.pk %}" class="text-primary-800 hover:underline font-medium">
+                                {{ w.osoba.imie }} {{ w.osoba.nazwisko }}
+                            </a>
+                            <div class="text-sm text-primary-700 italic">„{{ w.tresc|truncatechars:160 }}"</div>
+                            <div class="text-xs text-primary-500">— {{ w.autor_str }}, {{ w.data_dodania|timesince }} temu</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-primary-500 text-sm">Brak nowych wspomnień.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mt-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">Ostatnie zmiany w bazie</h2>
+        {% if zmiany %}
+            <ul class="divide-y divide-cream-100 text-sm">
+                {% for h in zmiany %}
+                    <li class="py-2 flex items-center gap-3">
+                        <span class="text-xs px-2 py-0.5 rounded {% if h.akcja == 'dodano' %}bg-primary-100 text-primary-800{% else %}bg-accent-400/20 text-accent-600{% endif %}">{{ h.get_akcja_display }}</span>
+                        <span class="text-primary-700 flex-1 truncate">{{ h.model }} · {{ h.obiekt_repr }}</span>
+                        <span class="text-xs text-primary-400">{{ h.data|timesince }} temu</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-primary-500 text-sm">Brak zmian.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

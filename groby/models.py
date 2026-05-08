@@ -106,6 +106,31 @@ class Zdjecie(models.Model):
     def __str__(self):
         return f'Zdjęcie {self.pk} — grób {self.grob}'
 
+    def miniatura_url(self, szer=600):
+        """Generuje miniaturę przy pierwszym dostępie i cache'uje na dysku."""
+        import os
+        from PIL import Image
+        from django.conf import settings
+        if not self.plik:
+            return ''
+        try:
+            sciezka_orig = self.plik.path
+        except (NotImplementedError, ValueError):
+            return self.plik.url
+        nazwa_orig = os.path.basename(sciezka_orig)
+        baza, ext = os.path.splitext(nazwa_orig)
+        nazwa_min = f'{baza}_w{szer}{ext}'
+        sciezka_min = os.path.join(settings.MEDIA_ROOT, 'thumbs', nazwa_min)
+        if not os.path.exists(sciezka_min):
+            os.makedirs(os.path.dirname(sciezka_min), exist_ok=True)
+            try:
+                with Image.open(sciezka_orig) as im:
+                    im.thumbnail((szer, szer * 4))
+                    im.save(sciezka_min, optimize=True, quality=85)
+            except (OSError, IOError):
+                return self.plik.url
+        return settings.MEDIA_URL + 'thumbs/' + nazwa_min
+
 
 class Relacja(models.Model):
     TYP_CHOICES = [
@@ -361,6 +386,82 @@ class Komentarz(models.Model):
 
     def __str__(self):
         return f'Komentarz {self.pk} pod {self.wspomnienie}'
+
+
+class Trasa(models.Model):
+    nazwa = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True)
+    opis = models.TextField(blank=True)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    opublikowana = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Trasa zwiedzania'
+        verbose_name_plural = 'Trasy zwiedzania'
+        ordering = ['nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class TrasaPunkt(models.Model):
+    trasa = models.ForeignKey(Trasa, on_delete=models.CASCADE, related_name='punkty')
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE)
+    kolejnosc = models.PositiveSmallIntegerField(default=0)
+    podpis = models.TextField(blank=True, verbose_name='Komentarz przewodnika')
+
+    class Meta:
+        verbose_name = 'Punkt trasy'
+        verbose_name_plural = 'Punkty tras'
+        ordering = ['kolejnosc']
+        unique_together = [['trasa', 'grob']]
+
+
+class Odznaka(models.Model):
+    KOD_CHOICES = [
+        ('strazn', 'Strażnik pamięci (10 świec)'),
+        ('kron', 'Kronikarz (5 wspomnień)'),
+        ('genea', 'Genealog (3 relacje)'),
+        ('prze', 'Przewodnik (1 trasa)'),
+        ('hist', 'Historyk (1 wpis)'),
+    ]
+    kod = models.CharField(max_length=20, choices=KOD_CHOICES, unique=True)
+    nazwa = models.CharField(max_length=100)
+    opis = models.TextField(blank=True)
+    ikona = models.CharField(max_length=10, default='🏆', help_text='Emoji/glyph')
+
+    class Meta:
+        verbose_name = 'Odznaka'
+        verbose_name_plural = 'Odznaki'
+
+    def __str__(self):
+        return self.nazwa
+
+
+class UzytkownikOdznaka(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='odznaki')
+    odznaka = models.ForeignKey(Odznaka, on_delete=models.CASCADE)
+    data_zdobycia = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['user', 'odznaka']]
+        ordering = ['-data_zdobycia']
+
+
+class Newsletter(models.Model):
+    email = models.EmailField(unique=True)
+    aktywny = models.BooleanField(default=True)
+    token_anulowania = models.CharField(max_length=64, unique=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+    ostatnia_wysylka = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Subskrybent newslettera'
+        verbose_name_plural = 'Subskrybenci newslettera'
+
+    def __str__(self):
+        return f'{self.email} ({"✓" if self.aktywny else "✗"})'
 
 
 class HistoriaZmian(models.Model):

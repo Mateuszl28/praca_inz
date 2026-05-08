@@ -129,9 +129,33 @@
         /* Skeleton loader */
         .skeleton { background: linear-gradient(90deg, #f5f1e7 0%, #fbf9f4 50%, #f5f1e7 100%); background-size: 200% 100%; animation: skel 1.5s ease-in-out infinite; border-radius: 0.25rem; }
         @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Tryb wysokiego kontrastu */
+        html.kontrast { background: #000 !important; color: #ffe !important; }
+        html.kontrast body { background: #000 !important; color: #ffe !important; }
+        html.kontrast a { color: #ffe000 !important; text-decoration: underline !important; }
+        html.kontrast .bg-white, html.kontrast .bg-cream-50, html.kontrast .bg-cream-100, html.kontrast .bg-cream-200,
+        html.kontrast .bg-primary-50, html.kontrast .bg-primary-100 { background: #000 !important; }
+        html.kontrast .text-primary-500, html.kontrast .text-primary-600, html.kontrast .text-primary-700,
+        html.kontrast .text-primary-800, html.kontrast .text-primary-900, html.kontrast .text-accent-600,
+        html.kontrast .text-accent-500, html.kontrast .text-accent-400 { color: #ffe !important; }
+        html.kontrast .border-cream-100, html.kontrast .border-cream-200 { border-color: #ffe !important; }
+        html.kontrast button, html.kontrast .bg-primary-700, html.kontrast .bg-primary-800 { background: #ffe000 !important; color: #000 !important; }
+
+        /* Powiększanie czcionki */
+        html.text-l { font-size: 110%; }
+        html.text-xl { font-size: 125%; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">
+
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-700 focus:text-cream-50 focus:rounded">Pomiń do treści</a>
+
+{% if banner_wszystkich_swietych %}
+<div class="bg-gradient-to-r from-accent-400 to-accent-500 text-primary-900 py-2 px-4 text-sm text-center no-print">
+    🕯 Czas Wszystkich Świętych. Pamiętamy o tych, którzy odeszli — <a href="{% url 'groby:kalendarz' %}" class="underline font-medium">zobacz kalendarz rocznic</a>.
+</div>
+{% endif %}
 
 <header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/95 no-print">
     <div class="max-w-7xl mx-auto px-6">
@@ -207,6 +231,10 @@
                         <option value="uk" {% if request.LANGUAGE_CODE == 'uk' %}selected{% endif %}>UA</option>
                     </select>
                 </form>
+                <button id="font-size-toggle" type="button" aria-label="Powiększ czcionkę" class="hidden md:inline p-2 rounded-md text-primary-600 hover:bg-cream-50 hover:text-primary-900 transition text-sm font-bold" title="Rozmiar czcionki">A+</button>
+                <button id="contrast-toggle" type="button" aria-label="Tryb wysokiego kontrastu" class="hidden md:inline p-2 rounded-md text-primary-600 hover:bg-cream-50 hover:text-primary-900 transition" title="Wysoki kontrast">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M12 2a10 10 0 0 1 0 20" fill="currentColor"/></svg>
+                </button>
                 <button id="theme-toggle" type="button" aria-label="Przełącz motyw" class="p-2 rounded-md text-primary-600 hover:bg-cream-50 hover:text-primary-900 transition">
                     <svg class="w-4 h-4 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                     <svg class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>
@@ -266,7 +294,7 @@
     </nav>
 </header>
 
-<main class="flex-1">
+<main id="main-content" class="flex-1" role="main">
     {% block content %}{% endblock %}
 </main>
 
@@ -297,10 +325,25 @@
             </div>
             <div>
                 <div class="text-accent-400 text-sm uppercase tracking-wider mb-3">Kontakt</div>
-                <p class="text-sm text-primary-300 leading-relaxed">
+                <p class="text-sm text-primary-300 leading-relaxed mb-4">
                     Parafia pw. św. Władysława<br>
                     Szydłów, woj. świętokrzyskie
                 </p>
+
+                <div class="text-accent-400 text-xs uppercase tracking-wider mb-2">Newsletter</div>
+                <form method="post" action="{% url 'groby:newsletter_zapis' %}" class="flex gap-1 mb-3">
+                    {% csrf_token %}
+                    <input type="email" name="email" required placeholder="Twój e-mail" class="flex-1 px-2 py-1.5 text-sm bg-primary-800 border border-primary-700 rounded text-cream-50 placeholder:text-primary-400">
+                    <input type="text" name="_pulapka" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
+                    <input type="hidden" name="_ts" value="{% now 'U' %}">
+                    <button type="submit" class="px-3 py-1.5 text-xs bg-accent-500 hover:bg-accent-400 text-primary-900 rounded">Zapisz</button>
+                </form>
+
+                <div class="flex gap-3 mt-3 text-xs">
+                    <a href="{% url 'groby:skaner' %}" class="text-primary-300 hover:text-cream-50">📷 Skaner QR</a>
+                    <a href="{% url 'groby:trasy' %}" class="text-primary-300 hover:text-cream-50">🗺 Trasy</a>
+                    <a href="{% url 'groby:kronika' %}" class="text-primary-300 hover:text-cream-50">📰 Kronika</a>
+                </div>
             </div>
         </div>
         <div class="border-t border-primary-700 pt-6 flex flex-col sm:flex-row justify-between text-xs text-primary-400 gap-2">
@@ -344,6 +387,26 @@
             if (e.key === 'Escape') {
                 document.querySelectorAll('[data-dropdown-menu]').forEach(m => m.classList.add('hidden'));
             }
+        });
+        // Wysoki kontrast — toggle z localStorage
+        if (localStorage.kontrast === '1') document.documentElement.classList.add('kontrast');
+        const ct = document.getElementById('contrast-toggle');
+        if (ct) ct.addEventListener('click', () => {
+            const on = document.documentElement.classList.toggle('kontrast');
+            localStorage.kontrast = on ? '1' : '0';
+        });
+        // Rozmiar czcionki — cyklicznie normal → l → xl → normal
+        const ROZ = ['', 'text-l', 'text-xl'];
+        const zapisRoz = localStorage.fontSize || '';
+        if (zapisRoz) document.documentElement.classList.add(zapisRoz);
+        const ft = document.getElementById('font-size-toggle');
+        if (ft) ft.addEventListener('click', () => {
+            const akt = ROZ.find(r => r && document.documentElement.classList.contains(r)) || '';
+            const idx = ROZ.indexOf(akt);
+            const nast = ROZ[(idx + 1) % ROZ.length];
+            ROZ.forEach(r => r && document.documentElement.classList.remove(r));
+            if (nast) document.documentElement.classList.add(nast);
+            localStorage.fontSize = nast;
         });
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
