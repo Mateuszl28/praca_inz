@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load antybot %}
+
+{% block title %}Intencja mszalna — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Parafia</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Zamów intencję mszalną</h1>
+    <p class="text-primary-600 mb-6">Możesz zamówić mszę w intencji zmarłej osoby. Po wysłaniu skontaktujemy się drogą e-mail.</p>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="mb-4 p-3 rounded text-sm {% if m.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% else %}bg-primary-50 border border-primary-200 text-primary-800{% endif %}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 space-y-4">
+        {% csrf_token %}{% antybot_pola %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Imię i nazwisko *</span>
+                <input type="text" name="imie" required maxlength="200" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">E-mail *</span>
+                <input type="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Telefon</span>
+                <input type="tel" name="tel" maxlength="30" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+            <label class="block">
+                <span class="text-xs text-primary-600 uppercase tracking-wider">Proponowana data</span>
+                <input type="date" name="data" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            </label>
+        </div>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">ID osoby (opcjonalnie)</span>
+            <input type="number" name="osoba_id" min="1" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+            <small class="text-primary-500">Pole „ID" znajdziesz w URL-u strony osoby.</small>
+        </label>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Treść intencji *</span>
+            <textarea name="intencja" required rows="5" maxlength="2000" class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded" placeholder="Za duszę śp..."></textarea>
+        </label>
+        <button type="submit" class="px-5 py-2.5 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Wyślij prośbę</button>
+        <p class="text-xs text-primary-500">Ofiara dobrowolna ustalana z proboszczem po przyjęciu intencji.</p>
+    </form>
+</section>
+{% endblock %}

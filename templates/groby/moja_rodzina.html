@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Moja rodzina — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Profil</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Moja rodzina</h1>
+    <p class="text-primary-600 mb-6">Wszyscy obserwowani przez Ciebie + ich relacje rodzinne.</p>
+
+    {% if osoby %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+            <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4"><span>Osoby ({{ osoby|length }})</span></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for o in osoby %}
+                    <a href="{% url 'groby:osoba_detail' o.pk %}" class="block px-4 py-3 bg-cream-50 hover:bg-primary-50 border border-cream-200 rounded">
+                        <div class="font-serif text-primary-900">{{ o.imie }} {{ o.nazwisko }}</div>
+                        <div class="text-xs text-primary-500">{{ o.data_urodzenia|date:"Y"|default:"?" }} — {{ o.data_smierci|date:"Y"|default:"?" }}</div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if relacje %}
+            <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+                <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4"><span>Relacje ({{ relacje|length }})</span></div>
+                <ul class="space-y-2">
+                    {% for r in relacje %}
+                        <li class="flex items-center gap-3 text-sm">
+                            <a href="{% url 'groby:osoba_detail' r.osoba_a.pk %}" class="text-primary-800 hover:underline">{{ r.osoba_a.imie }} {{ r.osoba_a.nazwisko }}</a>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-accent-400/20 text-accent-600">{{ r.get_typ_display }}</span>
+                            <a href="{% url 'groby:osoba_detail' r.osoba_b.pk %}" class="text-primary-800 hover:underline">{{ r.osoba_b.imie }} {{ r.osoba_b.nazwisko }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+            Nie obserwujesz jeszcze żadnych osób ani grobów. Dodaj „Obserwuj" przy interesujących Cię osobach, a tu pojawi się Twoja sieć rodzinna.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

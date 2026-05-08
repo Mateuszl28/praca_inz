@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Kto żył w roku — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Wehikuł czasu</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Kto żył w roku…?</h1>
+    <p class="text-primary-600 mb-6">Wybierz rok, zobacz mieszkańców Szydłowa, którzy wtedy żyli.</p>
+
+    <form method="get" class="bg-white border border-cream-200 rounded-lg p-5 mb-6">
+        <label class="block">
+            <span class="text-sm text-primary-700">Rok: <strong id="rok-label">{{ rok|default:1900 }}</strong></span>
+            <input type="range" name="rok" min="1700" max="2026" value="{{ rok|default:1900 }}" oninput="document.getElementById('rok-label').textContent=this.value" class="w-full mt-2">
+        </label>
+        <div class="flex gap-2 mt-3 text-xs">
+            {% for r in '1850,1900,1914,1939,1945,1980,2000'|cut:' '|stringformat:'s'|slice:'1:-1' %}{% endfor %}
+            <a href="?rok=1850" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1850</a>
+            <a href="?rok=1900" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1900</a>
+            <a href="?rok=1914" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1914</a>
+            <a href="?rok=1939" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1939</a>
+            <a href="?rok=1945" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1945</a>
+            <a href="?rok=1980" class="px-2 py-1 border border-cream-200 rounded hover:bg-cream-100">1980</a>
+            <button type="submit" class="ml-auto px-4 py-1 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Pokaż</button>
+        </div>
+    </form>
+
+    {% if rok %}
+        <h2 class="font-serif text-2xl text-primary-900 mb-4">W roku {{ rok }} żyło {{ osoby|length }} {{ osoby|length|odmien:"osoba,osoby,osób" }} z naszej parafii</h2>
+
+        {% if osoby %}
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {% for o in osoby %}
+                    <li>
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="block bg-white border border-cream-200 rounded p-3 hover:border-primary-300 transition">
+                            <div class="font-serif text-primary-900">{{ o.imie }} {{ o.nazwisko }}</div>
+                            <div class="text-xs text-primary-500">
+                                {{ o.data_urodzenia|date:"Y" }} — {{ o.data_smierci|date:"Y" }}
+                                ({{ rok|add:'-1700'|add:o.data_urodzenia.year|add:'-0' }} ?lat — uproszczenie)
+                            </div>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="bg-white border border-cream-200 rounded p-6 text-center text-primary-500">
+                Nikogo z bazy nie żył w {{ rok }} r. (lub brak dat).
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endblock %}

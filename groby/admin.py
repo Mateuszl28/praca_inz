@@ -4,6 +4,7 @@ from .models import (
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
+    Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
 )
 
 
@@ -265,6 +266,52 @@ class NewsletterAdmin(admin.ModelAdmin):
     list_display = ('email', 'aktywny', 'data_dodania', 'ostatnia_wysylka')
     list_filter = ('aktywny',)
     search_fields = ('email',)
+
+
+@admin.register(Kwiat)
+class KwiatAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'rodzaj', 'autor_user', 'data_zlozenia')
+    list_filter = ('rodzaj',)
+    readonly_fields = ('ip_hash', 'data_zlozenia')
+
+
+@admin.register(Nagranie)
+class NagranieAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'typ', 'grob', 'zaakceptowane', 'data_dodania')
+    list_filter = ('typ', 'zaakceptowane')
+    autocomplete_fields = ('grob', 'osoba')
+    actions = ['zaakceptuj']
+
+    @admin.action(description='Zaakceptuj wybrane nagrania')
+    def zaakceptuj(self, request, qs):
+        qs.update(zaakceptowane=True)
+
+
+@admin.register(GlosNagrobek)
+class GlosAdmin(admin.ModelAdmin):
+    list_display = ('grob', 'user', 'data')
+    readonly_fields = ('ip_hash', 'data')
+
+
+@admin.register(IntencjaMszalna)
+class IntencjaAdmin(admin.ModelAdmin):
+    list_display = ('zamawiajacy_imie', 'osoba', 'status', 'data_zlozenia')
+    list_filter = ('status',)
+    search_fields = ('zamawiajacy_imie', 'zamawiajacy_email', 'intencja')
+    readonly_fields = ('data_zlozenia',)
+
+
+@admin.register(Zaproszenie)
+class ZaproszenieAdmin(admin.ModelAdmin):
+    list_display = ('email', 'osoba', 'autor', 'wykorzystane_przez', 'data_utworzenia')
+    readonly_fields = ('token', 'data_utworzenia', 'data_wykorzystania')
+
+
+@admin.register(GeoCache)
+class GeoCacheAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'lat', 'lng', 'znaleziono', 'data_zapytania')
+    list_filter = ('znaleziono',)
+    search_fields = ('nazwa',)
 
 
 @admin.register(HistoriaZmian)

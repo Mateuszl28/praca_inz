@@ -16,6 +16,7 @@ from .models import (
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
+    Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
 )
 
 
@@ -1238,6 +1239,257 @@ def newsletter_anuluj(request, token):
         n.save(update_fields=['aktywny'])
         messages.success(request, f'Anulowano subskrypcję {n.email}.')
     return redirect('groby:home')
+
+
+# ---- Kwiaty ----
+
+@require_POST
+def zloz_kwiat(request, pk):
+    if _antybot(request):
+        return redirect('groby:osoba_detail', pk=pk)
+    osoba = get_object_or_404(Osoba, pk=pk)
+    from datetime import timedelta
+    from django.utils import timezone
+    iph = _hash_ip(request)
+    if Kwiat.objects.filter(osoba=osoba, ip_hash=iph,
+                            data_zlozenia__gte=timezone.now() - timedelta(minutes=5)).exists():
+        return redirect('groby:osoba_detail', pk=pk)
+    Kwiat.objects.create(
+        osoba=osoba,
+        autor_user=request.user if request.user.is_authenticated else None,
+        autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+        wiadomosc=(request.POST.get('wiadomosc') or '').strip()[:300],
+        rodzaj=(request.POST.get('rodzaj') or 'roza')[:20],
+        ip_hash=iph,
+    )
+    messages.success(request, '💐 Kwiat złożony — pozostanie 7 dni.')
+    return redirect('groby:osoba_detail', pk=pk)
+
+
+# ---- Memory wall ----
+
+def memory_wall(request):
+    qs = Wspomnienie.objects.filter(status='zaakceptowane').select_related('osoba__grob__sektor', 'autor_user').order_by('-data_dodania')
+    page = Paginator(qs, 30).get_page(request.GET.get('page'))
+    return render(request, 'groby/memory_wall.html', {'page': page})
+
+
+# ---- Kto żył w roku X ----
+
+def kto_zyl(request):
+    rok = request.GET.get('rok', '').strip()
+    osoby = []
+    if rok.isdigit():
+        r = int(rok)
+        # Żyjący w danym roku: data_urodzenia <= rok <= data_smierci
+        qs = Osoba.objects.filter(
+            data_urodzenia__year__lte=r,
+            data_smierci__year__gte=r,
+        ).select_related('grob__sektor')
+        osoby = list(qs[:500])
+    return render(request, 'groby/kto_zyl.html', {
+        'rok': rok, 'osoby': osoby,
+    })
+
+
+# ---- Mapa pochodzenia (geo) ----
+
+def mapa_pochodzenia(request):
+    """Geo-mapa miejsc urodzenia. Geokodowanie z cache w GeoCache."""
+    miejsca = (Osoba.objects
+               .exclude(miejsce_urodzenia='')
+               .values('miejsce_urodzenia')
+               .annotate(c=Count('id'))
+               .order_by('-c')[:200])
+    dane = []
+    for m in miejsca:
+        nazwa = m['miejsce_urodzenia']
+        cache = GeoCache.objects.filter(nazwa=nazwa).first()
+        if cache and cache.lat is not None:
+            dane.append({'nazwa': nazwa, 'liczba': m['c'], 'lat': cache.lat, 'lng': cache.lng})
+    return render(request, 'groby/mapa_pochodzenia.html', {
+        'dane_json': json.dumps(dane, ensure_ascii=False),
+        'razem_miejsc': len(miejsca),
+        'zgeokodowane': len(dane),
+    })
+
+
+# ---- Moja rodzina ----
+
+@login_required
+def moja_rodzina(request):
+    profil_obj, _ = Profil.objects.get_or_create(user=request.user)
+    obs_osoby = list(profil_obj.obserwowane_osoby.all())
+    obs_groby_osoby = []
+    for g in profil_obj.obserwowane_groby.prefetch_related('osoby'):
+        obs_groby_osoby += list(g.osoby.all())
+    wszystkie = list({o.pk: o for o in obs_osoby + obs_groby_osoby}.values())
+    relacje = []
+    if wszystkie:
+        ids = [o.pk for o in wszystkie]
+        relacje = list(Relacja.objects.filter(
+            Q(osoba_a__in=ids) | Q(osoba_b__in=ids),
+        ).select_related('osoba_a', 'osoba_b'))
+    return render(request, 'groby/moja_rodzina.html', {
+        'osoby': wszystkie, 'relacje': relacje,
+    })
+
+
+# ---- Inline edit (staff) ----
+
+@login_required
+@require_POST
+def inline_edit(request, model, pk, pole):
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': 'Brak uprawnień'}, status=403)
+    DOZWOLONE = {'Grob': ('uwagi', 'numer_aktu', 'rodzaj_opis'),
+                 'Osoba': ('biogram', 'miejsce_urodzenia')}
+    if model not in DOZWOLONE or pole not in DOZWOLONE[model]:
+        return JsonResponse({'ok': False, 'error': 'Pole niedozwolone'}, status=400)
+    Klasa = Grob if model == 'Grob' else Osoba
+    obj = get_object_or_404(Klasa, pk=pk)
+    nowa_wartosc = (request.POST.get('wartosc') or '').strip()
+    setattr(obj, pole, nowa_wartosc)
+    obj.save(update_fields=[pole, 'data_modyfikacji'] if hasattr(obj, 'data_modyfikacji') else [pole])
+    return JsonResponse({'ok': True, 'wartosc': nowa_wartosc})
+
+
+# ---- Drag & drop reorder zdjęć ----
+
+@login_required
+@require_POST
+def przestaw_zdjecia(request):
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False}, status=403)
+    try:
+        kolejnosc = json.loads(request.body)['kolejnosc']
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse({'ok': False}, status=400)
+    for idx, z_id in enumerate(kolejnosc):
+        Zdjecie.objects.filter(pk=z_id).update(kolejnosc=idx)
+    return JsonResponse({'ok': True})
+
+
+# ---- Plebiscyt nagrobków ----
+
+def plebiscyt(request):
+    okres_dni = int(request.GET.get('dni', '30'))
+    from datetime import timedelta
+    from django.utils import timezone
+    granica = timezone.now() - timedelta(days=okres_dni)
+    ranking = (Grob.objects
+               .annotate(liczba_glosow=Count('glosy', filter=Q(glosy__data__gte=granica)))
+               .filter(liczba_glosow__gt=0)
+               .select_related('sektor')
+               .prefetch_related('zdjecia', 'osoby')
+               .order_by('-liczba_glosow')[:30])
+    return render(request, 'groby/plebiscyt.html', {
+        'ranking': ranking, 'dni': okres_dni,
+    })
+
+
+@require_POST
+def glosuj(request, pk):
+    if _antybot(request):
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+    grob = get_object_or_404(Grob, pk=pk)
+    iph = _hash_ip(request)
+    _, created = GlosNagrobek.objects.get_or_create(
+        grob=grob, ip_hash=iph,
+        defaults={'user': request.user if request.user.is_authenticated else None},
+    )
+    if created:
+        messages.success(request, '✓ Głos oddany!')
+    else:
+        messages.info(request, 'Już głosowałeś na ten grób.')
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+# ---- Statystyki użytkownika ----
+
+@login_required
+def moje_statystyki(request):
+    user = request.user
+    return render(request, 'groby/moje_statystyki.html', {
+        'liczba_swiec': user.swiece.count(),
+        'liczba_kwiatow': user.kwiat_set.count() if hasattr(user, 'kwiat_set') else Kwiat.objects.filter(autor_user=user).count(),
+        'liczba_wspomnien': user.wspomnienia.count(),
+        'liczba_komentarzy': Komentarz.objects.filter(autor_user=user).count(),
+        'liczba_zgloszen': user.zgloszenia.count(),
+        'liczba_obserwowanych_grobow': user.profil.obserwowane_groby.count() if hasattr(user, 'profil') else 0,
+        'liczba_obserwowanych_osob': user.profil.obserwowane_osoby.count() if hasattr(user, 'profil') else 0,
+        'liczba_zapisanych_szukan': user.zapisane_szukania.count(),
+        'liczba_glosow': GlosNagrobek.objects.filter(user=user).count(),
+        'liczba_odznak': user.odznaki.count(),
+        'odznaki': user.odznaki.select_related('odznaka'),
+    })
+
+
+# ---- Intencje mszalne ----
+
+def intencje_form(request):
+    if request.method == 'POST':
+        if _antybot(request):
+            return redirect('groby:intencje_form')
+        intencja = (request.POST.get('intencja') or '').strip()
+        imie = (request.POST.get('imie') or '').strip()[:200]
+        email = (request.POST.get('email') or '').strip()[:200]
+        if not (intencja and imie and email):
+            messages.error(request, 'Wymagane: imię, e-mail, intencja.')
+            return redirect('groby:intencje_form')
+        osoba_id = request.POST.get('osoba_id', '').strip()
+        osoba = Osoba.objects.filter(pk=osoba_id).first() if osoba_id.isdigit() else None
+        proponowana = request.POST.get('data') or None
+        IntencjaMszalna.objects.create(
+            osoba=osoba,
+            zamawiajacy_imie=imie,
+            zamawiajacy_email=email,
+            zamawiajacy_tel=(request.POST.get('tel') or '').strip()[:30],
+            intencja=intencja[:2000],
+            proponowana_data=proponowana if proponowana else None,
+        )
+        messages.success(request, 'Intencja przyjęta. Skontaktujemy się drogą e-mail.')
+        return redirect('groby:intencje_form')
+    return render(request, 'groby/intencje.html')
+
+
+# ---- Zaproszenia do edycji ----
+
+@login_required
+def utworz_zaproszenie(request, osoba_id):
+    if not request.user.is_authenticated:
+        return redirect('admin:login')
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if request.method != 'POST':
+        return redirect('groby:osoba_detail', pk=osoba_id)
+    email = (request.POST.get('email') or '').strip()
+    if not email:
+        return redirect('groby:osoba_detail', pk=osoba_id)
+    import secrets
+    from django.core.mail import send_mail
+    from django.conf import settings
+    token = secrets.token_urlsafe(32)
+    Zaproszenie.objects.create(osoba=osoba, email=email, token=token, autor=request.user)
+    link = request.build_absolute_uri(reverse('groby:przyjmij_zaproszenie', args=[token]))
+    send_mail(
+        f'Zaproszenie do współedycji — {osoba}',
+        f'Otrzymałeś/aś zaproszenie do współedycji wpisu o osobie {osoba}.\n'
+        f'Kliknij aby skorzystać: {link}\n',
+        settings.DEFAULT_FROM_EMAIL, [email], fail_silently=True,
+    )
+    messages.success(request, f'Zaproszenie wysłane na {email}.')
+    return redirect('groby:osoba_detail', pk=osoba_id)
+
+
+@login_required
+def przyjmij_zaproszenie(request, token):
+    from django.utils import timezone
+    z = get_object_or_404(Zaproszenie, token=token, wykorzystane_przez__isnull=True)
+    z.wykorzystane_przez = request.user
+    z.data_wykorzystania = timezone.now()
+    z.save()
+    messages.success(request, f'Możesz teraz edytować {z.osoba} w panelu admin.')
+    return redirect('groby:osoba_detail', pk=z.osoba.pk)
 
 
 def manifest(request):

@@ -392,6 +392,7 @@ class Trasa(models.Model):
     nazwa = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     opis = models.TextField(blank=True)
+    audio = models.FileField(upload_to='trasy/audio/', blank=True, null=True, verbose_name='Przewodnik audio (mp3)')
     autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     opublikowana = models.BooleanField(default=False)
     data_dodania = models.DateTimeField(auto_now_add=True)
@@ -462,6 +463,115 @@ class Newsletter(models.Model):
 
     def __str__(self):
         return f'{self.email} ({"✓" if self.aktywny else "✗"})'
+
+
+class Kwiat(models.Model):
+    """Wirtualny kwiat położony na grobie. TTL 7 dni."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='kwiaty')
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    wiadomosc = models.CharField(max_length=300, blank=True)
+    rodzaj = models.CharField(max_length=20, default='roza', choices=[
+        ('roza', 'Róża'),
+        ('lilia', 'Lilia'),
+        ('chryzantema', 'Chryzantema'),
+        ('tulipan', 'Tulipan'),
+    ])
+    ip_hash = models.CharField(max_length=64, blank=True)
+    data_zlozenia = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Kwiat'
+        verbose_name_plural = 'Kwiaty'
+        ordering = ['-data_zlozenia']
+
+
+class Nagranie(models.Model):
+    """Audio/video pożegnanie do grobu."""
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='nagrania')
+    osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True, related_name='nagrania')
+    typ = models.CharField(max_length=10, choices=[('audio', 'Audio'), ('video', 'Wideo')], default='audio')
+    plik = models.FileField(upload_to='nagrania/')
+    tytul = models.CharField(max_length=200)
+    opis = models.TextField(blank=True)
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    zaakceptowane = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Nagranie'
+        verbose_name_plural = 'Nagrania'
+        ordering = ['-data_dodania']
+
+    def __str__(self):
+        return f'{self.get_typ_display()}: {self.tytul}'
+
+
+class GlosNagrobek(models.Model):
+    """Plebiscyt nagrobków — głos na grób."""
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='glosy')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64)
+    data = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Głos w plebiscycie'
+        verbose_name_plural = 'Głosy w plebiscycie'
+        unique_together = [['grob', 'ip_hash']]
+
+
+class IntencjaMszalna(models.Model):
+    STATUS_CHOICES = [
+        ('nowa', 'Nowa'),
+        ('przyjeta', 'Przyjęta'),
+        ('odprawiona', 'Odprawiona'),
+        ('odrzucona', 'Odrzucona'),
+    ]
+    osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True, related_name='intencje')
+    zamawiajacy_imie = models.CharField(max_length=200)
+    zamawiajacy_email = models.EmailField()
+    zamawiajacy_tel = models.CharField(max_length=30, blank=True)
+    intencja = models.TextField()
+    proponowana_data = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='nowa')
+    notatka_kapelana = models.TextField(blank=True)
+    data_zlozenia = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Intencja mszalna'
+        verbose_name_plural = 'Intencje mszalne'
+        ordering = ['-data_zlozenia']
+
+
+class Zaproszenie(models.Model):
+    """Zaproszenie do współedycji konkretnej osoby (rodzina krewna)."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='zaproszenia')
+    email = models.EmailField()
+    token = models.CharField(max_length=64, unique=True)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    wykorzystane_przez = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='przyjete_zaproszenia')
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    data_wykorzystania = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Zaproszenie do edycji'
+        verbose_name_plural = 'Zaproszenia do edycji'
+
+
+class GeoCache(models.Model):
+    """Cache geokodowania (miejsce -> lat/lng)."""
+    nazwa = models.CharField(max_length=200, unique=True)
+    lat = models.FloatField(null=True, blank=True)
+    lng = models.FloatField(null=True, blank=True)
+    znaleziono = models.BooleanField(default=False)
+    data_zapytania = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Cache geokodowania'
+        verbose_name_plural = 'Cache geokodowania'
+
+    def __str__(self):
+        return f'{self.nazwa} → ({self.lat}, {self.lng})'
 
 
 class HistoriaZmian(models.Model):

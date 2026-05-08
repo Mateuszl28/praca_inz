@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Moja aktywność — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Profil</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Moja aktywność</h1>
+    <p class="text-primary-600 mb-8">Twój wkład w bazę pamięci.</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">🕯</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_swiec }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_swiec|odmien:"świeczka,świeczki,świeczek" }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">💐</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_kwiatow }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_kwiatow|odmien:"kwiat,kwiaty,kwiatów" }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">📜</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_wspomnien }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_wspomnien|odmien:"wspomnienie,wspomnienia,wspomnień" }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">💬</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_komentarzy }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_komentarzy|odmien:"komentarz,komentarze,komentarzy" }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">⭐</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_obserwowanych_grobow|add:liczba_obserwowanych_osob }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">obserwowane</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">🔍</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_zapisanych_szukan }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">zapisanych szukań</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">🗳</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_glosow }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_glosow|odmien:"głos,głosy,głosów" }}</div>
+        </div>
+        <div class="bg-white rounded-lg border border-cream-200 p-5 text-center">
+            <div class="text-3xl mb-1">🏆</div>
+            <div class="font-serif text-3xl text-primary-900">{{ liczba_odznak }}</div>
+            <div class="text-xs uppercase tracking-wider text-primary-500">{{ liczba_odznak|odmien:"odznaka,odznaki,odznak" }}</div>
+        </div>
+    </div>
+
+    {% if odznaki %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4">Twoje odznaki</h2>
+            <div class="flex flex-wrap gap-3">
+                {% for u in odznaki %}
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-accent-400/15 border border-accent-400">
+                        <span class="text-2xl">{{ u.odznaka.ikona }}</span>
+                        <div>
+                            <div class="font-medium text-primary-900">{{ u.odznaka.nazwa }}</div>
+                            <div class="text-xs text-primary-500">{{ u.odznaka.opis }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

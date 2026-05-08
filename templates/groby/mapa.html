@@ -85,6 +85,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
     const groby = {{ groby_json|safe }};
     const planUrl  = {% if plan_url %}'{{ plan_url }}'{% else %}null{% endif %};
@@ -136,6 +137,31 @@
         grupa.addLayer(marker);
     });
     grupa.addTo(mapa);
+
+    // Heatmapa gęstości — toggle (Leaflet.heat)
+    let warstwa_heatmap = null;
+    L.Control.Heat = L.Control.extend({
+        onAdd: function () {
+            const btn = L.DomUtil.create('div', 'leaflet-bar');
+            btn.innerHTML = '<a href="#" title="Heatmapa pochówków" style="font-size:14px;line-height:30px;width:30px;display:block;text-align:center;">🔥</a>';
+            btn.onclick = function (e) {
+                e.preventDefault();
+                if (warstwa_heatmap) {
+                    mapa.removeLayer(warstwa_heatmap);
+                    warstwa_heatmap = null;
+                } else if (window.L && L.heatLayer) {
+                    const punkty = groby.map(g => [g.y, g.x, 0.5]);
+                    warstwa_heatmap = L.heatLayer(punkty, { radius: 25, blur: 15, maxZoom: 1 }).addTo(mapa);
+                }
+                return false;
+            };
+            return btn;
+        },
+        onRemove: function () {},
+    });
+    if (window.L && typeof L.heatLayer === 'function') {
+        new L.Control.Heat({ position: 'topright' }).addTo(mapa);
+    }
 
     // Geolokalizacja: cmentarz w Szydłowie ~ 50.5847, 20.8327
     // Mapowanie GPS → CRS.Simple jest przybliżone (cmentarz < 100 m)

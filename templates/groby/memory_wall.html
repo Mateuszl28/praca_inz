@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Ściana wspomnień — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Ściana wspomnień</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Wszystkie wspomnienia</h1>
+    <p class="text-primary-600 mb-8">Zaakceptowane wspomnienia o ludziach z naszego cmentarza.</p>
+
+    {% if page.object_list %}
+        <div class="space-y-6">
+            {% for w in page.object_list %}
+                <article class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <a href="{% url 'groby:osoba_detail' w.osoba.pk %}" class="font-serif text-xl text-primary-900 hover:underline">
+                            {{ w.osoba.imie }} {{ w.osoba.nazwisko }}{% if w.osoba.nazwisko_rodowe %} <span class="italic text-primary-500 text-sm">(z d. {{ w.osoba.nazwisko_rodowe }})</span>{% endif %}
+                        </a>
+                        <span class="text-xs text-primary-500">{{ w.data_dodania|date:"j.n.Y" }}</span>
+                    </div>
+                    <blockquote class="font-serif italic text-primary-800 leading-relaxed">
+                        „{{ w.tresc|linebreaksbr }}"
+                    </blockquote>
+                    <div class="mt-3 text-xs text-primary-500">— {{ w.autor_str }}</div>
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if page.paginator.num_pages > 1 %}
+            <div class="mt-8 flex justify-center gap-2 text-sm">
+                {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">‹</a>{% endif %}
+                <span class="px-3 py-1 text-primary-600">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?page={{ page.next_page_number }}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">›</a>{% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-12 text-center text-primary-500">
+            Brak wspomnień. Bądź pierwszą osobą, która podzieli się historią pod profilem osoby.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
