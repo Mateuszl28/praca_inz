@@ -11,7 +11,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.views.decorators.http import require_POST
-from .models import Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca
+from .models import Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca, ZapisaneSzukanie, Wpis
 
 
 SZYDLOW_CENTRUM = (50.5847, 20.8327)
@@ -620,6 +620,149 @@ def indeks_nazwisk(request):
     })
 
 
+def eksport_gedcom(request):
+    """Eksport wszystkich osób + relacji do GEDCOM 5.5.5."""
+    osoby = list(Osoba.objects.select_related('grob__sektor').all())
+    relacje = list(Relacja.objects.select_related('osoba_a', 'osoba_b').all())
+
+    # Pogrupuj relacje rodzic/małżeństwo na rodziny GEDCOM (FAM).
+    # Dla każdej pary rodziców, wszystkie ich dzieci tworzą jedną FAM.
+    # Małżeństwa bez wspólnych dzieci dostają własny FAM.
+    rodzice_dziecka = defaultdict(list)  # dziecko_id -> [rodzice_ids]
+    pary_malzonkow = set()
+    for r in relacje:
+        if r.typ == 'rodzic':
+            rodzice_dziecka[r.osoba_b_id].append(r.osoba_a_id)
+        elif r.typ == 'malzenstwo':
+            para = tuple(sorted([r.osoba_a_id, r.osoba_b_id]))
+            pary_malzonkow.add(para)
+
+    rodziny = {}  # klucz: para rodziców (sorted) -> {ojciec, matka, dzieci}
+    for dziecko_id, rodzice in rodzice_dziecka.items():
+        klucz = tuple(sorted(rodzice))
+        if klucz not in rodziny:
+            rodziny[klucz] = {'rodzice': set(rodzice), 'dzieci': set()}
+        rodziny[klucz]['dzieci'].add(dziecko_id)
+    for para in pary_malzonkow:
+        if para not in rodziny:
+            rodziny[para] = {'rodzice': set(para), 'dzieci': set()}
+
+    rodzina_indeks = {}  # klucz -> numer FAM
+    for i, klucz in enumerate(rodziny.keys(), start=1):
+        rodzina_indeks[klucz] = i
+
+    # Mapowanie osoba -> FAMC (rodzina-z-rodzicow), FAMS (rodziny-malzeńskie)
+    famc = defaultdict(list)
+    fams = defaultdict(list)
+    for klucz, dane in rodziny.items():
+        idx = rodzina_indeks[klucz]
+        for r in dane['rodzice']:
+            fams[r].append(idx)
+        for d in dane['dzieci']:
+            famc[d].append(idx)
+
+    linie = ['0 HEAD', '1 SOUR Informator-Cmentarny-Szydlow', '2 VERS 1.0',
+             '1 GEDC', '2 VERS 5.5.5', '2 FORM LINEAGE-LINKED', '1 CHAR UTF-8']
+
+    def gd_data(d):
+        if not d:
+            return None
+        return d.strftime('%d %b %Y').upper()
+
+    for o in osoby:
+        linie.append(f'0 @I{o.pk}@ INDI')
+        nazw = o.nazwisko_rodowe or o.nazwisko
+        linie.append(f'1 NAME {o.imie} {o.drugie_imie} /{nazw}/'.replace('  ', ' ').strip())
+        if o.imie:
+            linie.append(f'2 GIVN {o.imie}{(" " + o.drugie_imie) if o.drugie_imie else ""}')
+        if nazw:
+            linie.append(f'2 SURN {nazw}')
+        if o.data_urodzenia:
+            linie.append('1 BIRT')
+            linie.append(f'2 DATE {gd_data(o.data_urodzenia)}')
+            if o.miejsce_urodzenia:
+                linie.append(f'2 PLAC {o.miejsce_urodzenia}')
+        if o.data_smierci:
+            linie.append('1 DEAT')
+            linie.append(f'2 DATE {gd_data(o.data_smierci)}')
+            linie.append(f'2 PLAC Szydlow, sektor {o.grob.sektor.nazwa}, grob {o.grob.numer}')
+        if o.biogram:
+            linie.append(f'1 NOTE {o.biogram[:200]}')
+        for f in famc[o.pk]:
+            linie.append(f'1 FAMC @F{f}@')
+        for f in fams[o.pk]:
+            linie.append(f'1 FAMS @F{f}@')
+
+    for klucz, dane in rodziny.items():
+        idx = rodzina_indeks[klucz]
+        linie.append(f'0 @F{idx}@ FAM')
+        rodzice = sorted(dane['rodzice'])
+        # Pierwsza osoba jako HUSB, druga jako WIFE (uproszczenie — bez płci w bazie)
+        if rodzice:
+            linie.append(f'1 HUSB @I{rodzice[0]}@')
+        if len(rodzice) > 1:
+            linie.append(f'1 WIFE @I{rodzice[1]}@')
+        for d in sorted(dane['dzieci']):
+            linie.append(f'1 CHIL @I{d}@')
+
+    linie.append('0 TRLR')
+
+    resp = HttpResponse('\r\n'.join(linie), content_type='application/x-gedcom; charset=utf-8')
+    resp['Content-Disposition'] = 'attachment; filename="cmentarz-szydlow.ged"'
+    return resp
+
+
+def galeria_cmentarza(request):
+    sektor_id = request.GET.get('sektor', '').strip()
+    qs = Zdjecie.objects.select_related('grob__sektor').order_by('-data_dodania')
+    if sektor_id:
+        qs = qs.filter(grob__sektor_id=sektor_id)
+    page = Paginator(qs, 60).get_page(request.GET.get('page'))
+    return render(request, 'groby/galeria.html', {
+        'page': page,
+        'sektory': Sektor.objects.order_by('nazwa'),
+        'sektor_id': sektor_id,
+        'razem': qs.count(),
+    })
+
+
+@login_required
+@require_POST
+def zapisz_szukanie(request):
+    nazwa = (request.POST.get('nazwa') or '').strip()[:100]
+    querystring = (request.POST.get('querystring') or '').strip()[:500]
+    if not nazwa or not querystring:
+        messages.error(request, 'Wpisz nazwę.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+    ZapisaneSzukanie.objects.create(user=request.user, nazwa=nazwa, querystring=querystring)
+    messages.success(request, f'Zapisano: „{nazwa}"')
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+@login_required
+@require_POST
+def usun_zapisane(request, pk):
+    ZapisaneSzukanie.objects.filter(pk=pk, user=request.user).delete()
+    return redirect('groby:profil')
+
+
+def lista_wpisow(request):
+    typ = request.GET.get('typ', '').strip()
+    qs = Wpis.objects.filter(opublikowany=True).select_related('osoba__grob__sektor', 'autor')
+    if typ:
+        qs = qs.filter(typ=typ)
+    return render(request, 'groby/wpisy_lista.html', {
+        'wpisy': qs,
+        'typ': typ,
+        'typy': Wpis.TYP_CHOICES,
+    })
+
+
+def wpis_detail(request, slug):
+    wpis = get_object_or_404(Wpis, slug=slug, opublikowany=True)
+    return render(request, 'groby/wpis_detail.html', {'wpis': wpis})
+
+
 def manifest(request):
     data = {
         "name": "Informator Cmentarny — Szydłów",
@@ -839,6 +982,7 @@ def profil(request):
         'obserwowane_groby': profil_obj.obserwowane_groby.select_related('sektor').prefetch_related('osoby'),
         'obserwowane_osoby': profil_obj.obserwowane_osoby.select_related('grob__sektor'),
         'moje_zgloszenia': Zgloszenie.objects.filter(autor_user=request.user).select_related('grob__sektor', 'osoba__grob__sektor')[:20],
+        'zapisane_szukania': request.user.zapisane_szukania.all()[:20],
     })
 
 

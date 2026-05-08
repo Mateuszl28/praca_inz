@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca
+from .models import Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca, ZapisaneSzukanie, Wpis
 
 
 admin.site.site_header = 'Informator Cmentarny — Szydłów'
@@ -135,6 +135,27 @@ class SwiecaAdmin(admin.ModelAdmin):
     list_display = ('osoba', 'intencja', 'autor_user', 'data_zapalenia')
     search_fields = ('osoba__nazwisko', 'intencja')
     readonly_fields = ('ip_hash', 'data_zapalenia')
+
+
+@admin.register(Wpis)
+class WpisAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'typ', 'opublikowany', 'data_publikacji', 'autor')
+    list_filter = ('typ', 'opublikowany')
+    search_fields = ('tytul', 'tresc', 'podpis')
+    prepopulated_fields = {'slug': ('tytul',)}
+    autocomplete_fields = ('osoba',)
+    readonly_fields = ('data_dodania', 'data_modyfikacji')
+
+    def save_model(self, request, obj, form, change):
+        if not obj.autor_id:
+            obj.autor = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ZapisaneSzukanie)
+class ZapisaneSzukanieAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'user', 'querystring', 'data_utworzenia')
+    search_fields = ('nazwa', 'user__username')
 
 
 @admin.register(HistoriaZmian)

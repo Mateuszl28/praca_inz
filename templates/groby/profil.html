@@ -88,6 +88,26 @@
         {% endif %}
     </div>
 
+    {% if zapisane_szukania %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+            <h2 class="font-serif text-2xl text-primary-900 mb-4">Zapisane wyszukiwania ({{ zapisane_szukania|length }})</h2>
+            <ul class="divide-y divide-cream-100">
+                {% for z in zapisane_szukania %}
+                    <li class="py-3 flex items-center justify-between gap-3">
+                        <a href="{% url 'groby:szukaj' %}?{{ z.querystring }}" class="text-primary-800 hover:underline flex-1">
+                            <span class="font-medium">{{ z.nazwa }}</span>
+                            <span class="text-xs text-primary-500 ml-2">{{ z.querystring|truncatechars:60 }}</span>
+                        </a>
+                        <form method="post" action="{% url 'groby:usun_zapisane' z.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs text-red-700 hover:underline">Usuń</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
     <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
         <h2 class="font-serif text-2xl text-primary-900 mb-4">Moje zgłoszenia ({{ moje_zgloszenia|length }})</h2>
         {% if moje_zgloszenia %}

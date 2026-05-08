@@ -7,3 +7,6 @@ gunicorn
 psycopg2-binary
 qrcode
 reportlab
+djangorestframework
+django-filter
+sentry-sdk

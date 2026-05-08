@@ -65,6 +65,15 @@
         </div>
     </form>
 
+    {% if aktywne_filtry and request.user.is_authenticated %}
+        <form method="post" action="{% url 'groby:zapisz_szukanie' %}" class="mb-4 flex items-center gap-2 text-sm">
+            {% csrf_token %}
+            <input type="hidden" name="querystring" value="{{ querystring_bez_page }}">
+            <input type="text" name="nazwa" required maxlength="100" placeholder="Nazwij to wyszukiwanie..." class="flex-1 max-w-xs px-3 py-1.5 border border-cream-200 rounded">
+            <button type="submit" class="px-3 py-1.5 border border-cream-200 rounded text-primary-700 hover:bg-cream-100">★ Zapisz</button>
+        </form>
+    {% endif %}
+
     {% if aktywne_filtry %}
         <div class="mb-5 flex items-center justify-between gap-3 flex-wrap text-sm">
             <div class="text-primary-600">

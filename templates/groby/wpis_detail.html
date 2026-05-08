@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ wpis.tytul }} — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<article class="max-w-3xl mx-auto px-4 py-10">
+    <nav class="text-sm text-primary-500 mb-6">
+        <a href="{% url 'groby:home' %}" class="hover:text-primary-800">Strona główna</a>
+        <span class="mx-2">/</span>
+        <a href="{% url 'groby:wpisy_lista' %}" class="hover:text-primary-800">Postacie i wydarzenia</a>
+        <span class="mx-2">/</span>
+        <span class="text-primary-700">{{ wpis.tytul|truncatechars:50 }}</span>
+    </nav>
+
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">
+        {{ wpis.get_typ_display }}{% if wpis.data_publikacji %} · {{ wpis.data_publikacji|date:"j.n.Y" }}{% endif %}
+    </div>
+    <h1 class="font-serif text-4xl sm:text-5xl text-primary-900 mb-3">{{ wpis.tytul }}</h1>
+    {% if wpis.podpis %}<p class="text-xl font-serif italic text-primary-600 mb-6">{{ wpis.podpis }}</p>{% endif %}
+
+    {% if wpis.zdjecie %}
+        <img src="{{ wpis.zdjecie.url }}" alt="{{ wpis.tytul }}" class="w-full rounded-lg shadow-soft border border-cream-200 mb-8">
+    {% endif %}
+
+    <div class="prose prose-stone max-w-none font-serif text-lg text-primary-800 leading-relaxed">
+        {{ wpis.tresc|linebreaks }}
+    </div>
+
+    {% if wpis.osoba %}
+        <a href="{% url 'groby:osoba_detail' wpis.osoba.pk %}" class="mt-8 block bg-primary-50 border border-primary-200 rounded-lg p-5 hover:bg-primary-100 transition">
+            <div class="text-xs uppercase tracking-wider text-primary-700 mb-1">Powiązana osoba</div>
+            <div class="font-serif text-xl text-primary-900">{{ wpis.osoba.imie }} {{ wpis.osoba.nazwisko }}</div>
+            <div class="text-sm text-primary-600">Sektor {{ wpis.osoba.grob.sektor.nazwa }} · grób {{ wpis.osoba.grob.numer }}</div>
+        </a>
+    {% endif %}
+
+    <div class="mt-8 text-xs text-primary-500">
+        {% if wpis.autor %}Autor: {{ wpis.autor.username }} · {% endif %}Dodano: {{ wpis.data_dodania|date:"j.n.Y" }}
+    </div>
+</article>
+{% endblock %}

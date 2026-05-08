@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Znani Szydłowianie i wydarzenia — Informator Cmentarny{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Znani Szydłowianie · Wydarzenia</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Postacie i wydarzenia</h1>
+    <p class="text-primary-600 mb-6">Sylwetki znanych mieszkańców parafii oraz najważniejsze wydarzenia.</p>
+
+    <form method="get" class="mb-6 flex gap-2 flex-wrap text-sm">
+        <a href="{% url 'groby:wpisy_lista' %}" class="px-3 py-1.5 rounded-full border {% if not typ %}bg-primary-700 text-cream-50 border-primary-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">Wszystkie</a>
+        {% for k, v in typy %}
+            <a href="?typ={{ k }}" class="px-3 py-1.5 rounded-full border {% if typ == k %}bg-primary-700 text-cream-50 border-primary-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">{{ v }}</a>
+        {% endfor %}
+    </form>
+
+    {% if wpisy %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {% for w in wpisy %}
+                <a href="{% url 'groby:wpis_detail' w.slug %}" class="group block bg-white rounded-lg shadow-soft border border-cream-200 hover:border-primary-300 overflow-hidden transition">
+                    {% if w.zdjecie %}
+                        <div class="aspect-[16/9] bg-cream-100 overflow-hidden">
+                            <img src="{{ w.zdjecie.url }}" alt="{{ w.tytul }}" class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy">
+                        </div>
+                    {% endif %}
+                    <div class="p-5">
+                        <div class="text-xs uppercase tracking-wider text-accent-600 mb-1">{{ w.get_typ_display }}{% if w.data_publikacji %} · {{ w.data_publikacji|date:"j.n.Y" }}{% endif %}</div>
+                        <h2 class="font-serif text-2xl text-primary-900 mb-2">{{ w.tytul }}</h2>
+                        {% if w.podpis %}<p class="text-primary-600 text-sm">{{ w.podpis|truncatechars:160 }}</p>{% endif %}
+                        {% if w.osoba %}
+                            <div class="text-xs text-primary-500 mt-3">↳ {{ w.osoba.imie }} {{ w.osoba.nazwisko }} (sekt. {{ w.osoba.grob.sektor.nazwa }}, gr. {{ w.osoba.grob.numer }})</div>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+            Brak opublikowanych wpisów. Dodaj je w panelu administratora.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

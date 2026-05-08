@@ -216,6 +216,50 @@ class Swieca(models.Model):
         return f'Świeczka {self.pk} dla {self.osoba}'
 
 
+class ZapisaneSzukanie(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='zapisane_szukania')
+    nazwa = models.CharField(max_length=100, verbose_name='Nazwa wyszukiwania')
+    querystring = models.CharField(max_length=500, verbose_name='Parametry filtru')
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    ostatnie_uzycie = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Zapisane wyszukiwanie'
+        verbose_name_plural = 'Zapisane wyszukiwania'
+        ordering = ['-ostatnie_uzycie', '-data_utworzenia']
+
+    def __str__(self):
+        return f'{self.nazwa} ({self.user})'
+
+
+class Wpis(models.Model):
+    TYP_CHOICES = [
+        ('postac', 'Znana postać'),
+        ('wydarzenie', 'Wydarzenie'),
+        ('historia', 'Tekst historyczny'),
+    ]
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='postac')
+    tytul = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True)
+    podpis = models.CharField(max_length=300, blank=True, verbose_name='Krótki opis (lead)')
+    tresc = models.TextField()
+    osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True, related_name='wpisy', verbose_name='Powiązana osoba (opcjonalnie)')
+    zdjecie = models.ImageField(upload_to='wpisy/', blank=True, null=True)
+    data_publikacji = models.DateField(null=True, blank=True, verbose_name='Data publikacji')
+    opublikowany = models.BooleanField(default=False)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+    data_modyfikacji = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Wpis (blog/postać)'
+        verbose_name_plural = 'Wpisy (blog/postacie)'
+        ordering = ['-data_publikacji', '-data_dodania']
+
+    def __str__(self):
+        return f'{self.get_typ_display()}: {self.tytul}'
+
+
 class HistoriaZmian(models.Model):
     AKCJA_CHOICES = [
         ('dodano', 'Dodano'),

@@ -2,12 +2,21 @@
 Testy jednostkowe aplikacji groby.
 Uruchamianie: python manage.py test
 """
-from datetime import date
-from django.test import TestCase
+import time
+from datetime import date, timedelta
+from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import Sektor, Grob, Osoba
+from .models import (
+    Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil,
+    Wspomnienie, Swieca, ZapisaneSzukanie, Wpis, HistoriaZmian,
+)
 from .templatetags.polish import polish_plural
+
+
+User = get_user_model()
 
 
 # ---------- Testy modeli ----------
@@ -286,18 +295,180 @@ class ImportExcelParsingTest(TestCase):
         self.assertIsNone(parsuj_float(None))
         self.assertIsNone(parsuj_float('abc'))
 
-    def test_parsuj_typ_mapuje_aliasy(self):
-        from groby.management.commands.import_excel import parsuj_typ
-        self.assertEqual(parsuj_typ('ziemny'), 'ziemny')
-        self.assertEqual(parsuj_typ('Urnowy'), 'urnowy')
-        self.assertEqual(parsuj_typ('kolumbarium'), 'urnowy')
-        self.assertEqual(parsuj_typ('Masowy'), 'zbiorowy')
+    def test_infer_typ_mapuje_slowa_kluczowe(self):
+        from groby.management.commands.import_excel import infer_typ
+        self.assertEqual(infer_typ('ziemny'), 'ziemny')
+        self.assertEqual(infer_typ('Urna'), 'urnowy')
+        self.assertEqual(infer_typ('kolumbarium'), 'urnowy')
+        self.assertEqual(infer_typ('Pomnik kamienny'), 'murowany')
+        self.assertEqual(infer_typ('grobowiec'), 'rodzinny')
+        self.assertEqual(infer_typ('kopiec'), 'ziemny')
 
-    def test_parsuj_typ_nieznany_jako_inny(self):
-        from groby.management.commands.import_excel import parsuj_typ
-        self.assertEqual(parsuj_typ('dziwny_typ'), 'inny')
+    def test_infer_typ_nieznany_jako_inny(self):
+        from groby.management.commands.import_excel import infer_typ
+        self.assertEqual(infer_typ('dziwny_typ'), 'inny')
 
-    def test_parsuj_typ_pusty_jako_ziemny(self):
-        from groby.management.commands.import_excel import parsuj_typ
-        self.assertEqual(parsuj_typ(''), 'ziemny')
-        self.assertEqual(parsuj_typ(None), 'ziemny')
+    def test_infer_typ_pusty_jako_inny(self):
+        from groby.management.commands.import_excel import infer_typ
+        self.assertEqual(infer_typ(''), 'inny')
+        self.assertEqual(infer_typ(None), 'inny')
+
+
+# ---------- Testy nowych feature'ów ----------
+
+
+class FormularzeAntyspamTest(TestCase):
+    def setUp(self):
+        s = Sektor.objects.create(nazwa='A')
+        self.grob = Grob.objects.create(sektor=s, numer='1')
+        Osoba.objects.create(grob=self.grob, imie='Jan', nazwisko='Kowalski')
+
+    def test_honeypot_blokuje(self):
+        ts = int(time.time()) - 10
+        self.client.post(
+            reverse('groby:zglos_poprawke', args=['grob', self.grob.pk]),
+            {'tresc': 'spam', '_pulapka': 'wpisany', '_ts': str(ts)},
+            HTTP_REFERER='/',
+        )
+        self.assertEqual(Zgloszenie.objects.count(), 0)
+
+    def test_zbyt_szybki_blokuje(self):
+        self.client.post(
+            reverse('groby:zglos_poprawke', args=['grob', self.grob.pk]),
+            {'tresc': 'test', '_pulapka': '', '_ts': str(int(time.time()))},
+            HTTP_REFERER='/',
+        )
+        self.assertEqual(Zgloszenie.objects.count(), 0)
+
+    def test_poprawne_zapisuje(self):
+        ts = int(time.time()) - 10
+        self.client.post(
+            reverse('groby:zglos_poprawke', args=['grob', self.grob.pk]),
+            {'tresc': 'Brak daty', '_pulapka': '', '_ts': str(ts)},
+            HTTP_REFERER='/',
+        )
+        self.assertEqual(Zgloszenie.objects.count(), 1)
+
+
+class SwieczkiTest(TestCase):
+    def setUp(self):
+        s = Sektor.objects.create(nazwa='A')
+        g = Grob.objects.create(sektor=s, numer='1')
+        self.osoba = Osoba.objects.create(grob=g, imie='Anna', nazwisko='Nowak')
+
+    def test_zapal_tworzy_swiece(self):
+        ts = int(time.time()) - 10
+        self.client.post(
+            reverse('groby:zapal_swiece', args=[self.osoba.pk]),
+            {'intencja': 'pamietamy', '_pulapka': '', '_ts': str(ts)},
+        )
+        self.assertEqual(Swieca.objects.count(), 1)
+
+    def test_cooldown(self):
+        ts = int(time.time()) - 10
+        self.client.post(reverse('groby:zapal_swiece', args=[self.osoba.pk]),
+                         {'intencja': 'a', '_pulapka': '', '_ts': str(ts)})
+        self.client.post(reverse('groby:zapal_swiece', args=[self.osoba.pk]),
+                         {'intencja': 'b', '_pulapka': '', '_ts': str(ts)})
+        self.assertEqual(Swieca.objects.count(), 1)
+
+
+class WspomnieniaTest(TestCase):
+    def setUp(self):
+        s = Sektor.objects.create(nazwa='A')
+        g = Grob.objects.create(sektor=s, numer='1')
+        self.osoba = Osoba.objects.create(grob=g, imie='Maria', nazwisko='Nowak')
+
+    def test_idzie_do_kolejki(self):
+        ts = int(time.time()) - 10
+        self.client.post(
+            reverse('groby:dodaj_wspomnienie', args=[self.osoba.pk]),
+            {'tresc': 'Wspaniala osoba.', '_pulapka': '', '_ts': str(ts)},
+        )
+        self.assertEqual(Wspomnienie.objects.first().status, 'oczekuje')
+
+
+class StaffWidokiTest(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user('staff', password='x', is_staff=True)
+        User.objects.create_user('zwykly', password='x')
+
+    def test_dashboard_blokuje_anonima(self):
+        r = self.client.get(reverse('groby:dashboard'))
+        self.assertEqual(r.status_code, 302)
+
+    def test_dashboard_dla_staffa(self):
+        self.client.login(username='staff', password='x')
+        r = self.client.get(reverse('groby:dashboard'))
+        self.assertEqual(r.status_code, 200)
+
+
+class APITest(TestCase):
+    def setUp(self):
+        s = Sektor.objects.create(nazwa='A')
+        self.grob = Grob.objects.create(sektor=s, numer='1', typ='ziemny')
+        Osoba.objects.create(grob=self.grob, imie='Jan', nazwisko='Kowalski')
+
+    def test_sektory_endpoint(self):
+        r = self.client.get('/api/v1/sektory/')
+        self.assertEqual(r.status_code, 200)
+
+    def test_groby_paginacja(self):
+        r = self.client.get('/api/v1/groby/')
+        data = r.json()
+        self.assertIn('results', data)
+        self.assertIn('count', data)
+
+    def test_grob_zawiera_osoby(self):
+        r = self.client.get(f'/api/v1/groby/{self.grob.pk}/')
+        data = r.json()
+        self.assertEqual(len(data['osoby']), 1)
+
+
+class WpisyTest(TestCase):
+    def test_tylko_opublikowane(self):
+        Wpis.objects.create(typ='postac', tytul='Znana', slug='znana',
+                            tresc='...', opublikowany=True)
+        Wpis.objects.create(typ='postac', tytul='Draft', slug='draft',
+                            tresc='...', opublikowany=False)
+        r = self.client.get(reverse('groby:wpisy_lista'))
+        self.assertContains(r, 'Znana')
+        self.assertNotContains(r, 'Draft')
+
+
+class WalidatorTest(TestCase):
+    def test_smierc_przed_urodzeniem(self):
+        from io import StringIO
+        from django.core.management import call_command
+        s = Sektor.objects.create(nazwa='A')
+        g = Grob.objects.create(sektor=s, numer='1')
+        Osoba.objects.create(grob=g, imie='Jan', nazwisko='Z',
+                             data_urodzenia=date(2000, 1, 1),
+                             data_smierci=date(1990, 1, 1))
+        out = StringIO()
+        call_command('waliduj', '--json', stdout=out)
+        self.assertIn('smierc_przed_urodzeniem', out.getvalue())
+
+
+class GedcomEksportTest(TestCase):
+    def test_eksport_zawiera_indi(self):
+        s = Sektor.objects.create(nazwa='A')
+        g = Grob.objects.create(sektor=s, numer='1')
+        Osoba.objects.create(grob=g, imie='Jan', nazwisko='Kowalski',
+                             data_smierci=date(1970, 6, 15))
+        r = self.client.get(reverse('groby:eksport_gedcom'))
+        self.assertEqual(r.status_code, 200)
+        tresc = r.content.decode('utf-8')
+        self.assertIn('INDI', tresc)
+        self.assertIn('KOWALSKI', tresc.upper())
+
+
+class PWATest(TestCase):
+    def test_manifest(self):
+        r = self.client.get(reverse('groby:manifest'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['short_name'], 'Szydłów')
+
+    def test_sw(self):
+        r = self.client.get(reverse('groby:sw'))
+        self.assertEqual(r.status_code, 200)
