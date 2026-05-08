@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Nie znaleziono — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 py-24 text-center">
+    <div class="font-serif text-9xl text-primary-200 mb-4">404</div>
+    <h1 class="font-serif text-3xl text-primary-900 mb-3">Strona nie istnieje</h1>
+    <p class="text-primary-600 mb-8">Link mógł wygasnąć albo zawiera literówkę.</p>
+    <div class="flex gap-3 justify-center flex-wrap">
+        <a href="{% url 'groby:home' %}" class="px-5 py-2.5 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Strona główna</a>
+        <a href="{% url 'groby:szukaj' %}" class="px-5 py-2.5 border border-cream-200 rounded text-primary-700 hover:bg-cream-100">Wyszukaj osobę</a>
+    </div>
+</section>
+{% endblock %}

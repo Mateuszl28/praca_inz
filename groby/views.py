@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 from .models import (
     Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
-    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania,
+    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
 )
 
 
@@ -66,6 +66,10 @@ def _szukaj_fts(osoby_qs, query):
         )
 
 
+from django.views.decorators.cache import cache_page
+
+
+@cache_page(60 * 15)
 def home(request):
     context = {
         'liczba_osob': Osoba.objects.count(),
@@ -154,6 +158,7 @@ def _zaproponuj_nazwisko(query):
     return None
 
 
+@cache_page(60 * 15)
 def sektory_list(request):
     sektory = Sektor.objects.annotate(
         liczba_grobow=Count('groby', distinct=True),
@@ -383,11 +388,14 @@ def osoba_detail(request, pk):
         obserwuje = osoba.obserwujacy.filter(user=request.user).exists()
     granica = timezone.now() - timedelta(hours=24)
     aktywne_swiece = osoba.swiece.filter(data_zapalenia__gte=granica)
+    wspomnienia = osoba.wspomnienia.filter(status='zaakceptowane').prefetch_related(
+        'komentarze__autor_user',
+    )
     return render(request, 'groby/osoba_detail.html', {
         'osoba': osoba,
         'relacje': relacje,
         'obserwuje': obserwuje,
-        'wspomnienia': osoba.wspomnienia.filter(status='zaakceptowane'),
+        'wspomnienia': wspomnienia,
         'liczba_swiec': aktywne_swiece.count(),
         'ostatnie_swiece': aktywne_swiece.order_by('-data_zapalenia')[:8],
     })
@@ -610,6 +618,7 @@ def _filtruj_osoby(request):
     return osoby.order_by('nazwisko', 'imie')
 
 
+@cache_page(60 * 30)
 def indeks_nazwisk(request):
     nazwiska = (
         Osoba.objects.values('nazwisko')
@@ -1018,6 +1027,63 @@ def bulk_import_zdjec(request):
         except zipfile.BadZipFile:
             messages.error(request, 'Nieprawidłowy plik ZIP.')
     return render(request, 'groby/bulk_import.html', {'raport': raport})
+
+
+def wspolni_przodkowie(request):
+    """Znajduje wspólnych przodków dwóch osób przez analizę grafu Relacja typ='rodzic'."""
+    a_id = request.GET.get('a', '').strip()
+    b_id = request.GET.get('b', '').strip()
+    osoba_a = osoba_b = None
+    wspolni = []
+    if a_id.isdigit() and b_id.isdigit():
+        osoba_a = Osoba.objects.filter(pk=a_id).select_related('grob__sektor').first()
+        osoba_b = Osoba.objects.filter(pk=b_id).select_related('grob__sektor').first()
+        if osoba_a and osoba_b:
+            przodkowie_a = _zbierz_przodkow(osoba_a.pk)
+            przodkowie_b = _zbierz_przodkow(osoba_b.pk)
+            wspolni_ids = set(przodkowie_a) & set(przodkowie_b)
+            wspolni = list(Osoba.objects.filter(pk__in=wspolni_ids).select_related('grob__sektor'))
+    return render(request, 'groby/wspolni_przodkowie.html', {
+        'osoba_a': osoba_a, 'osoba_b': osoba_b, 'wspolni': wspolni,
+    })
+
+
+def _zbierz_przodkow(osoba_id, glebokosc=10):
+    """BFS w górę w grafie rodzic→dziecko (rodzice osoby x's są A w Relacji rodzic z B=x)."""
+    from collections import deque
+    odwiedzone = set()
+    kolejka = deque([(osoba_id, 0)])
+    while kolejka:
+        bieg, d = kolejka.popleft()
+        if d >= glebokosc:
+            continue
+        rodzice = Relacja.objects.filter(typ='rodzic', osoba_b_id=bieg).values_list('osoba_a_id', flat=True)
+        for r in rodzice:
+            if r not in odwiedzone:
+                odwiedzone.add(r)
+                kolejka.append((r, d + 1))
+    return odwiedzone
+
+
+@require_POST
+def dodaj_komentarz(request, wspomnienie_id):
+    if _antybot(request):
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+    w = get_object_or_404(Wspomnienie, pk=wspomnienie_id, status='zaakceptowane')
+    tresc = (request.POST.get('tresc') or '').strip()
+    if not tresc:
+        messages.error(request, 'Treść komentarza pusta.')
+        return redirect('groby:osoba_detail', pk=w.osoba_id)
+    parent_id = request.POST.get('parent', '').strip()
+    parent = Komentarz.objects.filter(pk=parent_id, wspomnienie=w).first() if parent_id else None
+    Komentarz.objects.create(
+        wspomnienie=w, parent=parent,
+        autor_user=request.user if request.user.is_authenticated else None,
+        autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+        tresc=tresc[:2000],
+    )
+    messages.success(request, 'Komentarz dodany. Pojawi się po akceptacji.')
+    return redirect('groby:osoba_detail', pk=w.osoba_id)
 
 
 def manifest(request):

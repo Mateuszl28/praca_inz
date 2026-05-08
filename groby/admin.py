@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
-    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania,
+    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
 )
 
 
@@ -39,6 +39,22 @@ class GrobAdmin(admin.ModelAdmin):
     list_filter = ('sektor', 'typ')
     search_fields = ('numer', 'sektor__nazwa', 'osoby__nazwisko', 'osoby__imie')
     inlines = [OsobaInline, ZdjecieInline]
+    actions = ['ustaw_typ_ziemny', 'ustaw_typ_murowany', 'wyczysc_pozycje']
+
+    @admin.action(description='Oznacz jako ziemny')
+    def ustaw_typ_ziemny(self, request, qs):
+        n = qs.update(typ='ziemny')
+        self.message_user(request, f'Zaktualizowano {n} grobów.')
+
+    @admin.action(description='Oznacz jako murowany')
+    def ustaw_typ_murowany(self, request, qs):
+        n = qs.update(typ='murowany')
+        self.message_user(request, f'Zaktualizowano {n} grobów.')
+
+    @admin.action(description='Wyczyść pozycje na planie')
+    def wyczysc_pozycje(self, request, qs):
+        n = qs.update(plan_x=None, plan_y=None)
+        self.message_user(request, f'Wyzerowano pozycje {n} grobów.')
     readonly_fields = ('data_dodania', 'data_modyfikacji')
     fieldsets = (
         ('Lokalizacja', {'fields': ('sektor', 'numer', 'rzad', 'typ')}),
@@ -112,6 +128,18 @@ class ProfilAdmin(admin.ModelAdmin):
     list_display = ('user', 'pokrewienstwo', 'data_utworzenia')
     search_fields = ('user__username', 'user__email', 'pokrewienstwo')
     filter_horizontal = ('obserwowane_groby', 'obserwowane_osoby')
+
+
+@admin.register(Komentarz)
+class KomentarzAdmin(admin.ModelAdmin):
+    list_display = ('wspomnienie', 'autor_user', 'autor_imie', 'zaakceptowany', 'data_dodania')
+    list_filter = ('zaakceptowany',)
+    actions = ['zaakceptuj_komentarze']
+
+    @admin.action(description='Zaakceptuj wybrane komentarze')
+    def zaakceptuj_komentarze(self, request, qs):
+        n = qs.update(zaakceptowany=True)
+        self.message_user(request, f'Zaakceptowano {n} komentarzy.')
 
 
 @admin.register(Wspomnienie)

@@ -1,6 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 from . import views
+from .feeds import WpisyFeed
 
 app_name = 'groby'
 
@@ -28,9 +29,12 @@ urlpatterns = [
     path('eksport.ged', views.eksport_gedcom, name='eksport_gedcom'),
     path('galeria/', views.galeria_cmentarza, name='galeria_cmentarza'),
     path('postacie/', views.lista_wpisow, name='wpisy_lista'),
+    path('postacie/feed/', WpisyFeed(), name='wpisy_feed'),
     path('postacie/<slug:slug>/', views.wpis_detail, name='wpis_detail'),
     path('zapisz-szukanie/', views.zapisz_szukanie, name='zapisz_szukanie'),
     path('zapisane/<int:pk>/usun/', views.usun_zapisane, name='usun_zapisane'),
+    path('wspolni-przodkowie/', views.wspolni_przodkowie, name='wspolni_przodkowie'),
+    path('komentarz/<int:wspomnienie_id>/', views.dodaj_komentarz, name='dodaj_komentarz'),
     path('timeline/', views.timeline, name='timeline'),
     path('widget/', views.widget, name='widget'),
     path('health/', views.health_check, name='health'),

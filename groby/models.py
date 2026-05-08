@@ -344,6 +344,25 @@ class TokenLogowania(models.Model):
         return f'Token {self.user} ({"wykorzystany" if self.wykorzystany else "aktywny"})'
 
 
+class Komentarz(models.Model):
+    """Komentarz pod wspomnieniem (1-poziomowe wątki)."""
+    wspomnienie = models.ForeignKey(Wspomnienie, on_delete=models.CASCADE, related_name='komentarze')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='odpowiedzi')
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    tresc = models.TextField()
+    zaakceptowany = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Komentarz'
+        verbose_name_plural = 'Komentarze'
+        ordering = ['data_dodania']
+
+    def __str__(self):
+        return f'Komentarz {self.pk} pod {self.wspomnienie}'
+
+
 class HistoriaZmian(models.Model):
     AKCJA_CHOICES = [
         ('dodano', 'Dodano'),

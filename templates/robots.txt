@@ -1,0 +1,12 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /staff/
+Disallow: /api/
+Disallow: /graphql/
+Disallow: /2fa/
+Disallow: /magic-link/
+Disallow: /push/
+Disallow: /zglos/
+Disallow: /obserwuj/
+
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml

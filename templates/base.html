@@ -4,8 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Informator Cmentarny — Szydłów{% endblock %}</title>
+    <meta name="description" content="{% block og_description %}Wyszukiwarka grobów cmentarza parafialnego w Szydłowie. Znajdź groby przodków, przeglądaj historię cmentarza, zapal świeczkę online.{% endblock %}">
     <link rel="manifest" href="{% url 'groby:manifest' %}">
     <meta name="theme-color" content="#2e4430">
+
+    {# Open Graph / Twitter Cards #}
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title }}{% endblock %}">
+    <meta property="og:description" content="{{ self.og_description }}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:locale" content="pl_PL">
+    <meta property="og:site_name" content="Informator Cmentarny — Szydłów">
+    {% block og_image %}{% endblock %}
+    <meta name="twitter:card" content="summary_large_image">
+
+    {% block extra_head %}{% endblock %}
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -109,6 +122,13 @@
             main { padding: 0 !important; }
         }
         .print-only { display: none; }
+
+        /* Spinner uniwersalny */
+        .spinner { display: inline-block; width: 1.25rem; height: 1.25rem; border: 2px solid #94ae93; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Skeleton loader */
+        .skeleton { background: linear-gradient(90deg, #f5f1e7 0%, #fbf9f4 50%, #f5f1e7 100%); background-size: 200% 100%; animation: skel 1.5s ease-in-out infinite; border-radius: 0.25rem; }
+        @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Wspólni przodkowie — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Genealogia</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Wspólni przodkowie</h1>
+    <p class="text-primary-600 mb-6">Podaj ID dwóch osób — system znajdzie wspólnych przodków przez relacje rodzic-dziecko.</p>
+
+    <form method="get" class="bg-white border border-cream-200 rounded-lg p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">ID osoby A</span>
+            <input type="number" name="a" value="{{ osoba_a.pk|default:'' }}" required class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+        </label>
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">ID osoby B</span>
+            <input type="number" name="b" value="{{ osoba_b.pk|default:'' }}" required class="mt-1 block w-full px-3 py-2 border border-cream-200 rounded">
+        </label>
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Szukaj</button>
+    </form>
+
+    {% if osoba_a and osoba_b %}
+        <div class="bg-white rounded-lg border border-cream-200 p-5 mb-6">
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+                <a href="{% url 'groby:osoba_detail' osoba_a.pk %}" class="font-serif text-lg text-primary-900 hover:underline">{{ osoba_a.imie }} {{ osoba_a.nazwisko }}</a>
+                <span class="text-accent-500">⇆</span>
+                <a href="{% url 'groby:osoba_detail' osoba_b.pk %}" class="font-serif text-lg text-primary-900 hover:underline">{{ osoba_b.imie }} {{ osoba_b.nazwisko }}</a>
+            </div>
+        </div>
+
+        {% if wspolni %}
+            <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4">
+                <span>Wspólni przodkowie ({{ wspolni|length }})</span>
+            </div>
+            <ul class="space-y-3">
+                {% for o in wspolni %}
+                    <li class="bg-white border border-cream-200 rounded p-4 hover:border-primary-300">
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="font-serif text-lg text-primary-900 hover:underline">{{ o.imie }} {{ o.nazwisko }}</a>
+                        {% if o.data_urodzenia or o.data_smierci %}
+                            <div class="text-sm text-primary-500">{{ o.data_urodzenia|date:"Y"|default:"?" }} — {{ o.data_smierci|date:"Y"|default:"?" }}</div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+                Nie znaleziono wspólnych przodków w bazie. Możliwe że relacje nie zostały jeszcze wprowadzone.
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endblock %}
