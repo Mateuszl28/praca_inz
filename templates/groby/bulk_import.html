@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk import zdjęć — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Staff</div>
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Bulk import zdjęć ZIP</h1>
+    <p class="text-primary-600 mb-6">
+        Prześlij ZIP z plikami nazwanymi <code class="px-1 bg-cream-100 rounded">SEKTOR_NUMER.jpg</code> lub
+        <code class="px-1 bg-cream-100 rounded">SEKTOR_NUMER_KOLEJNOSC.jpg</code> (np. <code>A_12.jpg</code>, <code>B_5_2.jpg</code>).
+        System dopasuje pliki do grobów po numerach.
+    </p>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="mb-4 p-3 rounded text-sm {% if m.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% else %}bg-primary-50 border border-primary-200 text-primary-800{% endif %}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        {% csrf_token %}
+        <label class="block">
+            <span class="text-xs text-primary-600 uppercase tracking-wider">Plik ZIP</span>
+            <input type="file" name="zip" accept=".zip" required class="mt-1 block w-full">
+        </label>
+        <button type="submit" class="mt-4 px-4 py-2 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Importuj</button>
+    </form>
+
+    {% if raport %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h2 class="font-serif text-xl text-primary-900 mb-3">Raport</h2>
+            <ul class="text-sm text-primary-700 space-y-1 mb-4">
+                <li>✓ Dodano: <strong>{{ raport.dodanych }}</strong></li>
+                <li>✗ Pominięto: <strong>{{ raport.pominietych }}</strong></li>
+            </ul>
+            {% if raport.bledow %}
+                <details>
+                    <summary class="cursor-pointer text-sm text-primary-600">Pokaż błędy ({{ raport.bledow|length }})</summary>
+                    <ul class="mt-2 text-xs text-red-700 font-mono space-y-1">
+                        {% for b in raport.bledow %}<li>{{ b }}</li>{% endfor %}
+                    </ul>
+                </details>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

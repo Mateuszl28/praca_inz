@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Oś czasu — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-7xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Oś czasu</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Życiorysy w czasie</h1>
+    <p class="text-primary-600 mb-6">Każdy pasek to życie jednej osoby. Najedź aby zobaczyć szczegóły.</p>
+
+    {% if wszystkie_tagi %}
+        <div class="flex flex-wrap gap-2 mb-6 text-sm">
+            <a href="{% url 'groby:timeline' %}" class="px-3 py-1.5 rounded-full border {% if not aktywny_tag %}bg-primary-700 text-cream-50 border-primary-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">Wszystkie</a>
+            {% for t in wszystkie_tagi %}
+                <a href="?tag={{ t.slug }}" class="px-3 py-1.5 rounded-full border {% if aktywny_tag == t.slug %}bg-primary-700 text-cream-50 border-primary-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">{{ t.nazwa }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-4 overflow-x-auto">
+        <canvas id="canvas-timeline" width="1400" height="600"></canvas>
+    </div>
+    <p class="text-xs text-primary-500 mt-2">Pokazano max. 1000 osób z datami śmierci.</p>
+</section>
+
+<script>
+(function () {
+    const dane = {{ dane_json|safe }};
+    if (!dane.length) return;
+    const c = document.getElementById('canvas-timeline');
+    const ctx = c.getContext('2d');
+    const minRok = Math.min(...dane.map(d => d.od)) - 5;
+    const maxRok = Math.max(...dane.map(d => d.do)) + 5;
+    const W = c.width, H = c.height;
+    const padL = 50, padR = 20, padT = 30, padB = 30;
+    const wykresW = W - padL - padR;
+    const wykresH = H - padT - padB;
+    const skalaX = wykresW / (maxRok - minRok);
+    const wysPaska = Math.max(2, Math.min(8, wykresH / dane.length));
+
+    // Tło: dziesięciolecia
+    ctx.fillStyle = '#fbf9f4';
+    ctx.fillRect(padL, padT, wykresW, wykresH);
+    ctx.strokeStyle = '#ebe3d0';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = '#94ae93';
+    for (let r = Math.ceil(minRok / 10) * 10; r <= maxRok; r += 10) {
+        const x = padL + (r - minRok) * skalaX;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, H - padB);
+        ctx.stroke();
+        ctx.fillText(r, x + 2, padT - 5);
+    }
+
+    // Paski
+    dane.forEach((d, i) => {
+        const x1 = padL + (d.od - minRok) * skalaX;
+        const x2 = padL + (d.do - minRok) * skalaX;
+        const y = padT + (i % Math.floor(wykresH / wysPaska)) * wysPaska;
+        const intensywnosc = Math.min(1, d.wiek / 100);
+        ctx.fillStyle = `hsla(${120 - intensywnosc * 60}, 35%, ${50 - intensywnosc * 20}%, 0.7)`;
+        ctx.fillRect(x1, y, Math.max(1, x2 - x1), wysPaska - 1);
+    });
+
+    // Tooltip
+    c.addEventListener('mousemove', e => {
+        const rect = c.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (W / rect.width);
+        const my = (e.clientY - rect.top) * (H / rect.height);
+        const rzad = Math.floor((my - padT) / wysPaska);
+        const idx = rzad + Math.floor(wykresH / wysPaska) * Math.floor(rzad / Math.floor(wykresH / wysPaska));
+        // ... uproszczone — bez znajdowania konkretnej osoby pod kursorem
+        c.title = `Rok: ${Math.round(minRok + (mx - padL) / skalaX)}`;
+    });
+})();
+</script>
+{% endblock %}

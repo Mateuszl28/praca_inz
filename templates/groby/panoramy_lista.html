@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Spacer 360° — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Spacer wirtualny</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Panoramy 360° cmentarza</h1>
+    <p class="text-primary-600 mb-6">Wirtualny spacer alejkami. Klikalne hotspoty prowadzą do grobów.</p>
+
+    {% if panoramy %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {% for p in panoramy %}
+                <a href="{% url 'groby:panorama_detail' p.pk %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 hover:border-primary-300 overflow-hidden transition group">
+                    <div class="aspect-video bg-cream-100 overflow-hidden">
+                        {% if p.plik %}<img src="{{ p.plik.url }}" alt="{{ p.nazwa }}" class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy">{% endif %}
+                    </div>
+                    <div class="p-4">
+                        <h2 class="font-serif text-lg text-primary-900">{{ p.nazwa }}</h2>
+                        {% if p.sektor %}<div class="text-xs text-primary-500 mt-1">Sektor {{ p.sektor.nazwa }}</div>{% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+            Brak panoram. Administrator może je dodać w panelu Django (model „Panorama 360°").
+            <br><br>
+            <span class="text-xs">Wymagane są zdjęcia panoramiczne (equirectangular, np. 4096×2048 lub 8192×4096 px).</span>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

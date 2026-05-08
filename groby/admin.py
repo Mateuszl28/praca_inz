@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca, ZapisaneSzukanie, Wpis
+from .models import (
+    Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
+    Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
+    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania,
+)
 
 
 admin.site.site_header = 'Informator Cmentarny — Szydłów'
@@ -156,6 +160,46 @@ class WpisAdmin(admin.ModelAdmin):
 class ZapisaneSzukanieAdmin(admin.ModelAdmin):
     list_display = ('nazwa', 'user', 'querystring', 'data_utworzenia')
     search_fields = ('nazwa', 'user__username')
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'slug', 'liczba_osob')
+    search_fields = ('nazwa',)
+    prepopulated_fields = {'slug': ('nazwa',)}
+    filter_horizontal = ('osoby',)
+
+    @admin.display(description='Osób')
+    def liczba_osob(self, obj):
+        return obj.osoby.count()
+
+
+class HotspotInline(admin.TabularInline):
+    model = HotspotPanoramy
+    extra = 1
+    fk_name = 'panorama'
+    fields = ('pitch', 'yaw', 'etykieta', 'grob', 'docelowa_panorama')
+
+
+@admin.register(Panorama)
+class PanoramaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'sektor', 'kolejnosc')
+    list_filter = ('sektor',)
+    search_fields = ('nazwa', 'opis')
+    inlines = [HotspotInline]
+
+
+@admin.register(SubskrypcjaPush)
+class SubskrypcjaPushAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'data_dodania', 'user_agent')
+    readonly_fields = ('endpoint', 'p256dh', 'auth', 'user_agent', 'data_dodania')
+
+
+@admin.register(TokenLogowania)
+class TokenLogowaniaAdmin(admin.ModelAdmin):
+    list_display = ('user', 'wykorzystany', 'data_utworzenia', 'data_wygasniecia')
+    list_filter = ('wykorzystany',)
+    readonly_fields = ('token', 'data_utworzenia')
 
 
 @admin.register(HistoriaZmian)

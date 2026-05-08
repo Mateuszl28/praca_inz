@@ -65,6 +65,15 @@
         </div>
     </form>
 
+    {% if tagi %}
+        <div class="flex flex-wrap gap-2 mb-4 text-xs">
+            <span class="text-primary-500 self-center mr-1">Tagi:</span>
+            {% for t in tagi %}
+                <a href="?tag={{ t.slug }}" class="px-2.5 py-1 rounded-full border {% if aktywny_tag == t.slug %}bg-primary-700 text-cream-50 border-primary-700{% else %}border-cream-200 hover:bg-cream-100 text-primary-700{% endif %}">{{ t.nazwa }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {% if aktywne_filtry and request.user.is_authenticated %}
         <form method="post" action="{% url 'groby:zapisz_szukanie' %}" class="mb-4 flex items-center gap-2 text-sm">
             {% csrf_token %}

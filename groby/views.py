@@ -11,7 +11,11 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.views.decorators.http import require_POST
-from .models import Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian, Wspomnienie, Swieca, ZapisaneSzukanie, Wpis
+from .models import (
+    Osoba, Grob, Sektor, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
+    Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
+    Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania,
+)
 
 
 SZYDLOW_CENTRUM = (50.5847, 20.8327)
@@ -91,7 +95,11 @@ def szukaj(request):
     if rok_do.isdigit():
         osoby = osoby.filter(data_smierci__year__lte=int(rok_do))
 
-    osoby = osoby.order_by('nazwisko', 'imie')
+    tag_slug = request.GET.get('tag', '').strip()
+    if tag_slug:
+        osoby = osoby.filter(tagi__slug=tag_slug)
+
+    osoby = osoby.order_by('nazwisko', 'imie').distinct()
     total = osoby.count()
 
     sugestia = None
@@ -120,6 +128,8 @@ def szukaj(request):
         'aktywne_filtry': aktywne_filtry,
         'querystring_bez_page': querystring_bez_page,
         'sugestia': sugestia,
+        'tagi': Tag.objects.all(),
+        'aktywny_tag': tag_slug,
     }
     return render(request, 'groby/szukaj.html', context)
 
@@ -761,6 +771,253 @@ def lista_wpisow(request):
 def wpis_detail(request, slug):
     wpis = get_object_or_404(Wpis, slug=slug, opublikowany=True)
     return render(request, 'groby/wpis_detail.html', {'wpis': wpis})
+
+
+def timeline(request):
+    """Oś czasu: paski życia osób na linii czasu."""
+    tag_slug = request.GET.get('tag', '').strip()
+    qs = Osoba.objects.exclude(data_smierci__isnull=True).select_related('grob__sektor')
+    if tag_slug:
+        qs = qs.filter(tagi__slug=tag_slug)
+    qs = qs.order_by('data_urodzenia', 'data_smierci')[:1000]
+    osoby = []
+    for o in qs:
+        urodzony = o.data_urodzenia.year if o.data_urodzenia else (o.data_smierci.year - 70)
+        zmarl = o.data_smierci.year
+        osoby.append({
+            'pk': o.pk, 'nazwa': f'{o.imie} {o.nazwisko}',
+            'od': urodzony, 'do': zmarl, 'wiek': zmarl - urodzony,
+            'sektor': o.grob.sektor.nazwa, 'numer': o.grob.numer,
+        })
+    return render(request, 'groby/timeline.html', {
+        'dane_json': json.dumps(osoby, ensure_ascii=False),
+        'wszystkie_tagi': Tag.objects.all(),
+        'aktywny_tag': tag_slug,
+    })
+
+
+def widget(request, typ='szukaj'):
+    """Uproszczone widoki bez nawigacji do osadzania w iframe innych stron."""
+    osoby = []
+    query = (request.GET.get('q') or '').strip()
+    if query:
+        osoby = list(_szukaj_fts(Osoba.objects.select_related('grob__sektor'), query)[:30])
+    return render(request, 'groby/widget.html', {
+        'osoby': osoby,
+        'query': query,
+    })
+
+
+def health_check(request):
+    """Endpoint dla monitoringu — zwraca JSON ze stanem systemu."""
+    from django.db import connection
+    import shutil
+    stan = {'status': 'ok', 'checks': {}}
+    try:
+        with connection.cursor() as c:
+            c.execute('SELECT 1')
+            c.fetchone()
+        stan['checks']['database'] = 'ok'
+    except Exception as e:
+        stan['status'] = 'fail'
+        stan['checks']['database'] = f'fail: {e}'
+    try:
+        usage = shutil.disk_usage('/')
+        stan['checks']['disk_free_gb'] = round(usage.free / (1024**3), 2)
+        if usage.free < 100 * 1024**2:  # < 100 MB
+            stan['status'] = 'warn'
+            stan['checks']['disk'] = 'warn: low space'
+    except Exception:
+        pass
+    stan['liczby'] = {
+        'sektory': Sektor.objects.count(),
+        'groby': Grob.objects.count(),
+        'osoby': Osoba.objects.count(),
+        'zdjecia': Zdjecie.objects.count(),
+    }
+    return JsonResponse(stan, status=200 if stan['status'] == 'ok' else 503)
+
+
+def szukaj_na_mapie(request):
+    """API zwracające pasujące groby z pozycją na planie — dla wyszukiwarki na mapie."""
+    q = (request.GET.get('q') or '').strip()
+    if len(q) < 2:
+        return JsonResponse({'wyniki': []})
+    osoby_ids = list(_szukaj_fts(Osoba.objects.values_list('pk', flat=True), q)[:50])
+    groby = Grob.objects.filter(
+        Q(osoby__pk__in=osoby_ids) | Q(numer__icontains=q),
+        plan_x__isnull=False, plan_y__isnull=False,
+    ).select_related('sektor').prefetch_related('osoby').distinct()[:30]
+    wyniki = []
+    for g in groby:
+        osoby_str = ', '.join(f'{o.imie} {o.nazwisko}' for o in g.osoby.all()[:3])
+        wyniki.append({
+            'id': g.pk, 'x': g.plan_x, 'y': g.plan_y,
+            'sektor': g.sektor.nazwa, 'numer': g.numer, 'rzad': g.rzad,
+            'osoby': osoby_str or '—',
+            'url': reverse('groby:grob_detail', args=[g.pk]),
+        })
+    return JsonResponse({'wyniki': wyniki})
+
+
+def lista_panoram(request):
+    panoramy = Panorama.objects.select_related('sektor').order_by('kolejnosc', 'nazwa')
+    return render(request, 'groby/panoramy_lista.html', {'panoramy': panoramy})
+
+
+def panorama_detail(request, pk):
+    panorama = get_object_or_404(Panorama.objects.prefetch_related('hotspoty__grob__sektor'), pk=pk)
+    return render(request, 'groby/panorama_detail.html', {'panorama': panorama})
+
+
+# ---- Magic link ----
+
+def magic_link_zarzadaj(request):
+    if request.method != 'POST':
+        return render(request, 'groby/magic_link.html')
+    email = (request.POST.get('email') or '').strip()
+    if not email:
+        messages.error(request, 'Podaj adres e-mail.')
+        return redirect('groby:magic_link')
+    User = __import__('django.contrib.auth', fromlist=['get_user_model']).get_user_model()
+    user = User.objects.filter(email__iexact=email).first()
+    if user:
+        import secrets
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.core.mail import send_mail
+        from django.conf import settings
+        token = secrets.token_urlsafe(32)
+        TokenLogowania.objects.create(
+            user=user, token=token,
+            data_wygasniecia=timezone.now() + timedelta(minutes=30),
+        )
+        link = request.build_absolute_uri(reverse('groby:magic_link_uzyj', args=[token]))
+        send_mail(
+            'Logowanie do Informatora Cmentarnego',
+            f'Kliknij aby się zalogować: {link}\nLink wygaśnie za 30 minut.\n',
+            settings.DEFAULT_FROM_EMAIL, [email], fail_silently=True,
+        )
+    messages.success(request, 'Jeśli ten e-mail jest zarejestrowany, link został wysłany.')
+    return redirect('groby:magic_link')
+
+
+def magic_link_uzyj(request, token):
+    from django.utils import timezone
+    t = TokenLogowania.objects.filter(token=token, wykorzystany=False).first()
+    if not t or t.data_wygasniecia < timezone.now():
+        messages.error(request, 'Link nieaktualny lub już użyty. Wygeneruj nowy.')
+        return redirect('groby:magic_link')
+    t.wykorzystany = True
+    t.save(update_fields=['wykorzystany'])
+    login(request, t.user, backend='django.contrib.auth.backends.ModelBackend')
+    messages.success(request, f'Zalogowano jako {t.user.username}.')
+    return redirect('groby:profil')
+
+
+# ---- 2FA TOTP ----
+
+@login_required
+def totp_setup(request):
+    """Konfiguracja 2FA: generuje sekret, pokazuje QR; potwierdzenie kodem aktywuje urządzenie."""
+    from django_otp.plugins.otp_totp.models import TOTPDevice
+    import qrcode, base64
+    device = TOTPDevice.objects.filter(user=request.user, name='default').first()
+
+    if request.method == 'POST':
+        kod = (request.POST.get('kod') or '').strip()
+        if device and device.verify_token(kod):
+            device.confirmed = True
+            device.save()
+            messages.success(request, '2FA aktywne.')
+            return redirect('groby:profil')
+        messages.error(request, 'Kod nieprawidłowy.')
+
+    if not device:
+        device = TOTPDevice.objects.create(user=request.user, name='default', confirmed=False)
+    config_url = device.config_url
+    img = qrcode.make(config_url)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    return render(request, 'groby/totp_setup.html', {
+        'device': device, 'qr_b64': qr_b64, 'config_url': config_url,
+    })
+
+
+@login_required
+@require_POST
+def totp_wylacz(request):
+    from django_otp.plugins.otp_totp.models import TOTPDevice
+    TOTPDevice.objects.filter(user=request.user).delete()
+    messages.success(request, '2FA wyłączone.')
+    return redirect('groby:profil')
+
+
+# ---- Web Push ----
+
+def push_klucz_publiczny(request):
+    """Zwraca klucz publiczny VAPID (frontend potrzebuje do subscribe())."""
+    from django.conf import settings
+    return JsonResponse({'publicKey': getattr(settings, 'VAPID_PUBLIC_KEY', '')})
+
+
+@require_POST
+def push_subskrybuj(request):
+    try:
+        data = json.loads(request.body or '{}')
+        endpoint = data['endpoint']
+        keys = data.get('keys', {})
+        SubskrypcjaPush.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                'p256dh': keys.get('p256dh', '')[:200],
+                'auth': keys.get('auth', '')[:80],
+                'user': request.user if request.user.is_authenticated else None,
+                'user_agent': request.META.get('HTTP_USER_AGENT', '')[:255],
+            },
+        )
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse({'ok': False}, status=400)
+    return JsonResponse({'ok': True})
+
+
+# ---- Bulk import zdjęć ZIP ----
+
+@login_required
+def bulk_import_zdjec(request):
+    if not request.user.is_staff:
+        return redirect('admin:login')
+    raport = None
+    if request.method == 'POST' and request.FILES.get('zip'):
+        import zipfile, re, os
+        from django.core.files.base import ContentFile
+        plik = request.FILES['zip']
+        dodanych, pominietych, bledow = 0, 0, []
+        try:
+            with zipfile.ZipFile(plik) as zf:
+                for nazwa in zf.namelist():
+                    if nazwa.endswith('/') or not re.search(r'\.(jpe?g|png|webp)$', nazwa, re.I):
+                        continue
+                    base = os.path.basename(nazwa)
+                    # Wzorzec: SEKTOR_NUMER[_KOL].ext  np. A_12.jpg, B_5_2.jpg
+                    m = re.match(r'^([A-Za-z0-9]+)[_-]([A-Za-z0-9]+)(?:[_-](\d+))?\..+$', base)
+                    if not m:
+                        bledow.append(f'{base}: nie pasuje wzorzec SEKTOR_NUMER.jpg')
+                        continue
+                    sektor_n, numer, kol = m.group(1), m.group(2), int(m.group(3) or 0)
+                    grob = Grob.objects.filter(sektor__nazwa__iexact=sektor_n, numer=numer).first()
+                    if not grob:
+                        pominietych += 1
+                        bledow.append(f'{base}: brak grobu {sektor_n}/{numer}')
+                        continue
+                    z = Zdjecie(grob=grob, kolejnosc=kol)
+                    z.plik.save(base, ContentFile(zf.read(nazwa)), save=True)
+                    dodanych += 1
+            raport = {'dodanych': dodanych, 'pominietych': pominietych, 'bledow': bledow[:30]}
+        except zipfile.BadZipFile:
+            messages.error(request, 'Nieprawidłowy plik ZIP.')
+    return render(request, 'groby/bulk_import.html', {'raport': raport})
 
 
 def manifest(request):

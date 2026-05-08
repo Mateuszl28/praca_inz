@@ -260,6 +260,90 @@ class Wpis(models.Model):
         return f'{self.get_typ_display()}: {self.tytul}'
 
 
+class Tag(models.Model):
+    nazwa = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    opis = models.CharField(max_length=255, blank=True)
+    osoby = models.ManyToManyField(Osoba, related_name='tagi', blank=True)
+
+    class Meta:
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tagi'
+        ordering = ['nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class Panorama(models.Model):
+    nazwa = models.CharField(max_length=200)
+    plik = models.ImageField(upload_to='panoramy/')
+    opis = models.TextField(blank=True)
+    sektor = models.ForeignKey(Sektor, on_delete=models.SET_NULL, null=True, blank=True, related_name='panoramy')
+    pitch = models.FloatField(default=0, help_text='Domyślny pitch widoku w stopniach')
+    yaw = models.FloatField(default=0, help_text='Domyślny yaw widoku w stopniach')
+    hfov = models.FloatField(default=110, help_text='Domyślny horizontal FOV')
+    kolejnosc = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Panorama 360°'
+        verbose_name_plural = 'Panoramy 360°'
+        ordering = ['kolejnosc', 'nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class HotspotPanoramy(models.Model):
+    """Punkt na panoramie 360° → grób lub inna panorama."""
+    panorama = models.ForeignKey(Panorama, on_delete=models.CASCADE, related_name='hotspoty')
+    pitch = models.FloatField()
+    yaw = models.FloatField()
+    etykieta = models.CharField(max_length=120, blank=True)
+    grob = models.ForeignKey(Grob, on_delete=models.SET_NULL, null=True, blank=True)
+    docelowa_panorama = models.ForeignKey(Panorama, on_delete=models.SET_NULL, null=True, blank=True, related_name='przejscia_z')
+
+    class Meta:
+        verbose_name = 'Hotspot panoramy'
+        verbose_name_plural = 'Hotspoty panoram'
+
+    def __str__(self):
+        return f'{self.panorama} @ {self.pitch:.1f},{self.yaw:.1f}'
+
+
+class SubskrypcjaPush(models.Model):
+    """Subskrypcja Web Push z serviceWorker.subscribe()."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subskrypcje_push', null=True, blank=True)
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=80)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = 'Subskrypcja Push'
+        verbose_name_plural = 'Subskrypcje Push'
+
+    def __str__(self):
+        return f'Push {self.pk} ({self.user or "anon"})'
+
+
+class TokenLogowania(models.Model):
+    """Magic-link token. Wygasa po 30 minutach lub po jednym użyciu."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.CharField(max_length=64, unique=True)
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    data_wygasniecia = models.DateTimeField()
+    wykorzystany = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Token logowania (magic link)'
+        verbose_name_plural = 'Tokeny logowania'
+
+    def __str__(self):
+        return f'Token {self.user} ({"wykorzystany" if self.wykorzystany else "aktywny"})'
+
+
 class HistoriaZmian(models.Model):
     AKCJA_CHOICES = [
         ('dodano', 'Dodano'),

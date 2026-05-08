@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ panorama.nazwa }} — Spacer 360°{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+
+<section class="max-w-7xl mx-auto px-4 py-10">
+    <nav class="text-sm text-primary-500 mb-4">
+        <a href="{% url 'groby:panoramy' %}" class="hover:text-primary-800">Panoramy</a>
+        <span class="mx-2">/</span>
+        <span class="text-primary-700">{{ panorama.nazwa }}</span>
+    </nav>
+
+    <h1 class="font-serif text-3xl text-primary-900 mb-1">{{ panorama.nazwa }}</h1>
+    {% if panorama.sektor %}<p class="text-primary-600 mb-4">Sektor {{ panorama.sektor.nazwa }}</p>{% endif %}
+
+    <div id="panorama" style="height: 70vh; border-radius: 0.5rem; overflow: hidden;"></div>
+
+    {% if panorama.opis %}
+        <div class="mt-6 prose max-w-none text-primary-700">{{ panorama.opis|linebreaks }}</div>
+    {% endif %}
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+<script>
+    const hotSpots = [
+        {% for h in panorama.hotspoty.all %}
+            {
+                pitch: {{ h.pitch }},
+                yaw: {{ h.yaw }},
+                type: '{% if h.grob %}info{% else %}scene{% endif %}',
+                text: '{{ h.etykieta|default:""|escapejs }}',
+                {% if h.grob %}URL: '{% url "groby:grob_detail" h.grob.pk %}',{% endif %}
+                {% if h.docelowa_panorama %}sceneId: 'p{{ h.docelowa_panorama.pk }}',{% endif %}
+            },
+        {% endfor %}
+    ];
+    pannellum.viewer('panorama', {
+        type: 'equirectangular',
+        panorama: '{{ panorama.plik.url }}',
+        autoLoad: true,
+        pitch: {{ panorama.pitch }},
+        yaw: {{ panorama.yaw }},
+        hfov: {{ panorama.hfov }},
+        hotSpots: hotSpots,
+    });
+</script>
+{% endblock %}

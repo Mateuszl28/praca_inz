@@ -10,3 +10,6 @@ reportlab
 djangorestframework
 django-filter
 sentry-sdk
+django-otp
+graphene-django
+pywebpush

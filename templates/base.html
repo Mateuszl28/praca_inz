@@ -113,95 +113,137 @@
 </head>
 <body class="min-h-screen flex flex-col bg-cream-50 text-primary-900">
 
-<header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/90 no-print">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <a href="{% url 'groby:home' %}" class="flex items-center gap-3 group">
-            <div class="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center text-cream-50 group-hover:bg-primary-800 transition">
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2v8M8 6h8"/>
-                    <path d="M6 22V12a6 6 0 0 1 12 0v10"/>
-                    <path d="M4 22h16"/>
-                </svg>
-            </div>
-            <div class="leading-tight">
-                <div class="font-serif text-xl text-primary-900 leading-none">Informator Cmentarny</div>
-                <div class="text-[11px] tracking-[0.2em] uppercase text-accent-600 mt-1">Szydłów</div>
-            </div>
-        </a>
-        <button id="menu-toggle" type="button" class="sm:hidden p-2 rounded-md text-primary-700 hover:bg-cream-100" aria-label="Menu">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <nav id="main-nav" class="hidden sm:flex items-center gap-1 text-sm">
-            <a href="{% url 'groby:home' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span>Strona główna</span>
-            </a>
-            <a href="{% url 'groby:szukaj' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <span>Wyszukaj</span>
-            </a>
-            <a href="{% url 'groby:sektory_list' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                <span>Sektory</span>
-            </a>
-            <a href="{% url 'groby:mapa' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>Mapa</span>
-            </a>
-            <a href="{% url 'groby:kalendarz' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                <span>Kalendarz</span>
-            </a>
-            <a href="{% url 'groby:wpisy_lista' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <span>Postacie</span>
-            </a>
-            <a href="{% url 'groby:indeks' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                <span>Indeks</span>
-            </a>
-            <a href="{% url 'groby:statystyki' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-8"/></svg>
-                <span>Statystyki</span>
-            </a>
-            <a href="{% url 'groby:o_cmentarzu' %}" class="flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                <span>O cmentarzu</span>
+<header class="bg-white border-b border-cream-200 sticky top-0 z-40 backdrop-blur bg-white/95 no-print">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="flex items-center justify-between h-16">
+            <a href="{% url 'groby:home' %}" class="flex items-center gap-3 group flex-shrink-0">
+                <div class="w-9 h-9 rounded-full bg-primary-700 flex items-center justify-center text-cream-50 group-hover:bg-primary-800 transition">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v8M8 6h8"/><path d="M6 22V12a6 6 0 0 1 12 0v10"/><path d="M4 22h16"/>
+                    </svg>
+                </div>
+                <div class="leading-tight hidden xs:block">
+                    <div class="font-serif text-lg text-primary-900 leading-none">Informator Cmentarny</div>
+                    <div class="text-[10px] tracking-[0.18em] uppercase text-accent-600 mt-0.5">Szydłów</div>
+                </div>
             </a>
 
-            <form action="/i18n/setlang/" method="post" class="ml-2 inline-flex items-center">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <select name="language" onchange="this.form.submit()" class="text-xs px-2 py-1 border border-cream-200 rounded bg-white text-primary-700">
-                    <option value="pl" {% if request.LANGUAGE_CODE == 'pl' %}selected{% endif %}>PL</option>
-                    <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
-                    <option value="uk" {% if request.LANGUAGE_CODE == 'uk' %}selected{% endif %}>UA</option>
-                </select>
-            </form>
-            <button id="theme-toggle" type="button" aria-label="Przełącz motyw" class="ml-2 p-2 rounded-md text-primary-700 hover:bg-cream-100 hover:text-primary-900 transition">
-                <svg class="w-5 h-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            </button>
+            <nav class="hidden lg:flex items-center gap-1 text-sm" data-menu>
+                <a href="{% url 'groby:szukaj' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 hover:bg-cream-50 rounded-md transition">Wyszukaj</a>
 
-            {% if request.user.is_authenticated %}
-                <a href="{% url 'groby:profil' %}" class="ml-1 flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition" title="Mój profil">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span>{{ request.user.username }}</span>
-                </a>
-            {% else %}
-                <a href="{% url 'groby:logowanie' %}" class="ml-1 flex items-center gap-2 px-3 py-2 text-primary-700 hover:text-primary-900 transition">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    <span>Zaloguj</span>
-                </a>
-            {% endif %}
-            {% if request.user.is_staff %}
-                <a href="/admin/" class="ml-1 flex items-center gap-2 px-4 py-2 rounded-md bg-primary-700 text-cream-50 hover:bg-primary-800 transition text-sm">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
-                    <span>Panel admina</span>
-                </a>
-            {% endif %}
-        </nav>
+                <div class="relative" data-dropdown>
+                    <button type="button" class="px-3 py-2 text-primary-700 hover:text-primary-900 hover:bg-cream-50 rounded-md transition flex items-center gap-1" data-dropdown-trigger>
+                        Cmentarz
+                        <svg class="w-3 h-3" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L1.5 3.5h9z"/></svg>
+                    </button>
+                    <div class="hidden absolute top-full left-0 mt-1 min-w-[200px] bg-white border border-cream-200 rounded-md shadow-lift py-1.5 z-50" data-dropdown-menu>
+                        <a href="{% url 'groby:mapa' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            Mapa cmentarza
+                        </a>
+                        <a href="{% url 'groby:sektory_list' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                            Sektory
+                        </a>
+                        <a href="{% url 'groby:galeria_cmentarza' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                            Galeria
+                        </a>
+                    </div>
+                </div>
+
+                <div class="relative" data-dropdown>
+                    <button type="button" class="px-3 py-2 text-primary-700 hover:text-primary-900 hover:bg-cream-50 rounded-md transition flex items-center gap-1" data-dropdown-trigger>
+                        Pamięć
+                        <svg class="w-3 h-3" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L1.5 3.5h9z"/></svg>
+                    </button>
+                    <div class="hidden absolute top-full left-0 mt-1 min-w-[200px] bg-white border border-cream-200 rounded-md shadow-lift py-1.5 z-50" data-dropdown-menu>
+                        <a href="{% url 'groby:kalendarz' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Rocznice
+                        </a>
+                        <a href="{% url 'groby:wpisy_lista' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            Postacie i wydarzenia
+                        </a>
+                        <a href="{% url 'groby:indeks' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">
+                            <svg class="w-4 h-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                            Indeks nazwisk
+                        </a>
+                    </div>
+                </div>
+
+                <a href="{% url 'groby:statystyki' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 hover:bg-cream-50 rounded-md transition">Statystyki</a>
+                <a href="{% url 'groby:o_cmentarzu' %}" class="px-3 py-2 text-primary-700 hover:text-primary-900 hover:bg-cream-50 rounded-md transition">O cmentarzu</a>
+            </nav>
+
+            <div class="flex items-center gap-2">
+                <form action="/i18n/setlang/" method="post" class="hidden md:inline-flex items-center">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <select name="language" onchange="this.form.submit()" class="text-xs px-2 py-1.5 border border-cream-200 rounded bg-white text-primary-700 hover:border-primary-300 transition cursor-pointer">
+                        <option value="pl" {% if request.LANGUAGE_CODE == 'pl' %}selected{% endif %}>PL</option>
+                        <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                        <option value="uk" {% if request.LANGUAGE_CODE == 'uk' %}selected{% endif %}>UA</option>
+                    </select>
+                </form>
+                <button id="theme-toggle" type="button" aria-label="Przełącz motyw" class="p-2 rounded-md text-primary-600 hover:bg-cream-50 hover:text-primary-900 transition">
+                    <svg class="w-4 h-4 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>
+                </button>
+
+                {% if request.user.is_authenticated %}
+                    <div class="relative hidden md:block" data-dropdown>
+                        <button type="button" class="flex items-center gap-2 px-2.5 py-1.5 text-sm text-primary-700 hover:bg-cream-50 rounded-md transition" data-dropdown-trigger>
+                            <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium text-xs">
+                                {{ request.user.username|first|upper }}
+                            </div>
+                            <span class="hidden xl:inline">{{ request.user.username }}</span>
+                            <svg class="w-3 h-3" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L1.5 3.5h9z"/></svg>
+                        </button>
+                        <div class="hidden absolute top-full right-0 mt-1 min-w-[200px] bg-white border border-cream-200 rounded-md shadow-lift py-1.5 z-50" data-dropdown-menu>
+                            <a href="{% url 'groby:profil' %}" class="block px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">Mój profil</a>
+                            {% if request.user.is_staff %}
+                                <a href="{% url 'groby:dashboard' %}" class="block px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">Dashboard staffu</a>
+                                <a href="/admin/" class="block px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">Panel Django</a>
+                            {% endif %}
+                            <hr class="my-1 border-cream-100">
+                            <form method="post" action="{% url 'groby:wylogowanie' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-primary-700 hover:bg-cream-50 hover:text-primary-900">Wyloguj</button>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'groby:logowanie' %}" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-cream-200 rounded-md text-primary-700 hover:border-primary-300 hover:bg-cream-50 transition">Zaloguj</a>
+                {% endif %}
+
+                <button id="menu-toggle" type="button" class="lg:hidden p-2 rounded-md text-primary-700 hover:bg-cream-50" aria-label="Menu">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
     </div>
+
+    <nav id="main-nav-mobile" class="hidden lg:hidden border-t border-cream-200 bg-white">
+        <div class="max-w-7xl mx-auto px-6 py-3 grid grid-cols-2 gap-1 text-sm">
+            <a href="{% url 'groby:szukaj' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Wyszukaj</a>
+            <a href="{% url 'groby:mapa' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Mapa</a>
+            <a href="{% url 'groby:sektory_list' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Sektory</a>
+            <a href="{% url 'groby:galeria_cmentarza' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Galeria</a>
+            <a href="{% url 'groby:kalendarz' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Rocznice</a>
+            <a href="{% url 'groby:wpisy_lista' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Postacie</a>
+            <a href="{% url 'groby:indeks' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Indeks</a>
+            <a href="{% url 'groby:statystyki' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Statystyki</a>
+            <a href="{% url 'groby:o_cmentarzu' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded col-span-2">O cmentarzu</a>
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'groby:profil' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Profil</a>
+                <form method="post" action="{% url 'groby:wylogowanie' %}">{% csrf_token %}<button class="w-full text-left px-3 py-2 text-primary-700 hover:bg-cream-50 rounded">Wyloguj</button></form>
+            {% else %}
+                <a href="{% url 'groby:logowanie' %}" class="px-3 py-2 text-primary-700 hover:bg-cream-50 rounded col-span-2">Zaloguj się</a>
+            {% endif %}
+        </div>
+    </nav>
 </header>
 
 <main class="flex-1">
@@ -258,24 +300,31 @@
             });
         }
         const mtg = document.getElementById('menu-toggle');
-        const mn = document.getElementById('main-nav');
+        const mn = document.getElementById('main-nav-mobile');
         if (mtg && mn) {
-            mtg.addEventListener('click', () => {
-                mn.classList.toggle('hidden');
-                mn.classList.toggle('flex');
-                mn.classList.toggle('absolute');
-                mn.classList.toggle('top-full');
-                mn.classList.toggle('left-0');
-                mn.classList.toggle('right-0');
-                mn.classList.toggle('bg-white');
-                mn.classList.toggle('flex-col');
-                mn.classList.toggle('items-stretch');
-                mn.classList.toggle('p-4');
-                mn.classList.toggle('border-b');
-                mn.classList.toggle('border-cream-200');
-                mn.classList.toggle('shadow-lift');
-            });
+            mtg.addEventListener('click', () => mn.classList.toggle('hidden'));
         }
+        // Dropdowny w nawigacji — klik otwiera, klik poza zamyka, Esc zamyka
+        document.querySelectorAll('[data-dropdown]').forEach(dd => {
+            const trigger = dd.querySelector('[data-dropdown-trigger]');
+            const menu = dd.querySelector('[data-dropdown-menu]');
+            if (!trigger || !menu) return;
+            trigger.addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('[data-dropdown-menu]').forEach(m => {
+                    if (m !== menu) m.classList.add('hidden');
+                });
+                menu.classList.toggle('hidden');
+            });
+        });
+        document.addEventListener('click', () => {
+            document.querySelectorAll('[data-dropdown-menu]').forEach(m => m.classList.add('hidden'));
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[data-dropdown-menu]').forEach(m => m.classList.add('hidden'));
+            }
+        });
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('{% url "groby:sw" %}').catch(() => {});
