@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Importer zdjęć z EXIF GPS{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-3">Importer zdjęć z EXIF GPS</h1>
+    <p class="text-primary-700 mb-4">Zdjęcia robione na cmentarzu telefonem zazwyczaj mają w EXIF współrzędne GPS. Komenda <code>import_zdjec_exif</code> czyta ZIP, wyciąga GPS z każdego JPG/PNG i przypisuje zdjęcie do najbliższego grobu (na podstawie zapisanej pozycji X/Y).</p>
+
+    <pre class="bg-cream-50 border border-cream-200 rounded p-4 text-sm overflow-auto"><code>python manage.py import_zdjec_exif zdjecia.zip --dry-run    # pokaż co by się stało
+python manage.py import_zdjec_exif zdjecia.zip                # wykonaj
+python manage.py import_zdjec_exif zdjecia.zip --max-dist-m 10 # tylko jeśli &lt; 10m</code></pre>
+
+    <p class="mt-4 text-primary-700">Wymaganie: groby muszą mieć zapisane <code>plan_x/plan_y</code> (uruchom <code>rozmiesc_groby</code> lub edytuj na mapie w trybie edycji). Pliki bez GPS w EXIF są pomijane.</p>
+</section>
+{% endblock %}

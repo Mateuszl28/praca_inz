@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Time-lapse — Grób {{ grob.numer }}{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Time-lapse</h1>
+    <p class="text-primary-600 mb-6">Grób {{ grob.sektor.nazwa }}/{{ grob.rzad }}/{{ grob.numer }} — {{ zdjecia|length }} zdjęć w czasie.</p>
+
+    {% if zdjecia %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-4">
+            <div id="lapse" class="relative h-96 bg-cream-50 rounded overflow-hidden">
+                {% for z in zdjecia %}
+                    <img src="{{ z.plik.url }}" alt="{{ z.podpis }}" class="absolute inset-0 w-full h-full object-contain {% if not forloop.first %}opacity-0{% endif %}" data-i="{{ forloop.counter0 }}" loading="lazy">
+                {% endfor %}
+            </div>
+            <div class="mt-3 flex items-center gap-3">
+                <button id="btn-play" class="px-3 py-1 bg-accent-700 text-white rounded">▶ Odtwarzaj</button>
+                <input type="range" id="slider" min="0" max="{{ zdjecia|length|add:'-1' }}" value="0" class="flex-1">
+                <span id="podpis" class="text-sm text-primary-600">1 / {{ zdjecia|length }}</span>
+            </div>
+        </div>
+        <script>
+            const imgs = document.querySelectorAll('#lapse img');
+            const slider = document.getElementById('slider');
+            const podpis = document.getElementById('podpis');
+            const btn = document.getElementById('btn-play');
+            let i = 0, timer = null;
+            function pokaz(n) {
+                imgs.forEach(im => im.classList.add('opacity-0'));
+                imgs[n].classList.remove('opacity-0');
+                slider.value = n;
+                podpis.textContent = (n+1) + ' / ' + imgs.length;
+            }
+            slider.addEventListener('input', () => pokaz(+slider.value));
+            btn.addEventListener('click', () => {
+                if (timer) { clearInterval(timer); timer = null; btn.textContent = '▶ Odtwarzaj'; return; }
+                btn.textContent = '⏸ Pauza';
+                timer = setInterval(() => { i = (i+1) % imgs.length; pokaz(i); }, 1500);
+            });
+        </script>
+    {% else %}
+        <p class="text-primary-500 italic">Brak zdjęć dla tego grobu.</p>
+    {% endif %}
+</section>
+{% endblock %}

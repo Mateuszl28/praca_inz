@@ -15,6 +15,16 @@
         {% endfor %}
     </form>
 
+    {% if tagi_wpisow %}
+        <div class="mb-6 flex gap-2 flex-wrap text-sm">
+            <span class="text-primary-500 self-center">Tagi:</span>
+            <a href="{% url 'groby:wpisy_tag' %}" class="px-3 py-1 rounded-full border {% if not aktywny_tag %}bg-accent-700 text-white border-accent-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">wszystkie</a>
+            {% for t in tagi_wpisow %}
+                <a href="?tag={{ t.slug }}" class="px-3 py-1 rounded-full border {% if aktywny_tag == t.slug %}bg-accent-700 text-white border-accent-700{% else %}border-cream-200 hover:bg-cream-100{% endif %}">#{{ t.nazwa }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {% if wpisy %}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {% for w in wpisy %}

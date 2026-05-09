@@ -535,3 +535,61 @@ class Batch89Test(TestCase):
         r = self.client.get(reverse('groby:ksiega_cmentarna_pdf'))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r['Content-Type'], 'application/pdf')
+
+
+class Batch90Test(TestCase):
+    def setUp(self):
+        self.s = Sektor.objects.create(nazwa='X')
+        self.g = Grob.objects.create(sektor=self.s, numer=1, rzad=1)
+        self.o = Osoba.objects.create(imie='Jan', nazwisko='Test',
+                                       data_urodzenia=date(1900, 1, 1),
+                                       data_smierci=date(1980, 1, 1), grob=self.g)
+
+    def test_plan_zwiedzania_publiczny(self):
+        r = self.client.get(reverse('groby:plan_zwiedzania'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_plan_dodaj_anonim(self):
+        from .models import PlanZwiedzania
+        r = self.client.post(reverse('groby:plan_dodaj', args=[self.g.pk]))
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(PlanZwiedzania.objects.count(), 1)
+
+    def test_historic_events_overlay(self):
+        r = self.client.get(reverse('groby:historic_events', args=[self.o.pk]))
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d['urodzenie'], 1900)
+        self.assertTrue(any('I wojna' in w['tytul'] for w in d['wydarzenia']))
+
+    def test_time_lapse(self):
+        r = self.client.get(reverse('groby:time_lapse', args=[self.g.pk]))
+        self.assertEqual(r.status_code, 200)
+
+    def test_heatmapa_swiec_json(self):
+        r = self.client.get(reverse('groby:heatmapa_swiec'))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('punkty', r.json())
+
+    def test_audit_pdf_wymaga_staffu(self):
+        r = self.client.get(reverse('groby:audit_log_pdf'))
+        self.assertEqual(r.status_code, 302)
+
+    def test_diff_zmiany_wymaga_staffu(self):
+        h = HistoriaZmian.objects.create(model='Osoba', obiekt_id=self.o.pk,
+                                          obiekt_repr='x', akcja='zmieniono', pola={})
+        r = self.client.get(reverse('groby:diff_zmiany', args=[h.pk]))
+        self.assertEqual(r.status_code, 302)
+
+    def test_security_headers_obecne(self):
+        r = self.client.get(reverse('groby:o_cmentarzu'))
+        self.assertIn('X-Content-Type-Options', r.headers)
+        self.assertIn('Referrer-Policy', r.headers)
+        self.assertIn('Content-Security-Policy', r.headers)
+
+    def test_osoba_detail_inkrementuje_counter(self):
+        from .models import OdwiedzinyOsoba
+        przed = sum(OdwiedzinyOsoba.objects.filter(osoba=self.o).values_list('licznik', flat=True))
+        self.client.get(reverse('groby:osoba_detail', args=[self.o.pk]))
+        po = sum(OdwiedzinyOsoba.objects.filter(osoba=self.o).values_list('licznik', flat=True))
+        self.assertEqual(po, przed + 1)

@@ -2,7 +2,7 @@ import io
 import json
 from collections import Counter, defaultdict
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Q, Count, Prefetch
+from django.db.models import Q, Count, Prefetch, F
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
@@ -19,6 +19,7 @@ from .models import (
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
+    TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
 )
 
 
@@ -406,6 +407,12 @@ def osoba_detail(request, pk):
     wspomnienia = osoba.wspomnienia.filter(status='zaakceptowane').prefetch_related(
         'komentarze__autor_user',
     )
+    today = timezone.localdate()
+    OdwiedzinyOsoba.objects.get_or_create(osoba=osoba, data=today)
+    OdwiedzinyOsoba.objects.filter(osoba=osoba, data=today).update(licznik=F('licznik') + 1)
+    licznik_total = sum(OdwiedzinyOsoba.objects.filter(osoba=osoba).values_list('licznik', flat=True))
+    sparkline = list(OdwiedzinyOsoba.objects.filter(osoba=osoba).order_by('-data')[:30])
+    sparkline.reverse()
     return render(request, 'groby/osoba_detail.html', {
         'osoba': osoba,
         'relacje': relacje,
@@ -413,6 +420,8 @@ def osoba_detail(request, pk):
         'wspomnienia': wspomnienia,
         'liczba_swiec': aktywne_swiece.count(),
         'ostatnie_swiece': aktywne_swiece.order_by('-data_zapalenia')[:8],
+        'licznik_odwiedzin': licznik_total,
+        'sparkline': sparkline,
     })
 
 
@@ -2477,4 +2486,208 @@ def ai_biogram(request, osoba_id):
     return render(request, 'groby/ai_biogram.html', {
         'osoba': osoba,
         'propozycja': propozycja,
+    })
+
+
+# ----- Batch 90 -----
+
+
+def diff_zmiany(request, pk):
+    """Side-by-side diff dla wpisu HistoriaZmian."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    h = get_object_or_404(HistoriaZmian, pk=pk)
+    return render(request, 'groby/diff_zmiany.html', {'h': h})
+
+
+def time_lapse_grobu(request, pk):
+    grob = get_object_or_404(Grob, pk=pk)
+    zdjecia = grob.zdjecia.order_by('kolejnosc', 'pk')
+    return render(request, 'groby/time_lapse.html', {'grob': grob, 'zdjecia': zdjecia})
+
+
+HISTORIA_PL = [
+    (1772, 1795, 'Rozbiory Polski'),
+    (1830, 1831, 'Powstanie listopadowe'),
+    (1846, 1846, 'Powstanie krakowskie / rzeź galicyjska'),
+    (1863, 1864, 'Powstanie styczniowe'),
+    (1914, 1918, 'I wojna światowa'),
+    (1918, 1918, 'Odzyskanie niepodległości'),
+    (1920, 1920, 'Bitwa Warszawska'),
+    (1939, 1945, 'II wojna światowa'),
+    (1945, 1989, 'PRL'),
+    (1980, 1981, 'Solidarność'),
+    (1989, 1989, 'Zmiana ustroju'),
+    (2004, 2004, 'Wstąpienie do UE'),
+]
+
+
+def historic_events_overlay(request, osoba_id):
+    """JSON: wydarzenia historyczne, które miały miejsce za życia osoby."""
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if not osoba.data_urodzenia:
+        return JsonResponse({'wydarzenia': []})
+    rok_ur = osoba.data_urodzenia.year
+    rok_zm = osoba.data_smierci.year if osoba.data_smierci else 2026
+    pasujace = [
+        {'od': od, 'do': do, 'tytul': t}
+        for od, do, t in HISTORIA_PL
+        if not (do < rok_ur or od > rok_zm)
+    ]
+    return JsonResponse({
+        'urodzenie': rok_ur,
+        'smierc': rok_zm,
+        'wydarzenia': pasujace,
+    })
+
+
+def _sesja_id(request):
+    if not request.session.session_key:
+        request.session.create()
+    return request.session.session_key
+
+
+def plan_zwiedzania(request):
+    user = request.user if request.user.is_authenticated else None
+    if user:
+        plan = PlanZwiedzania.objects.filter(user=user).select_related('grob__sektor')
+    else:
+        plan = PlanZwiedzania.objects.filter(sesja_id=_sesja_id(request), user__isnull=True).select_related('grob__sektor')
+    return render(request, 'groby/plan_zwiedzania.html', {'plan': plan})
+
+
+@require_POST
+def plan_dodaj(request, grob_id):
+    grob = get_object_or_404(Grob, pk=grob_id)
+    user = request.user if request.user.is_authenticated else None
+    sesja = '' if user else _sesja_id(request)
+    PlanZwiedzania.objects.get_or_create(user=user, sesja_id=sesja, grob=grob)
+    messages.success(request, 'Dodano do planu zwiedzania.')
+    return redirect(request.META.get('HTTP_REFERER') or 'groby:plan_zwiedzania')
+
+
+@require_POST
+def plan_oznacz(request, pk):
+    p = get_object_or_404(PlanZwiedzania, pk=pk)
+    user = request.user if request.user.is_authenticated else None
+    if (user and p.user_id != user.pk) or (not user and p.sesja_id != request.session.session_key):
+        return JsonResponse({'ok': False}, status=403)
+    p.odwiedzony = not p.odwiedzony
+    p.save(update_fields=['odwiedzony'])
+    return redirect('groby:plan_zwiedzania')
+
+
+@require_POST
+def plan_usun(request, pk):
+    p = get_object_or_404(PlanZwiedzania, pk=pk)
+    user = request.user if request.user.is_authenticated else None
+    if (user and p.user_id != user.pk) or (not user and p.sesja_id != request.session.session_key):
+        return JsonResponse({'ok': False}, status=403)
+    p.delete()
+    return redirect('groby:plan_zwiedzania')
+
+
+def heatmapa_swiec_json(request):
+    """Punkty (x,y,liczba) dla heatmapy zapaleń świec."""
+    from django.utils import timezone
+    from datetime import timedelta
+    od = timezone.now() - timedelta(days=30)
+    qs = (Swieca.objects.filter(data_zapalenia__gte=od, osoba__grob__plan_x__isnull=False)
+          .values('osoba__grob__plan_x', 'osoba__grob__plan_y')
+          .annotate(n=Count('id')))
+    pkty = [
+        {'x': p['osoba__grob__plan_x'], 'y': p['osoba__grob__plan_y'], 'n': p['n']}
+        for p in qs if p['osoba__grob__plan_x'] is not None
+    ]
+    return JsonResponse({'punkty': pkty})
+
+
+def featured_tygodnia():
+    """Zwraca aktualne wyróżnienie (osoba/grób/wpis) lub deterministycznie auto-wybiera."""
+    from django.utils import timezone
+    today = timezone.localdate()
+    f = FeaturedTygodnia.objects.filter(aktywne=True, od__lte=today, do__gte=today).first()
+    if f:
+        return f
+    osoby = Osoba.objects.exclude(biogram='').order_by('pk')
+    if osoby.exists():
+        idx = today.isocalendar()[1] % osoby.count()
+        wybrana = osoby[idx]
+        return {
+            'kategoria': 'osoba',
+            'tytul': f'{wybrana.imie or ""} {wybrana.nazwisko or ""}'.strip(),
+            'opis': (wybrana.biogram or '')[:200],
+            'osoba': wybrana,
+        }
+    return None
+
+
+def importer_exif_info(request):
+    """Strona pomocy: jak importować zdjęcia z EXIF GPS (link do management command)."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    return render(request, 'groby/importer_exif.html', {})
+
+
+def stripe_donate(request):
+    """Skeleton: tworzy Checkout session (wymaga STRIPE_SECRET_KEY)."""
+    import os
+    klucz = os.environ.get('STRIPE_SECRET_KEY', '')
+    kwota = int(request.POST.get('kwota', '50') or '50')
+    if not klucz:
+        messages.error(request, 'Brak skonfigurowanego STRIPE_SECRET_KEY.')
+        return redirect('groby:donate')
+    return JsonResponse({
+        'info': 'Stripe skeleton — w produkcji użyj stripe.checkout.Session.create() z success_url.',
+        'kwota_pln': kwota,
+        'klucz_publiczny_env': 'STRIPE_PUBLISHABLE_KEY',
+    })
+
+
+def audit_log_pdf(request):
+    """Eksport HistoriaZmian do PDF (compliance/RODO)."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), title='Audit log')
+    style = getSampleStyleSheet()
+    flow = [Paragraph('Dziennik zmian — eksport zgodności (RODO)', style['Title']), Spacer(1, 8)]
+    qs = HistoriaZmian.objects.select_related('user').order_by('-data')[:1000]
+    dane = [['Data', 'Akcja', 'Model', 'Obiekt', 'Użytkownik']]
+    for h in qs:
+        dane.append([
+            h.data.strftime('%Y-%m-%d %H:%M'),
+            h.akcja,
+            h.model,
+            (h.obiekt_repr or '')[:60],
+            (h.user.username if h.user else '—')[:30],
+        ])
+    t = Table(dane, repeatRows=1)
+    t.setStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#5b6e51')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+    ])
+    flow.append(t)
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename="audit_log.pdf"'
+    return resp
+
+
+def lista_wpisow_z_tagami(request):
+    """Rozszerzenie /postacie/ o filtr po tagach (przekierowanie z parametrem)."""
+    tag = request.GET.get('tag', '').strip()
+    qs = Wpis.objects.filter(opublikowany=True).order_by('-data_publikacji')
+    if tag:
+        qs = qs.filter(tagi_tresci__slug=tag)
+    return render(request, 'groby/wpisy_lista.html', {
+        'wpisy': qs[:50],
+        'tagi_wpisow': TagWpisu.objects.all(),
+        'aktywny_tag': tag,
     })

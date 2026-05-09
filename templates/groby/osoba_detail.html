@@ -84,12 +84,74 @@
                 {% endif %}
 
                 {% if osoba.biogram %}
-                    <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest mb-4">
-                        <span>Biogram</span>
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest">
+                            <span>Biogram</span>
+                        </div>
+                        <button type="button" id="btn-tts" title="Odczytaj na głos" class="text-sm px-2 py-1 bg-cream-100 hover:bg-cream-200 rounded border border-cream-200 no-print">🔊 Czytaj</button>
                     </div>
-                    <div class="text-primary-700 leading-relaxed font-serif text-lg text-center max-w-prose mx-auto">
+                    <div id="biogram-tresc" class="text-primary-700 leading-relaxed font-serif text-lg text-center max-w-prose mx-auto">
                         {{ osoba.biogram|linebreaks }}
                     </div>
+                    <script>
+                        (function(){
+                            const btn = document.getElementById('btn-tts');
+                            const tekst = document.getElementById('biogram-tresc')?.innerText || '';
+                            if (!('speechSynthesis' in window) || !tekst) { btn.style.display='none'; return; }
+                            let utt = null;
+                            btn.addEventListener('click', () => {
+                                if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); btn.textContent='🔊 Czytaj'; return; }
+                                utt = new SpeechSynthesisUtterance(tekst);
+                                utt.lang = 'pl-PL'; utt.rate = 0.95;
+                                utt.onend = () => { btn.textContent='🔊 Czytaj'; };
+                                window.speechSynthesis.speak(utt);
+                                btn.textContent='⏸ Stop';
+                            });
+                        })();
+                    </script>
+                {% endif %}
+
+                {# Counter odwiedzin + sparkline + Plan zwiedzania + Historic events #}
+                <div class="mt-6 flex items-center justify-center gap-4 text-xs text-primary-500 no-print">
+                    <span title="Liczba wyświetleń profilu">👁 {{ licznik_odwiedzin|default:0 }}</span>
+                    {% if sparkline %}<svg id="sparkline" width="120" height="24"></svg>{% endif %}
+                    {% if osoba.grob %}
+                        <form method="post" action="{% url 'groby:plan_dodaj' osoba.grob.pk %}" class="inline">{% csrf_token %}
+                            <button type="submit" class="px-2 py-1 bg-cream-100 hover:bg-cream-200 rounded border border-cream-200">📌 Dodaj do planu</button>
+                        </form>
+                    {% endif %}
+                </div>
+                {% if osoba.data_urodzenia %}
+                    <div class="mt-3 text-center no-print">
+                        <button id="btn-historic" type="button" class="text-xs text-primary-600 hover:underline">📜 Co działo się w Polsce za życia</button>
+                        <div id="historic-out" class="text-xs text-primary-700 mt-2 hidden text-left max-w-md mx-auto bg-cream-50 border border-cream-200 rounded p-3"></div>
+                    </div>
+                    <script>
+                        document.getElementById('btn-historic')?.addEventListener('click', function() {
+                            const out = document.getElementById('historic-out');
+                            if (!out.classList.contains('hidden')) { out.classList.add('hidden'); return; }
+                            fetch('{% url "groby:historic_events" osoba.pk %}').then(r=>r.json()).then(d=>{
+                                out.innerHTML = '<strong>'+d.urodzenie+'–'+d.smierc+':</strong><ul class="list-disc list-inside mt-1">'
+                                    + d.wydarzenia.map(w=>`<li>${w.od}–${w.do}: ${w.tytul}</li>`).join('')
+                                    + '</ul>';
+                                out.classList.remove('hidden');
+                            });
+                        });
+                    </script>
+                {% endif %}
+                {% if sparkline %}
+                <script>
+                    (function(){
+                        const dane = [{% for d in sparkline %}{{ d.licznik }}{% if not forloop.last %},{% endif %}{% endfor %}];
+                        if (!dane.length) return;
+                        const max = Math.max(...dane, 1);
+                        const w = 120, h = 24;
+                        const krok = w / Math.max(dane.length-1, 1);
+                        const punkty = dane.map((v,i)=>`${i*krok},${h - (v/max)*h}`).join(' ');
+                        const svg = document.getElementById('sparkline');
+                        if (svg) svg.innerHTML = `<polyline points="${punkty}" fill="none" stroke="#8B7355" stroke-width="1.5"/>`;
+                    })();
+                </script>
                 {% endif %}
             </div>
         {% endif %}

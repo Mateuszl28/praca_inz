@@ -7,6 +7,7 @@ from .models import (
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache, ZdjecieWpisu,
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
+    TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
 )
 
 
@@ -407,4 +408,30 @@ class ZgloszenieKonkursoweAdmin(admin.ModelAdmin):
 class GlosKonkursowyAdmin(admin.ModelAdmin):
     list_display = ('zgloszenie', 'user', 'data')
     readonly_fields = ('zgloszenie', 'user', 'ip_hash', 'data')
-    date_hierarchy = 'data'
+
+
+@admin.register(TagWpisu)
+class TagWpisuAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'slug', 'opis')
+    prepopulated_fields = {'slug': ('nazwa',)}
+    search_fields = ('nazwa',)
+
+
+@admin.register(PlanZwiedzania)
+class PlanZwiedzaniaAdmin(admin.ModelAdmin):
+    list_display = ('grob', 'user', 'odwiedzony', 'data_dodania')
+    list_filter = ('odwiedzony',)
+
+
+@admin.register(OdwiedzinyOsoba)
+class OdwiedzinyOsobaAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'data', 'licznik')
+    list_filter = ('data',)
+    search_fields = ('osoba__nazwisko', 'osoba__imie')
+
+
+@admin.register(FeaturedTygodnia)
+class FeaturedTygodniaAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'kategoria', 'od', 'do', 'aktywne')
+    list_filter = ('kategoria', 'aktywne')
+    autocomplete_fields = ('osoba', 'grob', 'wpis')

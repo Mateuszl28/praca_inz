@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Mój plan zwiedzania{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Mój plan zwiedzania</h1>
+    <p class="text-primary-600 mb-6">Lista grobów do odwiedzenia. Zaznacz odwiedzony — system zachowa historię.</p>
+
+    {% if not user.is_authenticated %}
+        <p class="text-sm text-primary-500 mb-4 italic">Nie jesteś zalogowany — plan jest zapamiętany w tej przeglądarce.</p>
+    {% endif %}
+
+    {% if plan %}
+        <ul class="space-y-2">
+            {% for p in plan %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-3 flex items-center gap-3 {% if p.odwiedzony %}opacity-60{% endif %}">
+                    <form method="post" action="{% url 'groby:plan_oznacz' p.pk %}">{% csrf_token %}
+                        <button type="submit" title="Przełącz odwiedzony" class="w-6 h-6 rounded border-2 {% if p.odwiedzony %}bg-accent-600 border-accent-600 text-white{% else %}border-cream-300{% endif %}">{% if p.odwiedzony %}✓{% endif %}</button>
+                    </form>
+                    <div class="flex-1">
+                        <a href="{% url 'groby:grob_detail' p.grob.pk %}" class="font-medium text-primary-900 hover:underline">
+                            Sektor {{ p.grob.sektor.nazwa }}/{{ p.grob.rzad }}/{{ p.grob.numer }}
+                        </a>
+                        {% if p.notatka %}<p class="text-sm text-primary-600">{{ p.notatka }}</p>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'groby:plan_usun' p.pk %}">{% csrf_token %}
+                        <button type="submit" class="text-sm text-red-700 hover:underline">Usuń</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-primary-500 italic">Plan jest pusty. Otwórz stronę grobu i kliknij „Dodaj do planu".</p>
+    {% endif %}
+</section>
+{% endblock %}

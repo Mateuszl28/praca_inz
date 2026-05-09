@@ -273,6 +273,7 @@ class Wpis(models.Model):
     zdjecie = models.ImageField(upload_to='wpisy/', blank=True, null=True)
     data_publikacji = models.DateField(null=True, blank=True, verbose_name='Data publikacji')
     opublikowany = models.BooleanField(default=False)
+    tagi_tresci = models.ManyToManyField('TagWpisu', blank=True, related_name='wpisy', verbose_name='Tagi tematyczne')
     autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     data_dodania = models.DateTimeField(auto_now_add=True)
     data_modyfikacji = models.DateTimeField(auto_now=True)
@@ -328,6 +329,7 @@ class HotspotPanoramy(models.Model):
     etykieta = models.CharField(max_length=120, blank=True)
     grob = models.ForeignKey(Grob, on_delete=models.SET_NULL, null=True, blank=True)
     docelowa_panorama = models.ForeignKey(Panorama, on_delete=models.SET_NULL, null=True, blank=True, related_name='przejscia_z')
+    audio = models.FileField(upload_to='panoramy/audio/', blank=True, null=True, verbose_name='Audio przewodnik (MP3)')
 
     class Meta:
         verbose_name = 'Hotspot panoramy'
@@ -644,10 +646,16 @@ class Webhook(models.Model):
         ('osoba.dodano', 'Dodana osoba'),
         ('grob.zmieniono', 'Zmieniono grób'),
     ]
+    TYP_CHOICES = [
+        ('generic', 'Generyczny POST JSON'),
+        ('discord', 'Discord'),
+        ('slack', 'Slack'),
+    ]
     nazwa = models.CharField(max_length=100)
     url = models.URLField(max_length=500)
     event = models.CharField(max_length=50, choices=EVENT_CHOICES)
-    sekret = models.CharField(max_length=64, blank=True, help_text='Sekret do HMAC walidacji')
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='generic')
+    sekret = models.CharField(max_length=64, blank=True, help_text='Sekret do HMAC walidacji (tylko generic)')
     aktywny = models.BooleanField(default=True)
     licznik_wywolan = models.PositiveIntegerField(default=0)
     data_dodania = models.DateTimeField(auto_now_add=True)
@@ -740,6 +748,78 @@ class GeoCache(models.Model):
 
     def __str__(self):
         return f'{self.nazwa} → ({self.lat}, {self.lng})'
+
+
+class TagWpisu(models.Model):
+    nazwa = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    opis = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = 'Tag wpisu'
+        verbose_name_plural = 'Tagi wpisów'
+        ordering = ['nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class PlanZwiedzania(models.Model):
+    """Lista grobów do odwiedzenia (zalogowany lub anonim po cookie)."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='plan_zwiedzania')
+    sesja_id = models.CharField(max_length=64, blank=True, help_text='Identyfikator sesji dla anonimowych')
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='w_planach')
+    odwiedzony = models.BooleanField(default=False)
+    notatka = models.CharField(max_length=300, blank=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Plan zwiedzania'
+        verbose_name_plural = 'Plany zwiedzania'
+        ordering = ['odwiedzony', '-data_dodania']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'grob'], name='plan_user_grob_uniq', condition=models.Q(user__isnull=False)),
+            models.UniqueConstraint(fields=['sesja_id', 'grob'], name='plan_sesja_grob_uniq', condition=models.Q(user__isnull=True)),
+        ]
+
+
+class OdwiedzinyOsoba(models.Model):
+    """Counter dziennych odwiedzin strony osoby (do trendu sparkline)."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='odwiedziny')
+    data = models.DateField(db_index=True)
+    licznik = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Licznik odwiedzin osoby'
+        verbose_name_plural = 'Liczniki odwiedzin osób'
+        unique_together = [['osoba', 'data']]
+        ordering = ['-data']
+
+
+class FeaturedTygodnia(models.Model):
+    """Wyróżniony grób/postać/wpis na home (auto-rotacja lub ręcznie)."""
+    KAT_CHOICES = [
+        ('osoba', 'Osoba'),
+        ('grob', 'Grób'),
+        ('wpis', 'Wpis (postać/wydarzenie)'),
+    ]
+    kategoria = models.CharField(max_length=20, choices=KAT_CHOICES)
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, null=True, blank=True)
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, null=True, blank=True)
+    wpis = models.ForeignKey(Wpis, on_delete=models.CASCADE, null=True, blank=True)
+    tytul = models.CharField(max_length=200)
+    opis = models.CharField(max_length=400, blank=True)
+    od = models.DateField()
+    do = models.DateField()
+    aktywne = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Wyróżnienie tygodnia'
+        verbose_name_plural = 'Wyróżnienia tygodnia'
+        ordering = ['-od']
+
+    def __str__(self):
+        return f'{self.kategoria}: {self.tytul} ({self.od} – {self.do})'
 
 
 class HistoriaZmian(models.Model):

@@ -123,6 +123,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_otp.middleware.OTPMiddleware',
     'groby.middleware.BiezacyUzytkownikMiddleware',
+    'groby.middleware.SecurityHeadersMiddleware',
 ]
 
 LOGIN_URL = 'groby:logowanie'
@@ -160,6 +161,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'groby.context_processors.banner_kontekst',
+                'groby.context_processors.featured_kontekst',
             ],
         },
     },

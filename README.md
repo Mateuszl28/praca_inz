@@ -125,9 +125,28 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 ### Telemetria i obserwowalność
 - **Search analytics** (`/staff/wyszukiwania/`) — TOP fraz, frazy bez wyników (kandydaci do uzupełnienia bazy), aktywność dziennie
 - **Prometheus metrics** (`/metrics`) — `groby_total`, `osoby_total`, `zdjecia_total`, `wspomnienia_total`, `swiece_total`, `wyszukiwania_total`
+- **Per-osoba counter odwiedzin** + sparkline trendu 30 dni na profilu osoby
+- **Eksport audit log do PDF** (`/staff/audit-log.pdf`) — compliance/RODO report
+- **Diff viewer dla zmian** (`/staff/diff/<id>/`) — side-by-side „przed/po" zamiast tabeli
 - **AI-asystent biogramów** (`/staff/ai-biogram/<osoba_id>/`) — szkielet (wymaga `ANTHROPIC_API_KEY` lub `OPENAI_API_KEY`), zawsze ręczna weryfikacja przed publikacją
 - **Auto-suggest relacji** (`manage.py auto_suggest_relacji [--zapisz]`) — heurystyki rodzic/dziecko/rodzeństwo na podstawie wspólnego grobu, nazwiska i różnicy wieku
+- **Importer fotografii z EXIF GPS** (`manage.py import_zdjec_exif zip --dry-run`) — auto-przypisanie do najbliższego grobu
 - **Eksport statyczny** (`manage.py static_export --out path/`) — generuje statyczny HTML do hostingu na GitHub Pages
+
+### Personalizacja i eksperymentalne
+- **Mój plan zwiedzania** (`/plan/`) — lista grobów do odwiedzenia (zalogowany lub anonim po cookie sesji), checkbox „odwiedzony"
+- **TTS biogramów** — przycisk 🔊 Czytaj na profilu (Web Speech Synthesis API, voice `pl-PL`)
+- **Time-lapse galerii grobu** (`/grob/<id>/timelapse/`) — slideshow + kontroler odtwarzania
+- **Historic events overlay** — „Co działo się w Polsce za życia osoby" (rozbiory → UE) na profilu
+- **Heatmapa zapaleń świec** (`/api/heatmapa-swiec/`) — JSON do warstwy mapy ciepła
+- **Wyróżnienie tygodnia** — auto-rotacja postaci na home (`FeaturedTygodnia` lub deterministycznie po `isoweek`)
+- **Tagi tematyczne dla wpisów** — filtr blogu na `/postacie/?tag=...`
+- **Hotspoty audio w panoramach** — pole `audio` na `HotspotPanoramy` (MP3 przewodnik)
+
+### Integracje (skeleton)
+- **Stripe/Przelewy24 donate** (`/wesprzyj/stripe/`) — szkielet Checkout session (wymaga `STRIPE_SECRET_KEY`)
+- **Discord/Slack webhooki** — `Webhook.typ` z formaterem payloadu (`/discord/`, `/slack/` URL → POST JSON)
+- **Security headers middleware** — CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
 
 ## Szybki start (lokalnie)
 
@@ -207,7 +226,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | CI                 | GitHub Actions (matrix Python 3.10 + 3.12)                           |
 | Monitoring         | Sentry (opcjonalnie)                                                 |
 
-## Modele danych (~35)
+## Modele danych (~40)
 
 ```
 Sektor 1───n Grob 1───n Osoba ───n Wspomnienie ───n Komentarz
@@ -237,6 +256,10 @@ HistoriaZmian — audit log (sygnały dla Grob/Osoba)
 WyszukiwanieLog — co kto szukał (z hashem IP, liczba wyników)
 ZdjecieDronowe — galeria z lotu ptaka (per sektor)
 KonkursFoto ───n ZgloszenieKonkursowe ───n GlosKonkursowy (cooldown po IP)
+TagWpisu ───m Wpis (tagi tematyczne blogu)
+PlanZwiedzania (user/sesja) ───── Grob (lista „do odwiedzenia")
+OdwiedzinyOsoba (counter dziennych wyświetleń per osoba)
+FeaturedTygodnia — wyróżnienie na home (rotacja po `isoweek`)
 ```
 
 Pełny opis architektury: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).
@@ -269,6 +292,7 @@ python manage.py geokoduj --limit 100                # geokodowanie miejsc urodz
 python manage.py optymalizuj_zdjecia --max 2000      # bulk resize zdjęć (oszczędność dysku)
 python manage.py auto_suggest_relacji --zapisz       # heurystyczne sugestie relacji rodzinnych
 python manage.py static_export --out static_html/    # eksport całego serwisu do statycznego HTML
+python manage.py import_zdjec_exif zdjecia.zip       # import fotografii po EXIF GPS (--dry-run)
 ```
 
 ### Wysyłka mailowa

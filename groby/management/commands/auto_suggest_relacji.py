@@ -45,11 +45,15 @@ class Command(BaseCommand):
             for a, b, typ in kandydaci:
                 if typ == 'rodzic_dziecko':
                     starszy, mlodszy = (a, b) if a.data_urodzenia < b.data_urodzenia else (b, a)
-                    if not Relacja.objects.filter(osoba=mlodszy, krewny=starszy).exists():
-                        Relacja.objects.create(osoba=mlodszy, krewny=starszy, typ='rodzic')
+                    if not Relacja.objects.filter(
+                        Q(osoba_a=starszy, osoba_b=mlodszy) | Q(osoba_a=mlodszy, osoba_b=starszy)
+                    ).exists():
+                        Relacja.objects.create(osoba_a=starszy, osoba_b=mlodszy, typ='rodzic')
                         zapisanych += 1
                 elif typ == 'rodzenstwo':
-                    if not Relacja.objects.filter(osoba=a, krewny=b).exists():
-                        Relacja.objects.create(osoba=a, krewny=b, typ='rodzenstwo')
+                    if not Relacja.objects.filter(
+                        Q(osoba_a=a, osoba_b=b) | Q(osoba_a=b, osoba_b=a)
+                    ).exists():
+                        Relacja.objects.create(osoba_a=a, osoba_b=b, typ='rodzenstwo')
                         zapisanych += 1
             self.stdout.write(self.style.SUCCESS(f'Zapisano {zapisanych} relacji.'))

@@ -146,6 +146,19 @@
     </div>
 </section>
 
+{% if featured_tygodnia %}
+<section class="max-w-5xl mx-auto px-4 mb-10">
+    <div class="bg-gradient-to-br from-accent-50 to-cream-100 rounded-lg shadow-soft border border-accent-200 p-6 md:p-8">
+        <div class="text-xs uppercase tracking-widest text-accent-700 mb-2">Wyróżnienie tygodnia</div>
+        <h2 class="font-serif text-2xl text-primary-900 mb-2">{{ featured_tygodnia.tytul }}</h2>
+        {% if featured_tygodnia.opis %}<p class="text-primary-700">{{ featured_tygodnia.opis|truncatechars:300 }}</p>{% endif %}
+        {% if featured_tygodnia.osoba %}
+            <a href="{% url 'groby:osoba_detail' featured_tygodnia.osoba.pk %}" class="inline-block mt-3 text-sm text-accent-700 hover:underline">Zobacz profil →</a>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
 <section class="max-w-5xl mx-auto px-4 pb-20" id="dzis-i-stats">
     <div class="grid md:grid-cols-2 gap-6">
         <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">

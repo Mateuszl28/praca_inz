@@ -112,6 +112,20 @@ urlpatterns = [
     path('api/dzis/', views.dzis_rocznica_json, name='dzis_rocznica'),
     path('staff/ai-biogram/<int:osoba_id>/', views.ai_biogram, name='ai_biogram'),
 
+    # Batch 90
+    path('staff/diff/<int:pk>/', views.diff_zmiany, name='diff_zmiany'),
+    path('grob/<int:pk>/timelapse/', views.time_lapse_grobu, name='time_lapse'),
+    path('api/historic/<int:osoba_id>/', views.historic_events_overlay, name='historic_events'),
+    path('plan/', views.plan_zwiedzania, name='plan_zwiedzania'),
+    path('plan/dodaj/<int:grob_id>/', views.plan_dodaj, name='plan_dodaj'),
+    path('plan/<int:pk>/oznacz/', views.plan_oznacz, name='plan_oznacz'),
+    path('plan/<int:pk>/usun/', views.plan_usun, name='plan_usun'),
+    path('api/heatmapa-swiec/', views.heatmapa_swiec_json, name='heatmapa_swiec'),
+    path('staff/exif-importer/', views.importer_exif_info, name='importer_exif'),
+    path('wesprzyj/stripe/', views.stripe_donate, name='stripe_donate'),
+    path('staff/audit-log.pdf', views.audit_log_pdf, name='audit_log_pdf'),
+    path('postacie/tag/', views.lista_wpisow_z_tagami, name='wpisy_tag'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 

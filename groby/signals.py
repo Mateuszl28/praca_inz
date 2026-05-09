@@ -8,7 +8,26 @@ from django.core.mail import send_mail
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.urls import reverse
-from .models import Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian, Swieca, Relacja, Trasa, Wpis, Odznaka, UzytkownikOdznaka
+from .models import Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian, Swieca, Relacja, Trasa, Wpis, Odznaka, UzytkownikOdznaka, Webhook
+
+
+def wyslij_webhook(event, payload):
+    """Wysyła event do wszystkich aktywnych Webhook-ów (generic / Discord / Slack)."""
+    import json
+    import urllib.request
+    for w in Webhook.objects.filter(event=event, aktywny=True):
+        try:
+            if w.typ == 'discord':
+                body = json.dumps({'content': f'**{event}**: {payload.get("tytul", str(payload))}'}).encode()
+            elif w.typ == 'slack':
+                body = json.dumps({'text': f'*{event}*: {payload.get("tytul", str(payload))}'}).encode()
+            else:
+                body = json.dumps({'event': event, 'payload': payload}).encode()
+            req = urllib.request.Request(w.url, data=body, headers={'Content-Type': 'application/json'})
+            urllib.request.urlopen(req, timeout=3).read()
+            Webhook.objects.filter(pk=w.pk).update(licznik_wywolan=w.licznik_wywolan + 1)
+        except Exception:
+            pass
 
 
 _local = threading.local()
@@ -155,9 +174,10 @@ def _powiadom_zgloszenie(sender, instance, created, **kwargs):
     from django.contrib.auth import get_user_model
     User = get_user_model()
     emaile = list(User.objects.filter(is_staff=True).exclude(email='').values_list('email', flat=True))
+    cel = instance.osoba or instance.grob or '—'
     if emaile:
-        cel = instance.osoba or instance.grob or '—'
         _powiadom(emaile,
             f'Nowe zgłoszenie poprawki ({cel})',
             f'Treść:\n\n{instance.tresc}\n\n'
             f'Zarządzaj: /admin/groby/zgloszenie/{instance.pk}/change/')
+    wyslij_webhook('zgloszenie.nowe', {'tytul': f'Zgłoszenie #{instance.pk} ({cel})', 'tresc': instance.tresc[:200]})

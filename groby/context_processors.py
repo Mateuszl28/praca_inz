@@ -40,3 +40,11 @@ def banner_kontekst(request):
         'banner_wielkanoc': banner_we,
         'data_dzis': dzis,
     }
+
+
+def featured_kontekst(request):
+    try:
+        from .views import featured_tygodnia
+        return {'featured_tygodnia': featured_tygodnia()}
+    except Exception:
+        return {'featured_tygodnia': None}
