@@ -313,6 +313,7 @@
                     {% if obserwuje %}★ Obserwujesz{% else %}☆ Obserwuj{% endif %}
                 </button>
             </form>
+            <a href="{% url 'groby:prywatne_notatki' osoba_id=osoba.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">📝 Moje notatki</a>
         {% endif %}
         <button type="button" onclick="document.getElementById('zglos-osoba').classList.toggle('hidden')" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Zgłoś poprawkę</button>
     </div>

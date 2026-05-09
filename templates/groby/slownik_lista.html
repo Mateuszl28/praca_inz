@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Słownik historii Szydłowa — Informator Cmentarny{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Edukacja</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Słownik historii Szydłowa</h1>
+    <p class="text-primary-700 mb-6">Postacie, miejsca, wydarzenia i pojęcia związane z lokalną historią.</p>
+
+    <form method="get" class="mb-6 flex flex-wrap items-center gap-2 text-sm">
+        <input type="search" name="q" value="{{ q }}" placeholder="Szukaj hasła…" class="px-3 py-2 border border-cream-200 rounded flex-1 min-w-[200px]">
+        <select name="kat" class="px-3 py-2 border border-cream-200 rounded">
+            <option value="">— wszystkie kategorie —</option>
+            {% for v, lbl in kategorie %}
+                <option value="{{ v }}" {% if v == kat %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="px-4 py-2 bg-primary-700 text-white rounded hover:bg-primary-800">Szukaj</button>
+    </form>
+
+    {% if hasla %}
+        <ul class="space-y-2">
+            {% for h in hasla %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-4">
+                    <a href="{% url 'groby:slownik_haslo' slug=h.slug %}" class="font-serif text-lg text-primary-900 hover:underline">{{ h.haslo }}</a>
+                    <span class="ml-2 text-xs px-2 py-0.5 rounded bg-cream-100 text-primary-600">{{ h.get_kategoria_display }}</span>
+                    {% if h.skrot %}<p class="mt-1 text-sm text-primary-700">{{ h.skrot }}</p>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Brak haseł do wyświetlenia. Słownik jest sukcesywnie rozbudowywany przez staff.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

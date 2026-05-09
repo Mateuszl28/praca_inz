@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ haslo.haslo }} — Słownik historii Szydłowa{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">{{ haslo.get_kategoria_display }}</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">{{ haslo.haslo }}</h1>
+    <a href="{% url 'groby:slownik' %}" class="text-sm text-primary-600 hover:underline">← powrót do słownika</a>
+
+    <article class="prose max-w-none mt-6 text-primary-800 whitespace-pre-wrap">{{ haslo.tresc }}</article>
+
+    {% if haslo.powiazana_osoba %}
+        <div class="mt-6 p-4 bg-cream-50 rounded border border-cream-200 text-sm">
+            <span class="text-primary-600">Powiązana osoba w bazie:</span>
+            <a href="{% url 'groby:osoba_detail' pk=haslo.powiazana_osoba_id %}" class="ml-1 text-primary-900 underline">{{ haslo.powiazana_osoba }}</a>
+        </div>
+    {% endif %}
+
+    {% if zrodla %}
+        <div class="mt-8">
+            <h3 class="text-sm uppercase tracking-widest text-primary-600 mb-2">Źródła</h3>
+            <ul class="text-sm text-primary-700 list-disc list-inside space-y-1">
+                {% for z in zrodla %}<li>{{ z }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if powiazane %}
+        <div class="mt-8">
+            <h3 class="text-sm uppercase tracking-widest text-primary-600 mb-3">Zobacz też</h3>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                {% for p in powiazane %}
+                    <li><a href="{% url 'groby:slownik_haslo' slug=p.slug %}" class="text-primary-800 hover:underline">→ {{ p.haslo }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

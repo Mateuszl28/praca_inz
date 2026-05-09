@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Powiadomienia — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Twoje konto</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-6">Powiadomienia</h1>
+
+    {% if powiadomienia %}
+        <ul class="space-y-2">
+            {% for p in powiadomienia %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-4 flex items-start gap-3 {% if not p.przeczytane %}border-l-4 border-l-accent-500{% endif %}">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <span class="inline-block px-2 py-0.5 text-xs rounded bg-cream-100 text-primary-700">{{ p.get_typ_display }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        {% if p.url %}
+                            <a href="{{ p.url }}" class="text-primary-900 hover:underline">{{ p.tresc }}</a>
+                        {% else %}
+                            <div class="text-primary-900">{{ p.tresc }}</div>
+                        {% endif %}
+                        <div class="text-xs text-primary-500 mt-1">{{ p.data|date:"d.m.Y H:i" }}</div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Brak powiadomień. Powiadomimy Cię o nowych komentarzach pod Twoimi wspomnieniami, odpowiedziach na forum oraz statusie zgłoszeń.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

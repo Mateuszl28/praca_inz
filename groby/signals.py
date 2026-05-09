@@ -8,7 +8,11 @@ from django.core.mail import send_mail
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.urls import reverse
-from .models import Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian, Swieca, Relacja, Trasa, Wpis, Odznaka, UzytkownikOdznaka, Webhook
+from .models import (
+    Grob, Osoba, Zdjecie, Wspomnienie, Zgloszenie, HistoriaZmian, Swieca, Relacja,
+    Trasa, Wpis, Odznaka, UzytkownikOdznaka, Webhook,
+    Komentarz, PostForum, OpiekunGrobu, Powiadomienie,
+)
 
 
 def wyslij_webhook(event, payload):
@@ -181,3 +185,59 @@ def _powiadom_zgloszenie(sender, instance, created, **kwargs):
             f'Treść:\n\n{instance.tresc}\n\n'
             f'Zarządzaj: /admin/groby/zgloszenie/{instance.pk}/change/')
     wyslij_webhook('zgloszenie.nowe', {'tytul': f'Zgłoszenie #{instance.pk} ({cel})', 'tresc': instance.tresc[:200]})
+
+
+# ----- Batch 91: in-app notifications -----
+
+
+def _powiadom_inapp(user, typ, tresc, url=''):
+    """Tworzy wpis Powiadomienie dla użytkownika (cicho ignoruje brak usera)."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return
+    Powiadomienie.objects.create(user=user, typ=typ, tresc=tresc[:300], url=url[:300])
+
+
+@receiver(post_save, sender=Komentarz)
+def _powiadom_komentarz(sender, instance, created, **kwargs):
+    """Powiadom autora wspomnienia o nowym komentarzu (jeśli to nie on sam komentuje)."""
+    if not created:
+        return
+    autor_wspomnienia = getattr(instance.wspomnienie, 'autor_user', None)
+    komentujacy = getattr(instance, 'autor_user', None) or getattr(instance, 'user', None)
+    if autor_wspomnienia and autor_wspomnienia != komentujacy:
+        try:
+            url = reverse('groby:osoba_detail', args=[instance.wspomnienie.osoba_id])
+        except Exception:
+            url = ''
+        _powiadom_inapp(autor_wspomnienia, 'komentarz',
+                        f'Nowy komentarz pod Twoim wspomnieniem o {instance.wspomnienie.osoba}', url)
+
+
+@receiver(post_save, sender=PostForum)
+def _powiadom_forum(sender, instance, created, **kwargs):
+    """Powiadom autora wątku o nowej odpowiedzi (jeśli to nie on sam odpowiada)."""
+    if not created:
+        return
+    watek = instance.watek
+    autor_watku = getattr(watek, 'autor_user', None) or getattr(watek, 'autor', None)
+    autor_post = getattr(instance, 'autor_user', None) or getattr(instance, 'autor', None)
+    if autor_watku and autor_watku != autor_post:
+        _powiadom_inapp(autor_watku, 'forum',
+                        f'Nowa odpowiedź w wątku „{watek.tytul}”',
+                        f'/grob/{watek.grob_id}/forum/' if getattr(watek, 'grob_id', None) else '')
+
+
+@receiver(post_save, sender=OpiekunGrobu)
+def _powiadom_opiekun(sender, instance, created, **kwargs):
+    if created:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        for staff in User.objects.filter(is_staff=True):
+            _powiadom_inapp(staff, 'opieka',
+                            f'Nowe zgłoszenie opieki nad grobem {instance.grob} ({instance.user})',
+                            f'/admin/groby/opiekungrobu/{instance.pk}/change/')
+    else:
+        if instance.status in ('aktywny', 'odrzucony'):
+            _powiadom_inapp(instance.user, 'opieka',
+                            f'Twoje zgłoszenie opieki nad {instance.grob}: {instance.get_status_display()}',
+                            f'/grob/{instance.grob_id}/')

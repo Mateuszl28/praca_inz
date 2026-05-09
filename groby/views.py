@@ -20,6 +20,7 @@ from .models import (
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
+    Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
 )
 
 
@@ -2690,4 +2691,172 @@ def lista_wpisow_z_tagami(request):
         'wpisy': qs[:50],
         'tagi_wpisow': TagWpisu.objects.all(),
         'aktywny_tag': tag,
+    })
+
+
+# ===== Batch 91 =====
+
+
+@login_required
+def powiadomienia_lista(request):
+    qs = Powiadomienie.objects.filter(user=request.user)[:200]
+    Powiadomienie.objects.filter(user=request.user, przeczytane=False).update(przeczytane=True)
+    return render(request, 'groby/powiadomienia.html', {'powiadomienia': qs})
+
+
+@login_required
+def powiadomienia_count(request):
+    n = Powiadomienie.objects.filter(user=request.user, przeczytane=False).count()
+    return JsonResponse({'nieprzeczytane': n})
+
+
+@require_POST
+@login_required
+def powiadomienie_oznacz(request, pk):
+    p = get_object_or_404(Powiadomienie, pk=pk, user=request.user)
+    p.przeczytane = True
+    p.save(update_fields=['przeczytane'])
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def opieka_zgloszenie(request, grob_id):
+    grob = get_object_or_404(Grob, pk=grob_id)
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False, 'powod': 'antybot'}, status=400)
+        relacja = (request.POST.get('relacja') or '').strip()[:100]
+        motywacja = (request.POST.get('motywacja') or '').strip()[:2000]
+        op, created = OpiekunGrobu.objects.get_or_create(
+            grob=grob, user=request.user,
+            defaults={'relacja': relacja, 'motywacja': motywacja},
+        )
+        if created:
+            messages.success(request, 'Zgłoszenie wysłane — staff je rozpatrzy.')
+        else:
+            messages.info(request, 'Już wysłałeś wcześniej zgłoszenie do tego grobu.')
+        return redirect('groby:grob_detail', pk=grob.pk)
+    return render(request, 'groby/opieka_form.html', {'grob': grob, 'antybot_html': _pole_antybot_html()})
+
+
+def opiekunowie_lista(request):
+    """Publiczna lista aktywnych opiekunów grobów (transparentność)."""
+    qs = (OpiekunGrobu.objects.filter(status='aktywny')
+          .select_related('grob__sektor', 'user')
+          .order_by('grob__sektor__nazwa', 'grob__numer'))
+    return render(request, 'groby/opiekunowie.html', {'opiekunowie': qs})
+
+
+@login_required
+@require_POST
+def opieka_zrezygnuj(request, pk):
+    op = get_object_or_404(OpiekunGrobu, pk=pk, user=request.user)
+    op.status = 'zakonczony'
+    op.save(update_fields=['status', 'data_zmiany'])
+    messages.success(request, 'Zrezygnowano z opieki.')
+    return redirect('groby:grob_detail', pk=op.grob_id)
+
+
+@login_required
+def prywatne_notatki(request, osoba_id):
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        tresc = (request.POST.get('tresc') or '').strip()
+        if tresc:
+            PrywatnaNotatka.objects.create(user=request.user, osoba=osoba, tresc=tresc[:5000])
+            messages.success(request, 'Notatka zapisana.')
+        return redirect('groby:prywatne_notatki', osoba_id=osoba.pk)
+    notatki = PrywatnaNotatka.objects.filter(user=request.user, osoba=osoba)
+    return render(request, 'groby/prywatne_notatki.html', {
+        'osoba': osoba,
+        'notatki': notatki,
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+@login_required
+@require_POST
+def prywatna_notatka_usun(request, pk):
+    n = get_object_or_404(PrywatnaNotatka, pk=pk, user=request.user)
+    osoba_id = n.osoba_id
+    n.delete()
+    return redirect('groby:prywatne_notatki', osoba_id=osoba_id)
+
+
+def niedawno_zmarli(request):
+    from django.utils import timezone
+    from datetime import timedelta
+    try:
+        dni = int(request.GET.get('dni', '90'))
+    except ValueError:
+        dni = 90
+    dni = max(7, min(dni, 365))
+    dzis = timezone.localdate()
+    od = dzis - timedelta(days=dni)
+    qs = (Osoba.objects.filter(data_smierci__gte=od, data_smierci__lte=dzis)
+          .select_related('grob__sektor').order_by('-data_smierci'))
+    return render(request, 'groby/niedawno_zmarli.html', {
+        'osoby': qs,
+        'dni': dni,
+        'od': od,
+        'do': dzis,
+    })
+
+
+def slownik_lista(request):
+    q = (request.GET.get('q') or '').strip()
+    kat = (request.GET.get('kat') or '').strip()
+    qs = HasloSlownik.objects.all()
+    if q:
+        qs = qs.filter(Q(haslo__icontains=q) | Q(skrot__icontains=q) | Q(tresc__icontains=q))
+    if kat:
+        qs = qs.filter(kategoria=kat)
+    return render(request, 'groby/slownik_lista.html', {
+        'hasla': qs,
+        'q': q,
+        'kat': kat,
+        'kategorie': HasloSlownik.KATEGORIA_CHOICES,
+    })
+
+
+def slownik_haslo(request, slug):
+    haslo = get_object_or_404(HasloSlownik, slug=slug)
+    powiazane = HasloSlownik.objects.filter(kategoria=haslo.kategoria).exclude(pk=haslo.pk)[:8]
+    return render(request, 'groby/slownik_haslo.html', {
+        'haslo': haslo,
+        'zrodla': [s.strip() for s in (haslo.zrodla or '').splitlines() if s.strip()],
+        'powiazane': powiazane,
+    })
+
+
+def statystyki_dlugowiecznosci(request):
+    """Średnia długość życia per sektor i per dekada urodzenia."""
+    osoby = Osoba.objects.exclude(data_urodzenia=None).exclude(data_smierci=None).select_related('grob__sektor')
+    per_sektor = defaultdict(list)
+    per_dekada = defaultdict(list)
+    for o in osoby:
+        wiek = o.wiek
+        if wiek is None or wiek < 0 or wiek > 130:
+            continue
+        if o.grob and o.grob.sektor:
+            per_sektor[o.grob.sektor.nazwa].append(wiek)
+        dek = (o.data_urodzenia.year // 10) * 10
+        per_dekada[dek].append(wiek)
+    sektory = sorted(
+        [(nazwa, round(sum(w) / len(w), 1), len(w), min(w), max(w)) for nazwa, w in per_sektor.items() if w],
+        key=lambda x: -x[1],
+    )
+    dekady = sorted(
+        [(d, round(sum(w) / len(w), 1), len(w)) for d, w in per_dekada.items() if w],
+        key=lambda x: x[0],
+    )
+    wszyscy = [w for ws in per_sektor.values() for w in ws]
+    srednia_calosc = round(sum(wszyscy) / len(wszyscy), 1) if wszyscy else 0
+    return render(request, 'groby/statystyki_dlugowiecznosci.html', {
+        'sektory': sektory,
+        'dekady': dekady,
+        'srednia_calosc': srednia_calosc,
+        'razem': len(wszyscy),
     })

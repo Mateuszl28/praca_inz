@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Długowieczność — statystyki cmentarza{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Statystyki</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Długość życia</h1>
+    <p class="text-primary-700 mb-2">Analiza średniej długości życia na podstawie {{ razem }} osób z pełnymi datami urodzenia i śmierci.</p>
+    <p class="text-primary-900 text-2xl font-serif mb-8">Średnia: <strong>{{ srednia_calosc }} lat</strong></p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-4">Per sektor</h2>
+            <table class="w-full text-sm">
+                <thead class="text-primary-600">
+                    <tr><th class="text-left py-1">Sektor</th><th class="text-right py-1">Średnia</th><th class="text-right py-1">N</th><th class="text-right py-1">Min</th><th class="text-right py-1">Max</th></tr>
+                </thead>
+                <tbody>
+                    {% for nazwa, srednia, n, mi, ma in sektory %}
+                        <tr class="border-t border-cream-100">
+                            <td class="py-1.5 text-primary-800">{{ nazwa }}</td>
+                            <td class="py-1.5 text-right text-primary-900 font-medium">{{ srednia }}</td>
+                            <td class="py-1.5 text-right text-primary-500">{{ n }}</td>
+                            <td class="py-1.5 text-right text-primary-500">{{ mi }}</td>
+                            <td class="py-1.5 text-right text-primary-500">{{ ma }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-4">Per dekada urodzenia</h2>
+            <table class="w-full text-sm">
+                <thead class="text-primary-600">
+                    <tr><th class="text-left py-1">Dekada</th><th class="text-right py-1">Średnia</th><th class="text-right py-1">N</th><th class="text-left py-1 pl-3">Wykres</th></tr>
+                </thead>
+                <tbody>
+                    {% for d, srednia, n in dekady %}
+                        <tr class="border-t border-cream-100">
+                            <td class="py-1.5 text-primary-800">{{ d }}–{{ d|add:9 }}</td>
+                            <td class="py-1.5 text-right text-primary-900 font-medium">{{ srednia }}</td>
+                            <td class="py-1.5 text-right text-primary-500">{{ n }}</td>
+                            <td class="py-1.5 pl-3"><div class="h-3 bg-primary-300 rounded" style="width: {% widthratio srednia 100 100 %}%; max-width: 100%;"></div></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -126,6 +126,20 @@ urlpatterns = [
     path('staff/audit-log.pdf', views.audit_log_pdf, name='audit_log_pdf'),
     path('postacie/tag/', views.lista_wpisow_z_tagami, name='wpisy_tag'),
 
+    # Batch 91
+    path('powiadomienia/', views.powiadomienia_lista, name='powiadomienia'),
+    path('api/powiadomienia/count/', views.powiadomienia_count, name='powiadomienia_count'),
+    path('powiadomienie/<int:pk>/oznacz/', views.powiadomienie_oznacz, name='powiadomienie_oznacz'),
+    path('grob/<int:grob_id>/opieka/', views.opieka_zgloszenie, name='opieka_zgloszenie'),
+    path('opiekunowie/', views.opiekunowie_lista, name='opiekunowie'),
+    path('opieka/<int:pk>/zrezygnuj/', views.opieka_zrezygnuj, name='opieka_zrezygnuj'),
+    path('osoba/<int:osoba_id>/notatki/', views.prywatne_notatki, name='prywatne_notatki'),
+    path('notatka/<int:pk>/usun/', views.prywatna_notatka_usun, name='prywatna_notatka_usun'),
+    path('niedawno-zmarli/', views.niedawno_zmarli, name='niedawno_zmarli'),
+    path('slownik/', views.slownik_lista, name='slownik'),
+    path('slownik/<slug:slug>/', views.slownik_haslo, name='slownik_haslo'),
+    path('statystyki/dlugowiecznosc/', views.statystyki_dlugowiecznosci, name='statystyki_dlugowiecznosci'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 

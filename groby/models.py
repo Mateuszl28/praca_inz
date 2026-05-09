@@ -844,3 +844,105 @@ class HistoriaZmian(models.Model):
 
     def __str__(self):
         return f'{self.data:%Y-%m-%d %H:%M} {self.get_akcja_display()} {self.model}#{self.obiekt_id}'
+
+
+# ===== Batch 91 =====
+
+
+class Powiadomienie(models.Model):
+    """In-app notifications dla użytkowników (komentarz, odpowiedź na forum, akceptacja zgłoszenia)."""
+    TYP_CHOICES = [
+        ('komentarz', 'Nowy komentarz'),
+        ('forum', 'Odpowiedź na forum'),
+        ('zgloszenie', 'Status zgłoszenia'),
+        ('opieka', 'Opieka nad grobem'),
+        ('inne', 'Inne'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='powiadomienia')
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='inne')
+    tresc = models.CharField(max_length=300)
+    url = models.CharField(max_length=300, blank=True)
+    przeczytane = models.BooleanField(default=False, db_index=True)
+    data = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Powiadomienie'
+        verbose_name_plural = 'Powiadomienia'
+        ordering = ['-data']
+
+    def __str__(self):
+        return f'{self.user}: {self.tresc[:60]}'
+
+
+class OpiekunGrobu(models.Model):
+    """Użytkownicy mogą zadeklarować opiekę nad konkretnym grobem (zarządzanie zgłoszeniem przez staff)."""
+    STATUS_CHOICES = [
+        ('oczekuje', 'Oczekuje na akceptację'),
+        ('aktywny', 'Aktywny opiekun'),
+        ('odrzucony', 'Odrzucony'),
+        ('zakonczony', 'Opieka zakończona'),
+    ]
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='opiekunowie')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='opieka_groby')
+    relacja = models.CharField(max_length=100, blank=True, help_text='Np. wnuk, prawnuczka, sąsiad')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='oczekuje')
+    motywacja = models.TextField(blank=True, help_text='Dlaczego chcesz opiekować się tym grobem')
+    data_zgloszenia = models.DateTimeField(auto_now_add=True)
+    data_zmiany = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Opiekun grobu'
+        verbose_name_plural = 'Opiekunowie grobów'
+        ordering = ['-data_zmiany']
+        constraints = [
+            models.UniqueConstraint(fields=['grob', 'user'], name='opiekun_grob_user_uniq'),
+        ]
+
+    def __str__(self):
+        return f'{self.user} ↔ {self.grob} ({self.get_status_display()})'
+
+
+class PrywatnaNotatka(models.Model):
+    """Notatka przypięta do osoby — widoczna tylko dla autora."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='prywatne_notatki')
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='prywatne_notatki')
+    tresc = models.TextField()
+    data_dodania = models.DateTimeField(auto_now_add=True)
+    data_modyfikacji = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Prywatna notatka'
+        verbose_name_plural = 'Prywatne notatki'
+        ordering = ['-data_modyfikacji']
+        indexes = [models.Index(fields=['user', 'osoba'])]
+
+    def __str__(self):
+        return f'Notatka {self.user} → {self.osoba}'
+
+
+class HasloSlownik(models.Model):
+    """Hasło słownika historii Szydłowa (glossary postaci, wydarzeń, miejsc)."""
+    KATEGORIA_CHOICES = [
+        ('postac', 'Postać'),
+        ('miejsce', 'Miejsce'),
+        ('wydarzenie', 'Wydarzenie'),
+        ('termin', 'Termin'),
+        ('inne', 'Inne'),
+    ]
+    haslo = models.CharField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=220, unique=True)
+    kategoria = models.CharField(max_length=20, choices=KATEGORIA_CHOICES, default='termin')
+    skrot = models.CharField(max_length=300, blank=True, help_text='Krótka definicja (na liście)')
+    tresc = models.TextField()
+    zrodla = models.TextField(blank=True, help_text='Źródła, jedno na linię')
+    powiazana_osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True, related_name='hasla_slownika')
+    data_dodania = models.DateTimeField(auto_now_add=True)
+    data_modyfikacji = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Hasło słownika'
+        verbose_name_plural = 'Słownik historii'
+        ordering = ['haslo']
+
+    def __str__(self):
+        return self.haslo

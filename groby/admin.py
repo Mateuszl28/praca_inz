@@ -8,6 +8,7 @@ from .models import (
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
+    Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
 )
 
 
@@ -435,3 +436,46 @@ class FeaturedTygodniaAdmin(admin.ModelAdmin):
     list_display = ('tytul', 'kategoria', 'od', 'do', 'aktywne')
     list_filter = ('kategoria', 'aktywne')
     autocomplete_fields = ('osoba', 'grob', 'wpis')
+
+
+# ----- Batch 91 -----
+
+
+@admin.register(Powiadomienie)
+class PowiadomienieAdmin(admin.ModelAdmin):
+    list_display = ('user', 'typ', 'tresc', 'przeczytane', 'data')
+    list_filter = ('typ', 'przeczytane')
+    search_fields = ('user__username', 'tresc')
+    readonly_fields = ('data',)
+
+
+@admin.register(OpiekunGrobu)
+class OpiekunGrobuAdmin(admin.ModelAdmin):
+    list_display = ('grob', 'user', 'status', 'relacja', 'data_zgloszenia')
+    list_filter = ('status',)
+    search_fields = ('grob__numer', 'grob__sektor__nazwa', 'user__username', 'relacja')
+    actions = ['oznacz_jako_aktywny', 'oznacz_jako_odrzucony']
+
+    def oznacz_jako_aktywny(self, request, queryset):
+        queryset.update(status='aktywny')
+    oznacz_jako_aktywny.short_description = 'Zaakceptuj jako aktywnego opiekuna'
+
+    def oznacz_jako_odrzucony(self, request, queryset):
+        queryset.update(status='odrzucony')
+    oznacz_jako_odrzucony.short_description = 'Odrzuć zgłoszenie'
+
+
+@admin.register(PrywatnaNotatka)
+class PrywatnaNotatkaAdmin(admin.ModelAdmin):
+    list_display = ('user', 'osoba', 'data_modyfikacji')
+    search_fields = ('user__username', 'osoba__nazwisko', 'osoba__imie')
+    readonly_fields = ('data_dodania', 'data_modyfikacji')
+
+
+@admin.register(HasloSlownik)
+class HasloSlownikAdmin(admin.ModelAdmin):
+    list_display = ('haslo', 'kategoria', 'powiazana_osoba', 'data_modyfikacji')
+    list_filter = ('kategoria',)
+    search_fields = ('haslo', 'tresc', 'skrot')
+    prepopulated_fields = {'slug': ('haslo',)}
+    autocomplete_fields = ('powiazana_osoba',)

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Niedawno zmarli — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pamięć</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Niedawno zmarli</h1>
+    <p class="text-primary-700 mb-4">Osoby, które odeszły w okresie {{ od|date:"d.m.Y" }} – {{ do|date:"d.m.Y" }}.</p>
+
+    <form method="get" class="mb-6 flex items-center gap-2 text-sm">
+        <span class="text-primary-600">Pokaż okres:</span>
+        {% for d in "30 60 90 180 365"|cut:" "|make_list %}{% endfor %}
+        <a href="?dni=30" class="px-3 py-1 rounded border {% if dni == 30 %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">30 dni</a>
+        <a href="?dni=60" class="px-3 py-1 rounded border {% if dni == 60 %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">60 dni</a>
+        <a href="?dni=90" class="px-3 py-1 rounded border {% if dni == 90 %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">90 dni</a>
+        <a href="?dni=180" class="px-3 py-1 rounded border {% if dni == 180 %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">180 dni</a>
+        <a href="?dni=365" class="px-3 py-1 rounded border {% if dni == 365 %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">rok</a>
+    </form>
+
+    {% if osoby %}
+        <ul class="space-y-2">
+            {% for o in osoby %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-4 flex items-center justify-between">
+                    <div>
+                        <a href="{% url 'groby:osoba_detail' pk=o.pk %}" class="font-serif text-lg text-primary-900 hover:underline">{{ o }}</a>
+                        {% if o.wiek %}<span class="text-sm text-primary-500"> · {{ o.wiek }} lat</span>{% endif %}
+                        <div class="text-xs text-primary-500">Sektor {{ o.grob.sektor.nazwa }}/{{ o.grob.numer }}</div>
+                    </div>
+                    <div class="text-sm text-primary-700">zm. {{ o.data_smierci|date:"d.m.Y" }}</div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            W wybranym okresie nie odnotowano zgonów w bazie.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

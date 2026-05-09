@@ -147,6 +147,7 @@
                     {% if obserwuje %}★ Obserwujesz{% else %}☆ Obserwuj grób{% endif %}
                 </button>
             </form>
+            <a href="{% url 'groby:opieka_zgloszenie' grob_id=grob.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">🤝 Zostań opiekunem</a>
         {% else %}
             <a href="{% url 'groby:logowanie' %}?next={{ request.path }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">☆ Zaloguj się, aby obserwować</a>
         {% endif %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Opiekunowie grobów — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Społeczność</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Opiekunowie grobów</h1>
+    <p class="text-primary-700 mb-6">Lista użytkowników, którzy zadeklarowali opiekę nad konkretnymi grobami i zostali zaakceptowani przez staff.</p>
+
+    {% if opiekunowie %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-cream-50 text-primary-700">
+                    <tr>
+                        <th class="text-left px-4 py-2">Grób</th>
+                        <th class="text-left px-4 py-2">Opiekun</th>
+                        <th class="text-left px-4 py-2">Relacja</th>
+                        <th class="text-left px-4 py-2">Od</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in opiekunowie %}
+                        <tr class="border-t border-cream-100">
+                            <td class="px-4 py-2"><a href="{% url 'groby:grob_detail' pk=o.grob_id %}" class="text-primary-800 underline">{{ o.grob }}</a></td>
+                            <td class="px-4 py-2 text-primary-700">{{ o.user.username }}</td>
+                            <td class="px-4 py-2 text-primary-600">{{ o.relacja|default:"—" }}</td>
+                            <td class="px-4 py-2 text-primary-500">{{ o.data_zgloszenia|date:"d.m.Y" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Jeszcze nikt nie został aktywnym opiekunem. Możesz być pierwszy — wejdź na stronę grobu i kliknij <strong>Zostań opiekunem</strong>.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
