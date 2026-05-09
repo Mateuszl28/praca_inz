@@ -558,6 +558,18 @@ class Zaproszenie(models.Model):
         verbose_name_plural = 'Zaproszenia do edycji'
 
 
+class ZdjecieWpisu(models.Model):
+    wpis = models.ForeignKey(Wpis, on_delete=models.CASCADE, related_name='zdjecia_dodatkowe')
+    plik = models.ImageField(upload_to='wpisy/galeria/')
+    podpis = models.CharField(max_length=200, blank=True)
+    kolejnosc = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Zdjęcie wpisu'
+        verbose_name_plural = 'Zdjęcia wpisów'
+        ordering = ['kolejnosc']
+
+
 class GeoCache(models.Model):
     """Cache geokodowania (miejsce -> lat/lng)."""
     nazwa = models.CharField(max_length=200, unique=True)

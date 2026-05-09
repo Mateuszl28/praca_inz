@@ -157,6 +157,30 @@
 </div>
 {% endif %}
 
+<div id="cookies-banner" class="hidden fixed bottom-0 inset-x-0 bg-primary-900 text-cream-50 p-4 z-50 shadow-lift no-print">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+        <p class="text-sm flex-1 min-w-[200px]">
+            🍪 Używamy plików cookies do utrzymania sesji i preferencji. Korzystając ze strony zgadzasz się na ich użycie.
+            <a href="{% url 'groby:polityka' %}" class="underline">Szczegóły</a>
+        </p>
+        <button id="cookies-accept" type="button" class="px-4 py-1.5 bg-accent-500 hover:bg-accent-400 text-primary-900 rounded text-sm font-medium">Rozumiem</button>
+    </div>
+</div>
+<script>
+(function () {
+    if (localStorage.cookiesAccepted === '1') return;
+    document.addEventListener('DOMContentLoaded', () => {
+        const b = document.getElementById('cookies-banner');
+        if (b) b.classList.remove('hidden');
+        const btn = document.getElementById('cookies-accept');
+        if (btn) btn.addEventListener('click', () => {
+            localStorage.cookiesAccepted = '1';
+            b.classList.add('hidden');
+        });
+    });
+})();
+</script>
+
 <div id="pwa-install-banner" class="hidden bg-primary-700 text-cream-50 py-2 px-4 text-sm flex items-center justify-between no-print">
     <span>📱 Zainstaluj aplikację na telefonie — działa offline.</span>
     <span>
@@ -380,8 +404,15 @@
                 </div>
             </div>
         </div>
-        <div class="border-t border-primary-700 pt-6 flex flex-col sm:flex-row justify-between text-xs text-primary-400 gap-2">
+        <div class="border-t border-primary-700 pt-6 flex flex-col sm:flex-row justify-between text-xs text-primary-400 gap-2 flex-wrap">
             <div>© {% now "Y" %} Informator Cmentarny — Szydłów</div>
+            <div class="flex gap-3 flex-wrap">
+                <a href="{% url 'groby:polityka' %}" class="hover:text-cream-50">Polityka prywatności</a>
+                <a href="{% url 'groby:regulamin' %}" class="hover:text-cream-50">Regulamin</a>
+                <a href="{% url 'groby:faq' %}" class="hover:text-cream-50">FAQ</a>
+                <a href="{% url 'groby:pomoc' %}" class="hover:text-cream-50">Pomoc</a>
+                <a href="{% url 'groby:media_kit' %}" class="hover:text-cream-50">Dla mediów</a>
+            </div>
             <div>Praca inżynierska</div>
         </div>
     </div>

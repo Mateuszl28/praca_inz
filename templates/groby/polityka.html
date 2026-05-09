@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Polityka prywatności — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10 prose prose-stone">
+    <h1 class="font-serif text-4xl text-primary-900 mb-6">Polityka prywatności</h1>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">1. Administrator danych</h2>
+    <p>Administratorem danych osobowych jest Parafia pw. św. Władysława w Szydłowie.</p>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">2. Cel przetwarzania</h2>
+    <ul class="list-disc pl-6">
+        <li>prowadzenie ewidencji grobów i osób pochowanych na cmentarzu parafialnym</li>
+        <li>świadczenie usług informacyjnych dla zwiedzających</li>
+        <li>moderacja zgłoszeń, wspomnień i komentarzy</li>
+        <li>realizacja zamówionych intencji mszalnych</li>
+        <li>wysyłka newslettera (po zapisaniu się)</li>
+    </ul>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">3. Podstawa prawna</h2>
+    <p>Art. 6 ust. 1 lit. a, b, e, f RODO oraz Ustawa z dnia 31 stycznia 1959 r. o cmentarzach i chowaniu zmarłych.</p>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">4. Zakres danych</h2>
+    <ul class="list-disc pl-6">
+        <li>dane osób pochowanych — z księgi cmentarnej (publiczne)</li>
+        <li>dane użytkowników rejestrujących konto: e-mail, login, hasło (hashowane)</li>
+        <li>dane zgłaszających poprawki: imię, e-mail (opcjonalne)</li>
+        <li>dane techniczne: IP (hash) — wyłącznie do anty-spamu</li>
+    </ul>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">5. Twoje prawa (RODO)</h2>
+    <ul class="list-disc pl-6">
+        <li><strong>Prawo dostępu</strong> — pobierz swoje dane: <a href="{% url 'groby:eksport_moich_danych' %}">/moje-dane/</a></li>
+        <li><strong>Prawo do usunięcia</strong> — usuń konto: <a href="{% url 'groby:usun_konto' %}">/usun-konto/</a></li>
+        <li><strong>Prawo do sprostowania</strong> — edytuj profil w panelu</li>
+        <li><strong>Prawo do sprzeciwu</strong> — anuluj newsletter w stopce e-maila</li>
+    </ul>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">6. Cookies</h2>
+    <p>Strona używa plików cookies do utrzymania sesji zalogowanego użytkownika oraz zapamiętania preferencji (motyw, język, kontrast). Nie używamy cookies śledzących ani reklamowych.</p>
+
+    <h2 class="font-serif text-2xl text-primary-900 mt-8 mb-3">7. Kontakt</h2>
+    <p>Pytania dotyczące przetwarzania danych: <a href="mailto:admin@example.com">admin@example.com</a></p>
+</section>
+{% endblock %}

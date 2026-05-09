@@ -20,10 +20,31 @@
                     name="q"
                     value="{{ query }}"
                     placeholder="Imię lub nazwisko…"
-                    class="w-full h-11 pl-10 pr-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
+                    class="w-full h-11 pl-10 pr-12 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                     autocomplete="off"
                     autofocus
                 >
+                <button type="button" id="voice-search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-primary-500 hover:text-primary-800 hover:bg-cream-100 rounded" title="Wyszukiwanie głosowe" aria-label="Wyszukiwanie głosowe">🎤</button>
+                <script>
+                (function () {
+                    const btn = document.getElementById('voice-search-btn');
+                    const inp = document.getElementById('q-input');
+                    if (!btn || !('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                        if (btn) btn.style.display = 'none';
+                        return;
+                    }
+                    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const r = new SR();
+                    r.lang = 'pl-PL';
+                    r.continuous = false;
+                    r.interimResults = false;
+                    r.onresult = e => {
+                        inp.value = e.results[0][0].transcript;
+                        inp.form && inp.form.submit();
+                    };
+                    btn.addEventListener('click', () => { try { r.start(); } catch(e){} });
+                })();
+                </script>
                 <div id="sugestie" class="hidden absolute left-0 right-0 top-[calc(100%+4px)] bg-white border border-cream-200 rounded-md shadow-lift z-50 overflow-hidden"></div>
             </div>
 

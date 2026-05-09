@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Chmura nazwisk — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Wizualizacja</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Chmura nazwisk</h1>
+    <p class="text-primary-600 mb-6">Im większe słowo, tym częściej dane nazwisko występuje w bazie. Klik prowadzi do wyszukiwania.</p>
+
+    <div id="cloud" class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center" style="min-height: 60vh;"></div>
+</section>
+
+<script>
+(function () {
+    const dane = {{ nazwiska_json|safe }};
+    if (!dane.length) return;
+    const max = dane[0].c;
+    const min = dane[dane.length - 1].c;
+    const cont = document.getElementById('cloud');
+    const css_kolory = ['#2e4430', '#3a553a', '#4c6b4a', '#6a8a68', '#94ae93', '#b08d48', '#8f7237'];
+    const html = dane.map((n, i) => {
+        const skala = (n.c - min) / Math.max(1, max - min);
+        const rozmiar = (1 + skala * 3.5).toFixed(2);
+        const kolor = css_kolory[i % css_kolory.length];
+        const obrot = (Math.random() - 0.5) * 14;
+        return `<a href="/szukaj/?q=${encodeURIComponent(n.nazwisko)}"
+                  class="inline-block mx-2 my-1 hover:underline transition-transform"
+                  style="font-family:'Cormorant Garamond',serif;font-size:${rozmiar}rem;color:${kolor};transform:rotate(${obrot}deg);"
+                  title="${n.c}× w bazie">${n.nazwisko}</a>`;
+    }).join('');
+    cont.innerHTML = html;
+})();
+</script>
+{% endblock %}

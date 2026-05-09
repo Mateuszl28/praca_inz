@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Dla mediów — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Press kit</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Dla mediów</h1>
+    <p class="text-primary-600 mb-8">Materiały dla dziennikarzy, blogerów, badaczy historii lokalnej.</p>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-3">O projekcie</h2>
+        <p class="text-primary-700 mb-3">Informator Cmentarny Szydłów to cyfrowa baza grobów cmentarza parafialnego, służąca rodzinom, turystom i badaczom historii lokalnej.</p>
+        <ul class="text-sm text-primary-700 list-disc pl-6 space-y-1">
+            <li><strong>Liczba zapisanych osób:</strong> ok. 1238</li>
+            <li><strong>Liczba grobów:</strong> ok. 658</li>
+            <li><strong>Najstarszy zapis:</strong> XIX wiek</li>
+            <li><strong>Technologia:</strong> Django, SQLite, PWA, mapa Leaflet</li>
+            <li><strong>Status:</strong> rozwijany w ramach pracy inżynierskiej</li>
+        </ul>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-3">Funkcje wyróżniające</h2>
+        <ul class="text-sm text-primary-700 list-disc pl-6 space-y-1">
+            <li>Świeczki online i wirtualne kwiaty z intencjami</li>
+            <li>Skaner QR przy nagrobkach</li>
+            <li>Spacer 360° (panoramy z hotspotami)</li>
+            <li>Drzewo genealogiczne i wyszukiwanie wspólnych przodków</li>
+            <li>Mapa pochodzenia osób pochowanych</li>
+            <li>System odznak za aktywność społeczności</li>
+            <li>Eksport GEDCOM, PDF, iCal</li>
+            <li>API REST i GraphQL</li>
+        </ul>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 mb-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-3">Kontakt prasowy</h2>
+        <p class="text-primary-700">
+            Parafia pw. św. Władysława<br>
+            Szydłów, woj. świętokrzyskie<br>
+            E-mail: <a href="mailto:admin@example.com" class="text-primary-800 underline">admin@example.com</a>
+        </p>
+    </div>
+
+    <div class="bg-cream-100 rounded-lg p-6">
+        <h2 class="font-serif text-xl text-primary-900 mb-3">Linki bezpośrednie</h2>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+            <a href="{% url 'groby:home' %}" class="text-primary-800 hover:underline">Strona główna</a>
+            <a href="{% url 'groby:statystyki' %}" class="text-primary-800 hover:underline">Statystyki</a>
+            <a href="{% url 'groby:wpisy_lista' %}" class="text-primary-800 hover:underline">Postacie</a>
+            <a href="{% url 'groby:o_cmentarzu' %}" class="text-primary-800 hover:underline">O cmentarzu</a>
+            <a href="{% url 'groby:top10' %}" class="text-primary-800 hover:underline">Top 10</a>
+            <a href="{% url 'groby:family_tree' %}" class="text-primary-800 hover:underline">Drzewo cmentarza</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -4,7 +4,7 @@ from .models import (
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
-    Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
+    Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache, ZdjecieWpisu,
 )
 
 
@@ -171,8 +171,14 @@ class SwiecaAdmin(admin.ModelAdmin):
     readonly_fields = ('ip_hash', 'data_zapalenia')
 
 
+class ZdjecieWpisuInline(admin.TabularInline):
+    model = ZdjecieWpisu
+    extra = 1
+
+
 @admin.register(Wpis)
 class WpisAdmin(admin.ModelAdmin):
+    inlines = [ZdjecieWpisuInline]
     list_display = ('tytul', 'typ', 'opublikowany', 'data_publikacji', 'autor')
     list_filter = ('typ', 'opublikowany')
     search_fields = ('tytul', 'tresc', 'podpis')

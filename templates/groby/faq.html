@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}FAQ — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pomoc</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-6">Najczęściej zadawane pytania</h1>
+
+    <div class="space-y-3">
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Jak znaleźć grób bliskiej osoby?</summary>
+            <p class="mt-3 text-primary-700">Najszybciej przez wyszukiwarkę — wpisz nazwisko lub imię w polu na stronie głównej. Możesz też przeglądać alfabetyczny <a href="{% url 'groby:indeks' %}" class="text-primary-800 underline">indeks nazwisk</a> lub <a href="{% url 'groby:sektory_list' %}" class="text-primary-800 underline">listę sektorów</a>.</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Czy mogę zgłosić błąd lub uzupełnić dane?</summary>
+            <p class="mt-3 text-primary-700">Tak. Pod każdym grobem i osobą jest przycisk <strong>Zgłoś poprawkę</strong>. Administrator zweryfikuje i zaktualizuje informacje.</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Co to jest „świeczka online"?</summary>
+            <p class="mt-3 text-primary-700">Symboliczna forma upamiętnienia. Świeczka „pali się" przez 24 godziny od zapalenia, opcjonalnie z intencją.</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Jak dodać wspomnienie?</summary>
+            <p class="mt-3 text-primary-700">Wejdź na stronę osoby, kliknij <strong>Dodaj wspomnienie</strong>. Tekst pojawi się publicznie po akceptacji moderatora. Możesz też używać dyktowania (przycisk 🎤).</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Jak działa skaner QR?</summary>
+            <p class="mt-3 text-primary-700">Wejdź na <a href="{% url 'groby:skaner' %}" class="text-primary-800 underline">/skaner/</a>, zezwól na dostęp do kamery, skieruj na kod QR przy nagrobku — strona grobu otworzy się automatycznie.</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Czy mogę zamówić mszę za zmarłą osobę?</summary>
+            <p class="mt-3 text-primary-700">Tak — wejdź na <a href="{% url 'groby:intencje_form' %}" class="text-primary-800 underline">/intencje/</a> i wypełnij formularz. Skontaktujemy się drogą e-mail.</p>
+        </details>
+
+        <details class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <summary class="font-serif text-lg text-primary-900 cursor-pointer">Co z moimi danymi osobowymi?</summary>
+            <p class="mt-3 text-primary-700">Szczegóły w <a href="{% url 'groby:polityka' %}" class="text-primary-800 underline">polityce prywatności</a>. Możesz w każdej chwili pobrać swoje dane (RODO art. 15) lub usunąć konto.</p>
+        </details>
+    </div>
+</section>
+{% endblock %}

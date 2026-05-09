@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load polish %}
+
+{% block title %}Rankingi Top 10 — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Rankingi</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Top 10</h1>
+    <p class="text-primary-600 mb-8">Zaskakujące fakty z bazy cmentarza w liczbach.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-2xl text-primary-900 mb-3">Najstarsi w bazie</h2>
+            <ol class="space-y-2 text-sm">
+                {% for o in najstarsi %}
+                    <li class="flex justify-between items-center">
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="text-primary-800 hover:underline">{{ forloop.counter }}. {{ o.imie }} {{ o.nazwisko }}</a>
+                        <span class="text-accent-600 font-medium">{{ o.wiek_lat }} lat</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-2xl text-primary-900 mb-3">Najmłodsi (zmarli przedwcześnie)</h2>
+            <ol class="space-y-2 text-sm">
+                {% for o in najmlodsi %}
+                    <li class="flex justify-between items-center">
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="text-primary-800 hover:underline">{{ forloop.counter }}. {{ o.imie }} {{ o.nazwisko }}</a>
+                        <span class="text-primary-500 font-medium">{{ o.wiek_lat }} {{ o.wiek_lat|odmien:"rok,lata,lat" }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-2xl text-primary-900 mb-3">Najczęstsze nazwiska</h2>
+            <ol class="space-y-2 text-sm">
+                {% for n in najczestsze_nazwiska %}
+                    <li class="flex justify-between items-center">
+                        <a href="{% url 'groby:szukaj' %}?q={{ n.nazwisko|urlencode }}" class="text-primary-800 hover:underline">{{ forloop.counter }}. {{ n.nazwisko }}</a>
+                        <span class="text-primary-500 font-medium">{{ n.c }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-2xl text-primary-900 mb-3">Najliczniejsze groby</h2>
+            <ol class="space-y-2 text-sm">
+                {% for g in najwieksze_groby %}
+                    <li class="flex justify-between items-center">
+                        <a href="{% url 'groby:grob_detail' g.pk %}" class="text-primary-800 hover:underline">{{ forloop.counter }}. Sektor {{ g.sektor.nazwa }} · grób {{ g.numer }}</a>
+                        <span class="text-primary-500 font-medium">{{ g.n }} {{ g.n|odmien:"osoba,osoby,osób" }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5 md:col-span-2">
+            <h2 class="font-serif text-2xl text-primary-900 mb-3">Ostatnio dodane do bazy</h2>
+            <ol class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {% for o in najnowsze_dodane %}
+                    <li>
+                        <a href="{% url 'groby:osoba_detail' o.pk %}" class="text-primary-800 hover:underline">{{ forloop.counter }}. {{ o.imie }} {{ o.nazwisko }}</a>
+                        <span class="text-xs text-primary-500">· sekt. {{ o.grob.sektor.nazwa }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+</section>
+{% endblock %}

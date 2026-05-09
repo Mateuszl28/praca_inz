@@ -1492,6 +1492,226 @@ def przyjmij_zaproszenie(request, token):
     return redirect('groby:osoba_detail', pk=z.osoba.pk)
 
 
+# ---- GDPR ----
+
+def polityka_prywatnosci(request):
+    return render(request, 'groby/polityka.html')
+
+
+def regulamin(request):
+    return render(request, 'groby/regulamin.html')
+
+
+@login_required
+def eksport_moich_danych(request):
+    """GDPR Right to Access — ZIP z wszystkimi danymi użytkownika."""
+    import zipfile
+    user = request.user
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        dane = {
+            'user': {
+                'username': user.username, 'email': user.email,
+                'first_name': user.first_name, 'last_name': user.last_name,
+                'date_joined': user.date_joined.isoformat(),
+            },
+            'profil': None,
+            'obserwowane_groby': [],
+            'obserwowane_osoby': [],
+            'wspomnienia': [],
+            'komentarze': [],
+            'swieczki': [],
+            'kwiaty': [],
+            'zgloszenia': [],
+            'zapisane_szukania': [],
+            'odznaki': [],
+            'glosy_plebiscytu': [],
+        }
+        if hasattr(user, 'profil'):
+            dane['profil'] = {
+                'pokrewienstwo': user.profil.pokrewienstwo,
+                'data_utworzenia': user.profil.data_utworzenia.isoformat(),
+            }
+            dane['obserwowane_groby'] = [str(g) for g in user.profil.obserwowane_groby.all()]
+            dane['obserwowane_osoby'] = [str(o) for o in user.profil.obserwowane_osoby.all()]
+        for w in user.wspomnienia.all():
+            dane['wspomnienia'].append({'osoba': str(w.osoba), 'tresc': w.tresc, 'data': w.data_dodania.isoformat()})
+        for s in user.swiece.all():
+            dane['swieczki'].append({'osoba': str(s.osoba), 'intencja': s.intencja, 'data': s.data_zapalenia.isoformat()})
+        for k in Kwiat.objects.filter(autor_user=user):
+            dane['kwiaty'].append({'osoba': str(k.osoba), 'rodzaj': k.rodzaj, 'wiadomosc': k.wiadomosc, 'data': k.data_zlozenia.isoformat()})
+        for k in Komentarz.objects.filter(autor_user=user):
+            dane['komentarze'].append({'wspomnienie': str(k.wspomnienie), 'tresc': k.tresc, 'data': k.data_dodania.isoformat()})
+        for z in user.zgloszenia.all():
+            dane['zgloszenia'].append({'tresc': z.tresc, 'status': z.get_status_display(), 'data': z.data_dodania.isoformat()})
+        for s in user.zapisane_szukania.all():
+            dane['zapisane_szukania'].append({'nazwa': s.nazwa, 'querystring': s.querystring})
+        for o in user.odznaki.all():
+            dane['odznaki'].append({'odznaka': o.odznaka.nazwa, 'data': o.data_zdobycia.isoformat()})
+        for g in GlosNagrobek.objects.filter(user=user):
+            dane['glosy_plebiscytu'].append({'grob': str(g.grob), 'data': g.data.isoformat()})
+        zf.writestr('moje-dane.json', json.dumps(dane, ensure_ascii=False, indent=2))
+        zf.writestr('README.txt',
+            'Eksport Twoich danych z Informatora Cmentarnego w Szydłowie.\n'
+            'Zgodnie z RODO art. 15 (prawo dostępu).\n'
+            f'Wygenerowano: {__import__("django.utils.timezone", fromlist=["now"]).now().isoformat()}\n')
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type='application/zip')
+    resp['Content-Disposition'] = f'attachment; filename="moje-dane-{user.username}.zip"'
+    return resp
+
+
+@login_required
+def usun_konto(request):
+    if request.method == 'POST':
+        potwierdzenie = (request.POST.get('potwierdzenie') or '').strip()
+        if potwierdzenie != 'USUN':
+            messages.error(request, 'Wpisz USUN aby potwierdzić.')
+            return redirect('groby:usun_konto')
+        user = request.user
+        from django.contrib.auth import logout
+        logout(request)
+        user.delete()
+        messages.success(request, 'Konto i wszystkie powiązane dane zostały usunięte.')
+        return redirect('groby:home')
+    return render(request, 'groby/usun_konto.html')
+
+
+# ---- Top 10 / rankingi ----
+
+def top10(request):
+    """Strona z 10 rankingami."""
+    from django.db.models import F, ExpressionWrapper, IntegerField, Avg
+    najmlodsi = list(Osoba.objects.exclude(data_urodzenia__isnull=True).exclude(data_smierci__isnull=True)
+                     .annotate(wiek_lat=ExpressionWrapper(F('data_smierci__year') - F('data_urodzenia__year'), output_field=IntegerField()))
+                     .filter(wiek_lat__gte=0).order_by('wiek_lat')[:10])
+    najstarsi = list(Osoba.objects.exclude(data_urodzenia__isnull=True).exclude(data_smierci__isnull=True)
+                     .annotate(wiek_lat=ExpressionWrapper(F('data_smierci__year') - F('data_urodzenia__year'), output_field=IntegerField()))
+                     .order_by('-wiek_lat')[:10])
+    najczestsze_nazwiska = list(Osoba.objects.values('nazwisko').annotate(c=Count('id')).order_by('-c')[:10])
+    najwieksze_groby = list(Grob.objects.annotate(n=Count('osoby')).order_by('-n').select_related('sektor')[:10])
+    najnowsze_dodane = list(Osoba.objects.select_related('grob__sektor').order_by('-pk')[:10])
+    return render(request, 'groby/top10.html', {
+        'najmlodsi': najmlodsi,
+        'najstarsi': najstarsi,
+        'najczestsze_nazwiska': najczestsze_nazwiska,
+        'najwieksze_groby': najwieksze_groby,
+        'najnowsze_dodane': najnowsze_dodane,
+    })
+
+
+# ---- Word cloud nazwisk ----
+
+def word_cloud(request):
+    nazwiska = list(Osoba.objects.values('nazwisko').annotate(c=Count('id')).order_by('-c')[:100])
+    return render(request, 'groby/word_cloud.html', {
+        'nazwiska_json': json.dumps(nazwiska, ensure_ascii=False),
+    })
+
+
+# ---- Family tree całego cmentarza ----
+
+def family_tree_cmentarza(request):
+    osoby = list(Osoba.objects.values('id', 'imie', 'nazwisko'))
+    relacje = list(Relacja.objects.values('osoba_a_id', 'osoba_b_id', 'typ'))
+    nodes = [{'id': o['id'], 'name': f"{o['imie']} {o['nazwisko']}"} for o in osoby]
+    links = [{'source': r['osoba_a_id'], 'target': r['osoba_b_id'], 'typ': r['typ']} for r in relacje]
+    return render(request, 'groby/family_tree.html', {
+        'nodes_json': json.dumps(nodes, ensure_ascii=False),
+        'links_json': json.dumps(links, ensure_ascii=False),
+    })
+
+
+# ---- Kolaż wspomnień PDF ----
+
+def kolaz_wspomnien_pdf(request, osoba_id):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from pathlib import Path
+
+    osoba = get_object_or_404(Osoba.objects.prefetch_related('wspomnienia'), pk=osoba_id)
+    wsp = osoba.wspomnienia.filter(status='zaakceptowane')
+
+    czcionka = 'Helvetica'
+    for k in (r'C:\Windows\Fonts\arial.ttf',):
+        if Path(k).exists():
+            try:
+                pdfmetrics.registerFont(TTFont('Polska', k))
+                czcionka = 'Polska'
+                break
+            except Exception:
+                pass
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    h1 = ParagraphStyle('h1', fontName=czcionka, fontSize=22, leading=28, spaceAfter=12, alignment=1)
+    sub = ParagraphStyle('sub', fontName=czcionka, fontSize=11, leading=14, spaceAfter=20, alignment=1, textColor=colors.HexColor('#4c6b4a'))
+    body = ParagraphStyle('b', fontName=czcionka, fontSize=11, leading=16, spaceAfter=10, leftIndent=12, rightIndent=12)
+    autor = ParagraphStyle('a', fontName=czcionka, fontSize=9, leading=12, spaceAfter=20, alignment=2, textColor=colors.HexColor('#94ae93'))
+
+    e = []
+    e.append(Paragraph('Pamiętamy', sub))
+    e.append(Paragraph(f'{osoba.imie} {osoba.nazwisko}', h1))
+    if osoba.data_urodzenia or osoba.data_smierci:
+        e.append(Paragraph(f"{osoba.data_urodzenia.strftime('%d.%m.%Y') if osoba.data_urodzenia else '?'} — {osoba.data_smierci.strftime('%d.%m.%Y') if osoba.data_smierci else '?'}", sub))
+    e.append(Spacer(1, 1*cm))
+    if wsp:
+        for w in wsp:
+            e.append(Paragraph(f'„{w.tresc}"', body))
+            e.append(Paragraph(f'— {w.autor_str}, {w.data_dodania:%d.%m.%Y}', autor))
+    else:
+        e.append(Paragraph('Brak wspomnień. Dodaj swoje na stronie cmentarza.', body))
+
+    doc.build(e)
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="wspomnienia-{osoba.nazwisko}.pdf"'
+    return resp
+
+
+# ---- Eksport galerii sektora ZIP ----
+
+@login_required
+def eksport_galerii_sektora(request, sektor_id):
+    if not request.user.is_staff:
+        return redirect('admin:login')
+    import zipfile
+    sektor = get_object_or_404(Sektor, pk=sektor_id)
+    zdjecia = Zdjecie.objects.filter(grob__sektor=sektor).select_related('grob')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for z in zdjecia:
+            try:
+                with open(z.plik.path, 'rb') as f:
+                    nazwa = f'{z.grob.numer}_{z.pk}.jpg'
+                    zf.writestr(nazwa, f.read())
+            except (OSError, ValueError):
+                continue
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type='application/zip')
+    resp['Content-Disposition'] = f'attachment; filename="galeria-sektor-{sektor.nazwa}.zip"'
+    return resp
+
+
+# ---- Statyczne strony ----
+
+def faq(request):
+    return render(request, 'groby/faq.html')
+
+
+def pomoc(request):
+    return render(request, 'groby/pomoc.html')
+
+
+def media_kit(request):
+    return render(request, 'groby/media_kit.html')
+
+
 def manifest(request):
     data = {
         "name": "Informator Cmentarny — Szydłów",
