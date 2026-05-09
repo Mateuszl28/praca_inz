@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Epitafia — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pamięć</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Galeria epitafiów</h1>
+    <p class="text-primary-700 mb-8">Krótkie napisy z nagrobków — kolekcja {{ liczba }} epitafiów.</p>
+
+    {% if osoby %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {% for o in osoby %}
+                <article class="bg-white rounded-lg shadow-soft border border-cream-200 p-5 border-l-4 border-l-accent-400">
+                    <blockquote class="font-serif italic text-lg text-primary-800 mb-3">„{{ o.epitafium }}"</blockquote>
+                    <a href="{% url 'groby:osoba_detail' pk=o.pk %}" class="block text-sm">
+                        <span class="text-primary-900 hover:underline font-medium">{{ o }}</span>
+                        {% if o.data_urodzenia or o.data_smierci %}
+                            <span class="text-primary-500"> · {{ o.data_urodzenia|date:"Y"|default:"?" }}–{{ o.data_smierci|date:"Y"|default:"?" }}</span>
+                        {% endif %}
+                    </a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Jeszcze nie zapisano żadnych epitafiów. Możesz je uzupełnić przez panel staffu lub zgłaszając poprawkę.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

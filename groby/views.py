@@ -22,6 +22,7 @@ from .models import (
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
     EtykietaOsoby, WydarzenieParafialne,
+    Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
 )
 
 
@@ -3051,3 +3052,203 @@ def swiece_live(request):
         'plan_w': plan_w,
         'plan_h': plan_h,
     })
+
+
+# ===== Batch 93 =====
+
+
+def _wyniki_sondy(sonda):
+    odpowiedzi = sonda.odpowiedzi.annotate(n=Count('glosy')).order_by('kolejnosc', 'pk')
+    razem = sum(o.n for o in odpowiedzi) or 1
+    return [
+        {'pk': o.pk, 'tresc': o.tresc, 'n': o.n, 'procent': round(o.n * 100 / razem, 1)}
+        for o in odpowiedzi
+    ]
+
+
+def sondy_lista(request):
+    aktywne = Sonda.objects.filter(aktywna=True).prefetch_related('odpowiedzi')
+    archiwum = Sonda.objects.filter(aktywna=False).prefetch_related('odpowiedzi')[:10]
+    iph = _hash_ip(request)
+    glosowane = set(GlosSondy.objects.filter(ip_hash=iph).values_list('odpowiedz__sonda_id', flat=True))
+    return render(request, 'groby/sondy.html', {
+        'aktywne': [(s, _wyniki_sondy(s), s.id in glosowane) for s in aktywne],
+        'archiwum': [(s, _wyniki_sondy(s)) for s in archiwum],
+    })
+
+
+@require_POST
+def sonda_glosuj(request, pk):
+    odp = get_object_or_404(OdpowiedzSondy, pk=pk, sonda__aktywna=True)
+    iph = _hash_ip(request)
+    if GlosSondy.objects.filter(odpowiedz__sonda=odp.sonda, ip_hash=iph).exists():
+        messages.info(request, 'Już oddałeś głos w tej sondzie.')
+    else:
+        try:
+            GlosSondy.objects.create(
+                odpowiedz=odp,
+                ip_hash=iph,
+                user=request.user if request.user.is_authenticated else None,
+            )
+            messages.success(request, 'Dziękujemy za głos!')
+        except Exception:
+            messages.info(request, 'Już oddałeś głos w tej sondzie.')
+    return redirect('groby:sondy')
+
+
+def kondolencje_lista(request):
+    """Wszystkie zaakceptowane kondolencje (księga kondolencyjna)."""
+    qs = (Kondolencja.objects.filter(zaakceptowana=True)
+          .select_related('osoba__grob__sektor', 'autor_user')
+          .order_by('-data_dodania'))
+    paginator = Paginator(qs, 50)
+    page = paginator.get_page(request.GET.get('p', 1))
+    return render(request, 'groby/kondolencje.html', {'page': page})
+
+
+def dodaj_kondolencje(request, osoba_id):
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        tresc = (request.POST.get('tresc') or '').strip()
+        autor_imie = (request.POST.get('autor_imie') or '').strip()[:100]
+        if tresc:
+            Kondolencja.objects.create(
+                osoba=osoba,
+                autor_user=request.user if request.user.is_authenticated else None,
+                autor_imie=autor_imie,
+                tresc=tresc[:5000],
+                zaakceptowana=False,
+            )
+            messages.success(request, 'Kondolencja oczekuje na akceptację moderatora. Dziękujemy.')
+        return redirect('groby:osoba_detail', pk=osoba.pk)
+    return render(request, 'groby/dodaj_kondolencje.html', {
+        'osoba': osoba,
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+def epitafia_galeria(request):
+    """Kolekcja epitafiów — krótkich napisów z nagrobków."""
+    osoby = (Osoba.objects.exclude(epitafium='')
+             .select_related('grob__sektor')
+             .order_by('nazwisko', 'imie'))
+    return render(request, 'groby/epitafia.html', {
+        'osoby': osoby,
+        'liczba': osoby.count(),
+    })
+
+
+def zbiorki_lista(request):
+    aktywne = (ZbiorkaRenowacja.objects.filter(status='aktywna')
+               .select_related('grob__sektor', 'inicjator')
+               .order_by('-data_zmiany'))
+    zakonczone = (ZbiorkaRenowacja.objects.filter(status='zakonczona')
+                  .select_related('grob__sektor')[:10])
+    return render(request, 'groby/zbiorki.html', {
+        'aktywne': aktywne,
+        'zakonczone': zakonczone,
+    })
+
+
+def zbiorka_detail(request, pk):
+    z = get_object_or_404(ZbiorkaRenowacja, pk=pk)
+    return render(request, 'groby/zbiorka_detail.html', {'zbiorka': z})
+
+
+@login_required
+def zbiorka_zaproponuj(request, grob_id):
+    grob = get_object_or_404(Grob, pk=grob_id)
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        tytul = (request.POST.get('tytul') or '').strip()[:200]
+        opis = (request.POST.get('opis') or '').strip()[:5000]
+        try:
+            cel = max(50, min(int(request.POST.get('cel_pln') or '0'), 1_000_000))
+        except ValueError:
+            cel = 0
+        konto = (request.POST.get('konto_bankowe') or '').strip()[:80]
+        if tytul and opis and cel:
+            ZbiorkaRenowacja.objects.create(
+                grob=grob,
+                inicjator=request.user,
+                tytul=tytul,
+                opis=opis,
+                cel_pln=cel,
+                konto_bankowe=konto,
+                status='oczekuje',
+            )
+            messages.success(request, 'Propozycja zbiórki oczekuje na akceptację staffu.')
+            return redirect('groby:grob_detail', pk=grob.pk)
+        messages.error(request, 'Uzupełnij wszystkie wymagane pola.')
+    return render(request, 'groby/zbiorka_form.html', {
+        'grob': grob,
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+@login_required
+def najblizsza_rocznica(request):
+    """JSON: najbliższa rocznica śmierci/urodzin obserwowanej osoby z odliczaniem."""
+    from django.utils import timezone
+    from datetime import date as dt_date
+    user = request.user
+    obs_qs = Osoba.objects.filter(obserwujacy__user=user).exclude(data_smierci=None)
+    today = timezone.localdate()
+    najblizsza = None
+    najblizsze_dni = 999
+    typ = ''
+    for o in obs_qs:
+        for d, t in [(o.data_smierci, 'rocznica śmierci'), (o.data_urodzenia, 'urodziny')]:
+            if not d:
+                continue
+            try:
+                kandydat = dt_date(today.year, d.month, d.day)
+            except ValueError:
+                continue
+            if kandydat < today:
+                try:
+                    kandydat = dt_date(today.year + 1, d.month, d.day)
+                except ValueError:
+                    continue
+            ile = (kandydat - today).days
+            if ile < najblizsze_dni:
+                najblizsze_dni = ile
+                najblizsza = o
+                typ = t
+    if not najblizsza:
+        return JsonResponse({'jest': False})
+    return JsonResponse({
+        'jest': True,
+        'osoba': str(najblizsza),
+        'osoba_id': najblizsza.pk,
+        'typ': typ,
+        'data': (today + __import__('datetime').timedelta(days=najblizsze_dni)).isoformat(),
+        'dni': najblizsze_dni,
+    })
+
+
+def notki_cmentarne_json(request):
+    """Najnowsze 5 notek mini-blogu na home (JSON dla widgetu)."""
+    qs = NotkaCmentarna.objects.filter(opublikowana=True).select_related('autor')[:5]
+    return JsonResponse({
+        'notki': [
+            {
+                'id': n.pk,
+                'tresc': n.tresc,
+                'autor': (n.autor.username if n.autor else 'staff'),
+                'data': n.data_dodania.strftime('%d.%m.%Y'),
+                'przypiety': n.przypiety,
+            }
+            for n in qs
+        ],
+    })
+
+
+def notki_cmentarne_lista(request):
+    qs = NotkaCmentarna.objects.filter(opublikowana=True).select_related('autor')
+    paginator = Paginator(qs, 30)
+    page = paginator.get_page(request.GET.get('p', 1))
+    return render(request, 'groby/notki.html', {'page': page})

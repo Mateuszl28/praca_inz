@@ -150,6 +150,19 @@ urlpatterns = [
     path('statystyki/sezonowosc/', views.sezonowosc_zgonow, name='sezonowosc_zgonow'),
     path('swiece-live/', views.swiece_live, name='swiece_live'),
 
+    # Batch 93
+    path('sondy/', views.sondy_lista, name='sondy'),
+    path('sonda/<int:pk>/glosuj/', views.sonda_glosuj, name='sonda_glosuj'),
+    path('kondolencje/', views.kondolencje_lista, name='kondolencje'),
+    path('osoba/<int:osoba_id>/kondolencje/', views.dodaj_kondolencje, name='dodaj_kondolencje'),
+    path('epitafia/', views.epitafia_galeria, name='epitafia'),
+    path('zbiorki/', views.zbiorki_lista, name='zbiorki'),
+    path('zbiorka/<int:pk>/', views.zbiorka_detail, name='zbiorka_detail'),
+    path('grob/<int:grob_id>/zbiorka/', views.zbiorka_zaproponuj, name='zbiorka_zaproponuj'),
+    path('api/najblizsza-rocznica/', views.najblizsza_rocznica, name='najblizsza_rocznica'),
+    path('api/notki/', views.notki_cmentarne_json, name='notki_json'),
+    path('notki/', views.notki_cmentarne_lista, name='notki'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 

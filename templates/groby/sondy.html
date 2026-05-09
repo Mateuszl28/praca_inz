@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Sondy społeczności — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Społeczność</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Sondy</h1>
+    <p class="text-primary-700 mb-8">Twój głos pomaga w decyzjach dotyczących cmentarza i serwisu.</p>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="mb-3 p-3 rounded text-sm bg-primary-50 border border-primary-200 text-primary-800">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% for sonda, wyniki, juz in aktywne %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5 mb-5">
+            <h2 class="font-serif text-2xl text-primary-900 mb-1">{{ sonda.pytanie }}</h2>
+            {% if sonda.opis %}<p class="text-sm text-primary-600 mb-4">{{ sonda.opis }}</p>{% endif %}
+
+            {% if juz %}
+                <p class="text-xs text-primary-500 mb-3">✓ Już oddałeś głos w tej sondzie. Wyniki:</p>
+                <ul class="space-y-2">
+                    {% for w in wyniki %}
+                        <li>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-primary-800">{{ w.tresc }}</span>
+                                <span class="text-primary-500">{{ w.n }} ({{ w.procent }}%)</span>
+                            </div>
+                            <div class="h-2 bg-cream-100 rounded mt-1"><div class="h-full bg-primary-500 rounded" style="width: {{ w.procent }}%;"></div></div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <ul class="space-y-2">
+                    {% for w in wyniki %}
+                        <li>
+                            <form method="post" action="{% url 'groby:sonda_glosuj' pk=w.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full text-left px-3 py-2 border border-cream-200 rounded hover:bg-primary-50 hover:border-primary-300 text-primary-800">{{ w.tresc }}</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if sonda.data_zakonczenia %}
+                <div class="text-xs text-primary-500 mt-3">Sonda kończy się: {{ sonda.data_zakonczenia|date:"d.m.Y" }}</div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600 mb-8">
+            Aktualnie brak otwartych sond. Wróć później.
+        </div>
+    {% endfor %}
+
+    {% if archiwum %}
+        <h2 class="font-serif text-2xl text-primary-900 mt-10 mb-4">Archiwum</h2>
+        {% for sonda, wyniki in archiwum %}
+            <details class="bg-cream-50 border border-cream-200 rounded p-4 mb-2">
+                <summary class="cursor-pointer font-serif text-lg text-primary-800">{{ sonda.pytanie }}</summary>
+                <ul class="mt-3 space-y-1 text-sm">
+                    {% for w in wyniki %}
+                        <li class="flex justify-between"><span>{{ w.tresc }}</span><span class="text-primary-500">{{ w.n }} ({{ w.procent }}%)</span></li>
+                    {% endfor %}
+                </ul>
+            </details>
+        {% endfor %}
+    {% endif %}
+</section>
+{% endblock %}

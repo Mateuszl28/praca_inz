@@ -164,6 +164,16 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **Sezonowość zgonów** (`/statystyki/sezonowosc/`) — liczba zgonów per miesiąc kalendarzowy, paski
 - **Mapa świec aktywnych live** (`/swiece-live/`) — animowane płomyki na planie cmentarza, tylko zapalone w ostatnich 24h, auto-reload co minutę
 - **Eksport notatek prywatnych do PDF** (`/moje-notatki.pdf`) — szkicownik badacza w kieszonkowym formacie
+- **Pasek z cytatami memorial** pod nagłówkiem — 15 rotujących cytatów (Twardowski, Szymborska, Horacy, Saint-Exupéry, Einstein, Cyceron…), zmiana co 12 s z fade-in/out, schowanie na 30 dni
+
+### Sondy, kondolencje, epitafia, zbiórki, notki (batch 93)
+- **Sondy społeczności** (`/sondy/`) — `Sonda` + `OdpowiedzSondy` + `GlosSondy` z cooldown po hashu IP, paski wyników po głosie, archiwum zamkniętych sond
+- **Wirtualne kondolencje** — `Kondolencja` per `Osoba` z moderacją; formularz na profilu osoby, publiczna księga kondolencyjna (`/kondolencje/`)
+- **Epitafia** — pole `epitafium` na `Osoba` (cytat/motto z nagrobka), eksponowane jako blockquote na profilu, galeria wszystkich (`/epitafia/`)
+- **Zbiórki renowacyjne** (`/zbiorki/`) — `ZbiorkaRenowacja` per Grób z paskiem postępu (cel/zebrano), workflow `oczekuje → aktywna → zakończona`, propozycja przez zalogowanych, akcje admina
+- **Najbliższa rocznica obserwowanej** — widget na profilu zalogowanego z odliczaniem dni do najbliższej rocznicy śmierci/urodzin obserwowanej osoby (`/api/najblizsza-rocznica/`)
+- **Mini-blog „Z życia cmentarza"** (`/notki/`) — krótkie wpisy staffu (max 500 zn.), 5 najnowszych jako widget na home (`/api/notki/`), opcja przypięcia
+- **Migracja FTS5 rebuild** (`0020`) — odtwarza triggery FTS po `ALTER TABLE` SQLite
 
 ## Szybki start (lokalnie)
 
@@ -243,7 +253,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | CI                 | GitHub Actions (matrix Python 3.10 + 3.12)                           |
 | Monitoring         | Sentry (opcjonalnie)                                                 |
 
-## Modele danych (~50)
+## Modele danych (~55)
 
 ```
 Sektor 1───n Grob 1───n Osoba ───n Wspomnienie ───n Komentarz
@@ -287,6 +297,13 @@ HasloSlownik (postać/miejsce/wydarzenie/termin, źródła, powiązana Osoba)
 # Batch 92
 EtykietaOsoby ──m──n Osoba (zasługi/zawód: Powstaniec, Nauczyciel…)
 WydarzenieParafialne (msza/procesja/modlitwa, intencja, opublikowane)
+
+# Batch 93
+Sonda ───n OdpowiedzSondy ───n GlosSondy (z cooldown po IP)
+Kondolencja per Osoba (z moderacją)
+ZbiorkaRenowacja per Grob (cel_pln, zebrano_pln, status, % postępu)
+NotkaCmentarna — mini-blog staffu (max 500 zn., przypinanie)
+Osoba.epitafium — cytat/motto z nagrobka
 ```
 
 Pełny opis architektury: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).

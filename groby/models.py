@@ -70,6 +70,7 @@ class Osoba(models.Model):
     data_smierci = models.DateField(null=True, blank=True, verbose_name='Data śmierci')
     miejsce_urodzenia = models.CharField(max_length=200, blank=True, verbose_name='Miejsce urodzenia')
     biogram = models.TextField(blank=True, verbose_name='Biogram / uwagi')
+    epitafium = models.CharField(max_length=400, blank=True, verbose_name='Epitafium / motto na nagrobku')
 
     class Meta:
         verbose_name = 'Osoba'
@@ -994,3 +995,126 @@ class WydarzenieParafialne(models.Model):
 
     def __str__(self):
         return f'{self.data_start:%Y-%m-%d %H:%M} — {self.tytul}'
+
+
+# ===== Batch 93 =====
+
+
+class Sonda(models.Model):
+    """Tygodniowa sonda społecznościowa (np. Czy odnowić sektor A?)."""
+    pytanie = models.CharField(max_length=300)
+    opis = models.TextField(blank=True)
+    aktywna = models.BooleanField(default=True, db_index=True)
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    data_zakonczenia = models.DateField(null=True, blank=True, help_text='Po tej dacie sonda zamyka się automatycznie')
+
+    class Meta:
+        verbose_name = 'Sonda'
+        verbose_name_plural = 'Sondy'
+        ordering = ['-data_utworzenia']
+
+    def __str__(self):
+        return self.pytanie
+
+
+class OdpowiedzSondy(models.Model):
+    sonda = models.ForeignKey(Sonda, on_delete=models.CASCADE, related_name='odpowiedzi')
+    tresc = models.CharField(max_length=200)
+    kolejnosc = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Odpowiedź sondy'
+        verbose_name_plural = 'Odpowiedzi sondy'
+        ordering = ['kolejnosc', 'pk']
+
+    def __str__(self):
+        return self.tresc
+
+
+class GlosSondy(models.Model):
+    odpowiedz = models.ForeignKey(OdpowiedzSondy, on_delete=models.CASCADE, related_name='glosy')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64)
+    data = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Głos w sondzie'
+        verbose_name_plural = 'Głosy w sondach'
+        constraints = [
+            models.UniqueConstraint(fields=['odpowiedz', 'ip_hash'], name='glos_sondy_odp_ip_uniq'),
+        ]
+
+
+class Kondolencja(models.Model):
+    """Wirtualne kondolencje pod profilem osoby (z moderacją)."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='kondolencje')
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    tresc = models.TextField()
+    zaakceptowana = models.BooleanField(default=False, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Kondolencja'
+        verbose_name_plural = 'Kondolencje'
+        ordering = ['-data_dodania']
+
+    def __str__(self):
+        return f'Kondolencja dla {self.osoba} ({self.data_dodania:%Y-%m-%d})'
+
+    @property
+    def autor_str(self):
+        if self.autor_user:
+            return self.autor_user.get_full_name() or self.autor_user.username
+        return self.autor_imie or 'Anonim'
+
+
+class ZbiorkaRenowacja(models.Model):
+    """Zbiórka na renowację konkretnego grobu (publiczna, z postępem)."""
+    STATUS_CHOICES = [
+        ('oczekuje', 'Oczekuje na akceptację'),
+        ('aktywna', 'Aktywna'),
+        ('zakonczona', 'Zakończona'),
+        ('odrzucona', 'Odrzucona'),
+    ]
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='zbiorki')
+    inicjator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tytul = models.CharField(max_length=200)
+    opis = models.TextField()
+    cel_pln = models.PositiveIntegerField(help_text='Kwota docelowa w PLN')
+    zebrano_pln = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='oczekuje', db_index=True)
+    konto_bankowe = models.CharField(max_length=80, blank=True, help_text='Numer konta na wpłaty')
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    data_zmiany = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Zbiórka renowacyjna'
+        verbose_name_plural = 'Zbiórki renowacyjne'
+        ordering = ['-data_utworzenia']
+
+    def __str__(self):
+        return f'{self.tytul} ({self.zebrano_pln}/{self.cel_pln} zł)'
+
+    @property
+    def procent(self):
+        if not self.cel_pln:
+            return 0
+        return min(100, int(self.zebrano_pln * 100 / self.cel_pln))
+
+
+class NotkaCmentarna(models.Model):
+    """Mini-blog 'Z życia cmentarza' — krótkie posty staffu (max 500 zn.) na home."""
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tresc = models.CharField(max_length=500)
+    przypiety = models.BooleanField(default=False, help_text='Wyświetlaj na górze')
+    opublikowana = models.BooleanField(default=True, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Notka cmentarna'
+        verbose_name_plural = 'Notki cmentarne'
+        ordering = ['-przypiety', '-data_dodania']
+
+    def __str__(self):
+        return f'{self.data_dodania:%Y-%m-%d}: {self.tresc[:60]}'

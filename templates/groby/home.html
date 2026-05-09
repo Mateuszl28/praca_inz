@@ -146,6 +146,40 @@
     </div>
 </section>
 
+<section class="max-w-5xl mx-auto px-4 mb-10">
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+        <div class="flex items-baseline justify-between mb-3">
+            <h2 class="font-serif text-2xl text-primary-900">📌 Z życia cmentarza</h2>
+            <a href="{% url 'groby:notki' %}" class="text-sm text-primary-700 hover:underline">wszystkie →</a>
+        </div>
+        <ul id="notki-lista" class="space-y-2 text-sm">
+            <li class="text-primary-500 italic">Ładowanie…</li>
+        </ul>
+    </div>
+</section>
+<script>
+    fetch('{% url "groby:notki_json" %}')
+        .then(r => r.json())
+        .then(d => {
+            const ul = document.getElementById('notki-lista');
+            ul.innerHTML = '';
+            if (!d.notki || !d.notki.length) {
+                ul.innerHTML = '<li class="text-primary-500 italic">Brak wpisów.</li>';
+                return;
+            }
+            d.notki.forEach(n => {
+                const li = document.createElement('li');
+                li.className = 'border-b border-cream-100 pb-2';
+                li.innerHTML = (n.przypiety ? '<span class="text-accent-600">📌</span> ' : '') +
+                    '<span class="text-primary-800">' + n.tresc.replace(/</g,'&lt;') + '</span>' +
+                    ' <span class="text-xs text-primary-500 ml-1">— ' + n.autor + ', ' + n.data + '</span>';
+                ul.appendChild(li);
+            });
+        }).catch(() => {
+            document.getElementById('notki-lista').innerHTML = '';
+        });
+</script>
+
 {% if featured_tygodnia %}
 <section class="max-w-5xl mx-auto px-4 mb-10">
     <div class="bg-gradient-to-br from-accent-50 to-cream-100 rounded-lg shadow-soft border border-accent-200 p-6 md:p-8">

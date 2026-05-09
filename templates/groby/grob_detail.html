@@ -148,6 +148,7 @@
                 </button>
             </form>
             <a href="{% url 'groby:opieka_zgloszenie' grob_id=grob.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">🤝 Zostań opiekunem</a>
+            <a href="{% url 'groby:zbiorka_zaproponuj' grob_id=grob.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">💰 Zaproponuj zbiórkę renowacyjną</a>
         {% else %}
             <a href="{% url 'groby:logowanie' %}?next={{ request.path }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">☆ Zaloguj się, aby obserwować</a>
         {% endif %}
@@ -156,6 +157,26 @@
             <a href="{% url 'groby:mapa' %}?sektor={{ grob.sektor.pk }}#g{{ grob.pk }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Pokaż na mapie</a>
         {% endif %}
     </div>
+
+    {% with zb=grob.zbiorki.all %}
+    {% for z in zb %}{% if z.status == 'aktywna' %}
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex items-baseline justify-between gap-3 flex-wrap">
+                <div>
+                    <div class="font-serif text-lg text-primary-900">💰 {{ z.tytul }}</div>
+                    <div class="text-xs text-primary-600">Zbiórka renowacyjna</div>
+                </div>
+                <a href="{% url 'groby:zbiorka_detail' pk=z.pk %}" class="text-sm text-primary-700 underline">Szczegóły →</a>
+            </div>
+            <div class="mt-2">
+                <div class="h-3 bg-amber-100 rounded overflow-hidden">
+                    <div class="h-full bg-amber-500" style="width: {{ z.procent }}%;"></div>
+                </div>
+                <div class="text-xs text-primary-700 mt-1"><strong>{{ z.zebrano_pln }} zł</strong> z {{ z.cel_pln }} zł ({{ z.procent }}%)</div>
+            </div>
+        </div>
+    {% endif %}{% endfor %}
+    {% endwith %}
 
     <form id="zglos-grob" method="post" action="{% url 'groby:zglos_poprawke' 'grob' grob.pk %}" class="hidden mt-4 bg-cream-50 border border-cream-200 rounded-lg p-4 space-y-3 no-print">
         {% csrf_token %}

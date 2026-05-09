@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Księga kondolencyjna — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pamięć</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Księga kondolencyjna</h1>
+    <p class="text-primary-700 mb-8">Wirtualne kondolencje złożone rodzinom zmarłych.</p>
+
+    {% if page.object_list %}
+        <ul class="space-y-4">
+            {% for k in page %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+                    <div class="text-sm text-primary-500 mb-1">
+                        Dla <a href="{% url 'groby:osoba_detail' pk=k.osoba_id %}" class="text-primary-800 underline font-medium">{{ k.osoba }}</a>
+                    </div>
+                    <blockquote class="font-serif italic text-primary-800 text-lg leading-relaxed">„{{ k.tresc|linebreaksbr }}"</blockquote>
+                    <div class="mt-2 text-xs text-primary-500">— {{ k.autor_str }}, {{ k.data_dodania|date:"d.m.Y" }}</div>
+                </li>
+            {% endfor %}
+        </ul>
+
+        {% if page.has_other_pages %}
+            <div class="mt-6 flex justify-between text-sm">
+                {% if page.has_previous %}<a href="?p={{ page.previous_page_number }}" class="text-primary-700 underline">← poprzednia</a>{% else %}<span></span>{% endif %}
+                <span class="text-primary-500">strona {{ page.number }} z {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?p={{ page.next_page_number }}" class="text-primary-700 underline">następna →</a>{% else %}<span></span>{% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Księga jest jeszcze pusta. Złóż pierwsze kondolencje na profilu osoby.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

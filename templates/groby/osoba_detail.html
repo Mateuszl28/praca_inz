@@ -74,7 +74,7 @@
             {% endif %}
         </div>
 
-        {% if osoba.miejsce_urodzenia or osoba.biogram or osoba.etykiety.all %}
+        {% if osoba.miejsce_urodzenia or osoba.biogram or osoba.etykiety.all or osoba.epitafium %}
             <div class="px-10 py-10">
                 {% if osoba.etykiety.all %}
                     <div class="flex justify-center flex-wrap gap-2 mb-6">
@@ -84,6 +84,12 @@
                             </a>
                         {% endfor %}
                     </div>
+                {% endif %}
+                {% if osoba.epitafium %}
+                    <figure class="max-w-2xl mx-auto mb-8 border-l-4 border-accent-400 pl-5 py-3">
+                        <blockquote class="font-serif italic text-xl text-primary-800">„{{ osoba.epitafium }}"</blockquote>
+                        <figcaption class="text-xs uppercase tracking-widest text-primary-500 mt-2">Epitafium z nagrobka</figcaption>
+                    </figure>
                 {% endif %}
                 {% if osoba.miejsce_urodzenia %}
                     <dl class="flex justify-center gap-3 mb-8 text-sm">
@@ -289,6 +295,29 @@
             </form>
         </details>
     </div>
+
+    {% with kondol=osoba.kondolencje.all %}
+    {% if kondol %}
+        <div class="mt-6 bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div class="ornament text-accent-500 font-serif italic text-xs uppercase tracking-widest"><span>Kondolencje</span></div>
+                <a href="{% url 'groby:dodaj_kondolencje' osoba.pk %}" class="text-sm text-primary-700 hover:underline no-print">+ Złóż kondolencje</a>
+            </div>
+            <ul class="space-y-3">
+                {% for k in kondol %}{% if k.zaakceptowana %}
+                    <li class="border-l-2 border-cream-300 pl-4">
+                        <div class="text-primary-800 font-serif italic">„{{ k.tresc|linebreaksbr }}"</div>
+                        <div class="mt-1 text-xs text-primary-500">— {{ k.autor_str }}, {{ k.data_dodania|date:"j.n.Y" }}</div>
+                    </li>
+                {% endif %}{% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="mt-6 text-center no-print">
+            <a href="{% url 'groby:dodaj_kondolencje' osoba.pk %}" class="text-sm text-primary-700 hover:underline">+ Złóż wirtualne kondolencje</a>
+        </div>
+    {% endif %}
+    {% endwith %}
 
     {% if relacje %}
         <div class="mt-6 bg-white rounded-lg shadow-soft border border-cream-200 p-6">

@@ -10,6 +10,7 @@ from .models import (
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
     EtykietaOsoby, WydarzenieParafialne,
+    Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
 )
 
 
@@ -86,7 +87,7 @@ class OsobaAdmin(admin.ModelAdmin):
         ('Dane osobowe', {'fields': ('imie', 'drugie_imie', 'nazwisko', 'nazwisko_rodowe')}),
         ('Daty', {'fields': ('data_urodzenia', 'data_smierci', 'miejsce_urodzenia')}),
         ('Grób', {'fields': ('grob',)}),
-        ('Biogram', {'fields': ('biogram',)}),
+        ('Biogram', {'fields': ('biogram', 'epitafium')}),
     )
 
 
@@ -503,3 +504,65 @@ class WydarzenieParafialneAdmin(admin.ModelAdmin):
     list_filter = ('typ', 'opublikowane')
     search_fields = ('tytul', 'opis', 'intencja', 'miejsce')
     date_hierarchy = 'data_start'
+
+
+# ----- Batch 93 -----
+
+
+class OdpowiedzSondyInline(admin.TabularInline):
+    model = OdpowiedzSondy
+    extra = 2
+
+
+@admin.register(Sonda)
+class SondaAdmin(admin.ModelAdmin):
+    list_display = ('pytanie', 'aktywna', 'data_zakonczenia', 'data_utworzenia')
+    list_filter = ('aktywna',)
+    search_fields = ('pytanie', 'opis')
+    inlines = [OdpowiedzSondyInline]
+
+
+@admin.register(GlosSondy)
+class GlosSondyAdmin(admin.ModelAdmin):
+    list_display = ('odpowiedz', 'user', 'data')
+    readonly_fields = ('odpowiedz', 'user', 'ip_hash', 'data')
+
+
+@admin.register(Kondolencja)
+class KondolencjaAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'autor_str', 'zaakceptowana', 'data_dodania')
+    list_filter = ('zaakceptowana',)
+    search_fields = ('osoba__nazwisko', 'osoba__imie', 'autor_imie', 'tresc')
+    actions = ['zaakceptuj', 'odrzuc']
+
+    def zaakceptuj(self, request, queryset):
+        queryset.update(zaakceptowana=True)
+    zaakceptuj.short_description = 'Zaakceptuj wybrane'
+
+    def odrzuc(self, request, queryset):
+        queryset.update(zaakceptowana=False)
+    odrzuc.short_description = 'Cofnij akceptację'
+
+
+@admin.register(ZbiorkaRenowacja)
+class ZbiorkaRenowacjaAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'grob', 'cel_pln', 'zebrano_pln', 'status', 'data_utworzenia')
+    list_filter = ('status',)
+    search_fields = ('tytul', 'opis', 'grob__numer')
+    autocomplete_fields = ('grob',)
+    actions = ['aktywuj', 'zakoncz']
+
+    def aktywuj(self, request, queryset):
+        queryset.update(status='aktywna')
+    aktywuj.short_description = 'Zaakceptuj i aktywuj'
+
+    def zakoncz(self, request, queryset):
+        queryset.update(status='zakonczona')
+    zakoncz.short_description = 'Oznacz jako zakończone'
+
+
+@admin.register(NotkaCmentarna)
+class NotkaCmentarnaAdmin(admin.ModelAdmin):
+    list_display = ('data_dodania', 'tresc', 'autor', 'przypiety', 'opublikowana')
+    list_filter = ('opublikowana', 'przypiety')
+    search_fields = ('tresc',)
