@@ -18,6 +18,7 @@ from .models import (
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
+    WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
 )
 
 
@@ -112,6 +113,17 @@ def szukaj(request):
     sugestia = None
     if query and total == 0:
         sugestia = _zaproponuj_nazwisko(query)
+
+    if query:
+        try:
+            WyszukiwanieLog.objects.create(
+                fraza=query[:200],
+                user=request.user if request.user.is_authenticated else None,
+                ip_hash=_hash_ip(request),
+                liczba_wynikow=total,
+            )
+        except Exception:
+            pass
 
     paginator = Paginator(osoby, 20)
     page = paginator.get_page(request.GET.get('page'))
@@ -2158,4 +2170,311 @@ def historia_zmian(request):
     return render(request, 'groby/historia.html', {
         'page': page,
         'model_filtr': model,
+    })
+
+
+def search_analytics(request):
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    from django.db.models.functions import TruncDate
+    top_frazy = (WyszukiwanieLog.objects.values('fraza')
+                 .annotate(n=Count('id'), wyniki=Count('id'))
+                 .order_by('-n')[:50])
+    bez_wynikow = (WyszukiwanieLog.objects.filter(liczba_wynikow=0)
+                   .values('fraza').annotate(n=Count('id')).order_by('-n')[:30])
+    dziennie = (WyszukiwanieLog.objects.annotate(d=TruncDate('data'))
+                .values('d').annotate(n=Count('id')).order_by('-d')[:30])
+    return render(request, 'groby/search_analytics.html', {
+        'top_frazy': list(top_frazy),
+        'bez_wynikow': list(bez_wynikow),
+        'dziennie': list(dziennie),
+    })
+
+
+def dronowe(request):
+    zdjecia = ZdjecieDronowe.objects.select_related('sektor').order_by('kolejnosc', '-data_wykonania')
+    return render(request, 'groby/dronowe.html', {'zdjecia': zdjecia})
+
+
+def cmentarz_w_czasie(request):
+    """Liczba pochówków per dekada (na podstawie data_smierci)."""
+    from collections import Counter
+    licznik = Counter()
+    for o in Osoba.objects.exclude(data_smierci__isnull=True).only('data_smierci'):
+        d = o.data_smierci.year // 10 * 10
+        licznik[d] += 1
+    dekady = sorted(licznik.items())
+    return render(request, 'groby/cmentarz_w_czasie.html', {
+        'dekady': dekady,
+        'dekady_json': json.dumps(dekady),
+    })
+
+
+def powracajacy(request):
+    """Lista grobów najczęściej edytowanych w ciągu ostatnich 90 dni."""
+    from django.utils import timezone
+    from datetime import timedelta
+    od = timezone.now() - timedelta(days=90)
+    naj = (HistoriaZmian.objects.filter(model='Grob', data__gte=od)
+           .values('obiekt_id', 'obiekt_repr')
+           .annotate(n=Count('id')).order_by('-n')[:30])
+    return render(request, 'groby/powracajacy.html', {'naj': naj})
+
+
+def konkurs_lista(request):
+    aktywne = KonkursFoto.objects.filter(aktywny=True).order_by('-data_start')
+    archiwalne = KonkursFoto.objects.filter(aktywny=False).order_by('-data_start')[:10]
+    return render(request, 'groby/konkurs_lista.html', {
+        'aktywne': aktywne,
+        'archiwalne': archiwalne,
+    })
+
+
+def konkurs_detail(request, pk):
+    konkurs = get_object_or_404(KonkursFoto, pk=pk)
+    zgloszenia = (konkurs.zgloszenia_foto.filter(zaakceptowane=True)
+                  .annotate(liczba_glosow=Count('glosy'))
+                  .order_by('-liczba_glosow', '-data_dodania'))
+    return render(request, 'groby/konkurs_detail.html', {
+        'konkurs': konkurs,
+        'zgloszenia': zgloszenia,
+    })
+
+
+def konkurs_zgloszenie(request, pk):
+    konkurs = get_object_or_404(KonkursFoto, pk=pk, aktywny=True)
+    if request.method == 'POST':
+        if _antybot(request):
+            return redirect('groby:konkurs_lista')
+        plik = request.FILES.get('plik')
+        tytul = request.POST.get('tytul', '').strip()[:200]
+        autor_imie = request.POST.get('autor_imie', '').strip()[:100]
+        if plik:
+            ZgloszenieKonkursowe.objects.create(
+                konkurs=konkurs,
+                autor=request.user if request.user.is_authenticated else None,
+                autor_imie=autor_imie,
+                plik=plik,
+                tytul=tytul,
+            )
+            messages.success(request, 'Zgłoszenie wysłane — czeka na akceptację.')
+            return redirect('groby:konkurs_detail', pk=konkurs.pk)
+    return render(request, 'groby/konkurs_zgloszenie.html', {'konkurs': konkurs})
+
+
+@require_POST
+def konkurs_glosuj(request, pk):
+    z = get_object_or_404(ZgloszenieKonkursowe, pk=pk, zaakceptowane=True)
+    ip = _hash_ip(request)
+    obj, utworzono = GlosKonkursowy.objects.get_or_create(
+        zgloszenie=z, ip_hash=ip,
+        defaults={'user': request.user if request.user.is_authenticated else None},
+    )
+    if utworzono:
+        messages.success(request, 'Głos zapisany.')
+    else:
+        messages.info(request, 'Już oddałeś głos na to zdjęcie.')
+    return redirect('groby:konkurs_detail', pk=z.konkurs_id)
+
+
+def cmentarna_ksiega_pdf(request):
+    """Pełna księga: wszystkie groby z osobami, posortowane sektor/rząd/numer."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, title='Księga Cmentarna')
+    style = getSampleStyleSheet()
+    flow = [Paragraph('Księga Cmentarna — Szydłów', style['Title']), Spacer(1, 12)]
+    for sektor in Sektor.objects.order_by('nazwa'):
+        flow.append(Paragraph(f'Sektor {sektor.nazwa}', style['Heading2']))
+        groby = (Grob.objects.filter(sektor=sektor)
+                 .prefetch_related('osoby').order_by('rzad', 'numer'))
+        for g in groby:
+            naglowek = f'Grób {g.rzad}/{g.numer}'
+            flow.append(Paragraph(naglowek, style['Heading4']))
+            for o in g.osoby.all():
+                txt = f'{o.imie or "?"} {o.nazwisko or ""}'.strip()
+                if o.data_urodzenia:
+                    txt += f', ur. {o.data_urodzenia}'
+                if o.data_smierci:
+                    txt += f', zm. {o.data_smierci}'
+                flow.append(Paragraph(txt, style['Normal']))
+            flow.append(Spacer(1, 4))
+        flow.append(PageBreak())
+    doc.build(flow)
+    pdf = buf.getvalue()
+    buf.close()
+    resp = HttpResponse(pdf, content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename="ksiega_cmentarna.pdf"'
+    return resp
+
+
+def family_book_pdf(request, osoba_id):
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, title=f'Księga rodu {osoba.nazwisko}')
+    style = getSampleStyleSheet()
+    flow = [Paragraph(f'Księga rodu {osoba.nazwisko or osoba.imie}', style['Title']), Spacer(1, 12)]
+    przodkowie = _zbierz_przodkow(osoba) if '_zbierz_przodkow' in globals() else []
+    for o in przodkowie or [osoba]:
+        flow.append(Paragraph(f'<b>{o.imie or ""} {o.nazwisko or ""}</b>', style['Heading3']))
+        meta = []
+        if o.data_urodzenia: meta.append(f'ur. {o.data_urodzenia}')
+        if o.data_smierci: meta.append(f'zm. {o.data_smierci}')
+        if meta:
+            flow.append(Paragraph(', '.join(meta), style['Normal']))
+        if o.biogram:
+            flow.append(Paragraph(o.biogram, style['Normal']))
+        flow.append(Spacer(1, 8))
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="ksiega_rodu_{osoba.nazwisko or "osoba"}.pdf"'
+    return resp
+
+
+def folder_turystyczny_pdf(request):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, title='Folder turystyczny')
+    style = getSampleStyleSheet()
+    flow = [
+        Paragraph('Cmentarz Parafialny w Szydłowie', style['Title']),
+        Spacer(1, 8),
+        Paragraph('Przewodnik turystyczny', style['Heading2']),
+        Spacer(1, 12),
+        Paragraph(
+            'Szydłów to średniowieczne miasteczko z zachowanymi murami obronnymi z XIV wieku. '
+            'Cmentarz parafialny stanowi cenny zabytek lokalnej historii — spoczywają tu '
+            'pokolenia mieszkańców, w tym postacie zasłużone dla regionu.',
+            style['Normal']),
+        Spacer(1, 8),
+    ]
+    flow.append(Paragraph('Najważniejsze trasy', style['Heading3']))
+    for trasa in Trasa.objects.order_by('-opublikowana', 'nazwa')[:5]:
+        flow.append(Paragraph(f'<b>{trasa.nazwa}</b>', style['Normal']))
+        if trasa.opis:
+            flow.append(Paragraph(trasa.opis, style['Normal']))
+        flow.append(Spacer(1, 4))
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename="folder_turystyczny.pdf"'
+    return resp
+
+
+def ulotka_pdf(request):
+    """Ulotka edukacyjna: zasady na cmentarzu, kontakt, QR do strony."""
+    from reportlab.lib.pagesizes import A5
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A5, title='Ulotka — Cmentarz w Szydłowie')
+    style = getSampleStyleSheet()
+    flow = [
+        Paragraph('Cmentarz Parafialny w Szydłowie', style['Title']),
+        Spacer(1, 6),
+        Paragraph('Zasady zachowania', style['Heading3']),
+        Paragraph('— Zachowaj ciszę i powagę miejsca.', style['Normal']),
+        Paragraph('— Nie pal i nie spożywaj alkoholu.', style['Normal']),
+        Paragraph('— Sprzątaj po sobie i swoich bliskich.', style['Normal']),
+        Paragraph('— Świece zapalaj z rozwagą.', style['Normal']),
+        Spacer(1, 8),
+        Paragraph('Strona internetowa', style['Heading3']),
+        Paragraph('Pełna baza grobów, biogramów i zdjęć dostępna online.', style['Normal']),
+        Paragraph('Zeskanuj QR przy bramie głównej.', style['Normal']),
+    ]
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename="ulotka.pdf"'
+    return resp
+
+
+def prometheus_metrics(request):
+    """Minimalny endpoint /metrics zgodny z Prometheus."""
+    metrics = [
+        f'# HELP groby_total Liczba grobów',
+        f'# TYPE groby_total gauge',
+        f'groby_total {Grob.objects.count()}',
+        f'# HELP osoby_total Liczba osób',
+        f'# TYPE osoby_total gauge',
+        f'osoby_total {Osoba.objects.count()}',
+        f'# HELP zdjecia_total Liczba zdjęć',
+        f'# TYPE zdjecia_total gauge',
+        f'zdjecia_total {Zdjecie.objects.count()}',
+        f'# HELP wspomnienia_total Liczba wspomnień',
+        f'# TYPE wspomnienia_total gauge',
+        f'wspomnienia_total {Wspomnienie.objects.count()}',
+        f'# HELP swiece_total Liczba zapalonych świec',
+        f'# TYPE swiece_total counter',
+        f'swiece_total {Swieca.objects.count()}',
+        f'# HELP wyszukiwania_total Liczba wyszukiwań',
+        f'# TYPE wyszukiwania_total counter',
+        f'wyszukiwania_total {WyszukiwanieLog.objects.count()}',
+    ]
+    return HttpResponse('\n'.join(metrics) + '\n', content_type='text/plain; version=0.0.4')
+
+
+def live_stats_json(request):
+    """JSON dla widgetu live — odświeżany co 30 s przez fetch."""
+    from django.utils import timezone
+    from datetime import timedelta
+    od = timezone.now() - timedelta(hours=24)
+    return JsonResponse({
+        'osoby': Osoba.objects.count(),
+        'groby': Grob.objects.count(),
+        'swiece_24h': Swieca.objects.filter(data_zapalenia__gte=od).count(),
+        'wspomnienia_24h': Wspomnienie.objects.filter(data_dodania__gte=od).count(),
+        'wyszukiwania_24h': WyszukiwanieLog.objects.filter(data__gte=od).count(),
+    })
+
+
+def dzis_rocznica_json(request):
+    """JSON: osoby z rocznicą śmierci/urodzin dziś."""
+    from django.utils import timezone
+    today = timezone.localdate()
+    rocznice = Osoba.objects.filter(
+        data_smierci__month=today.month, data_smierci__day=today.day
+    ).exclude(data_smierci=today).order_by('nazwisko')[:20]
+    urodziny = Osoba.objects.filter(
+        data_urodzenia__month=today.month, data_urodzenia__day=today.day
+    ).exclude(data_urodzenia=today).order_by('nazwisko')[:20]
+    return JsonResponse({
+        'rocznice_smierci': [
+            {'id': o.pk, 'imie_nazwisko': f'{o.imie or ""} {o.nazwisko or ""}'.strip(),
+             'lat': today.year - o.data_smierci.year}
+            for o in rocznice
+        ],
+        'urodziny': [
+            {'id': o.pk, 'imie_nazwisko': f'{o.imie or ""} {o.nazwisko or ""}'.strip(),
+             'lat': today.year - o.data_urodzenia.year}
+            for o in urodziny
+        ],
+    })
+
+
+def ai_biogram(request, osoba_id):
+    """Skeleton — wymaga klucza API i ręcznej weryfikacji."""
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return redirect('admin:login')
+    propozycja = None
+    if request.method == 'POST':
+        import os
+        klucz = os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
+        if not klucz:
+            messages.error(request, 'Brak klucza API (ANTHROPIC_API_KEY / OPENAI_API_KEY).')
+        else:
+            propozycja = (
+                f'{osoba.imie or ""} {osoba.nazwisko or ""} '
+                f'({osoba.data_urodzenia or "?"} – {osoba.data_smierci or "?"}). '
+                f'[Wygenerowany szkielet biogramu — wymaga ręcznej weryfikacji historycznej.]'
+            )
+    return render(request, 'groby/ai_biogram.html', {
+        'osoba': osoba,
+        'propozycja': propozycja,
     })

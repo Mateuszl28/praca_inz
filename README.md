@@ -111,10 +111,23 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 
 ### Treść statyczna
 - **Strona główna**, **O cmentarzu**, **Statystyki** z heatmapą zgonów (miesiące × dekady)
+- **Live-stats widget na home** — świece/wspomnienia/wyszukiwania w ostatnich 24h, „Dziś rocznica/Dziś urodziny" (auto-refresh co 30 s)
 - **FAQ** — 7 najczęstszych pytań
-- **Pomoc** — instrukcja krok po kroku
+- **Pomoc** — instrukcja krok po kroku + **bookmarklet „Zgłoś poprawkę"**
 - **Dla mediów** (`/dla-mediow/`) — press kit dla dziennikarzy
 - **Wesprzyj cmentarz** (`/wesprzyj/`) — strona donate z numerem konta i szkieletem płatności online
+- **Cmentarz w czasie** (`/cmentarz-w-czasie/`) — wykres pochówków per dekada
+- **Powracający** (`/powracajacy/`) — najczęściej edytowane groby z 90 dni
+- **Cmentarz z lotu ptaka** (`/dronowe/`) — galeria zdjęć dronowych
+- **Konkurs fotograficzny** (`/konkurs/`) — zgłoszenia + głosowanie (cooldown po IP hash)
+- **Księga Cmentarna PDF** (`/ksiega-cmentarna.pdf`), **Księga rodu PDF** (`/osoba/<id>/ksiega-rodu.pdf`), **Folder turystyczny PDF** (`/folder-turystyczny.pdf`), **Ulotka edukacyjna PDF** (`/ulotka.pdf`)
+
+### Telemetria i obserwowalność
+- **Search analytics** (`/staff/wyszukiwania/`) — TOP fraz, frazy bez wyników (kandydaci do uzupełnienia bazy), aktywność dziennie
+- **Prometheus metrics** (`/metrics`) — `groby_total`, `osoby_total`, `zdjecia_total`, `wspomnienia_total`, `swiece_total`, `wyszukiwania_total`
+- **AI-asystent biogramów** (`/staff/ai-biogram/<osoba_id>/`) — szkielet (wymaga `ANTHROPIC_API_KEY` lub `OPENAI_API_KEY`), zawsze ręczna weryfikacja przed publikacją
+- **Auto-suggest relacji** (`manage.py auto_suggest_relacji [--zapisz]`) — heurystyki rodzic/dziecko/rodzeństwo na podstawie wspólnego grobu, nazwiska i różnicy wieku
+- **Eksport statyczny** (`manage.py static_export --out path/`) — generuje statyczny HTML do hostingu na GitHub Pages
 
 ## Szybki start (lokalnie)
 
@@ -194,7 +207,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | CI                 | GitHub Actions (matrix Python 3.10 + 3.12)                           |
 | Monitoring         | Sentry (opcjonalnie)                                                 |
 
-## Modele danych (~30)
+## Modele danych (~35)
 
 ```
 Sektor 1───n Grob 1───n Osoba ───n Wspomnienie ───n Komentarz
@@ -221,6 +234,9 @@ Wpis ───n ZdjecieWpisu (galeria treści blog)
 Newsletter (subskrybenci e-mail z tokenem anulowania)
 GeoCache (cache Nominatim: miejsce → lat/lng)
 HistoriaZmian — audit log (sygnały dla Grob/Osoba)
+WyszukiwanieLog — co kto szukał (z hashem IP, liczba wyników)
+ZdjecieDronowe — galeria z lotu ptaka (per sektor)
+KonkursFoto ───n ZgloszenieKonkursowe ───n GlosKonkursowy (cooldown po IP)
 ```
 
 Pełny opis architektury: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).
@@ -251,6 +267,8 @@ python manage.py waliduj                             # spójność danych (--jso
 python manage.py seed_odznaki                        # utwórz 5 odznak gamifikacji
 python manage.py geokoduj --limit 100                # geokodowanie miejsc urodzenia (Nominatim)
 python manage.py optymalizuj_zdjecia --max 2000      # bulk resize zdjęć (oszczędność dysku)
+python manage.py auto_suggest_relacji --zapisz       # heurystyczne sugestie relacji rodzinnych
+python manage.py static_export --out static_html/    # eksport całego serwisu do statycznego HTML
 ```
 
 ### Wysyłka mailowa

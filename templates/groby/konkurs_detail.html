@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ konkurs.nazwa }} — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">{{ konkurs.nazwa }}</h1>
+    <p class="text-primary-600 mb-2">{{ konkurs.data_start|date:"j.n.Y" }} — {{ konkurs.data_koniec|date:"j.n.Y" }}</p>
+    {% if konkurs.opis %}<p class="mb-6 text-primary-700">{{ konkurs.opis|linebreaksbr }}</p>{% endif %}
+
+    {% if konkurs.aktywny %}
+        <a href="{% url 'groby:konkurs_zgloszenie' konkurs.pk %}" class="inline-block px-4 py-2 bg-accent-700 text-white rounded mb-6 hover:bg-accent-800">
+            📷 Zgłoś swoje zdjęcie
+        </a>
+    {% endif %}
+
+    {% if zgloszenia %}
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for z in zgloszenia %}
+                <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+                    <img src="{{ z.plik.url }}" alt="{{ z.tytul }}" class="w-full h-48 object-cover" loading="lazy">
+                    <div class="p-3">
+                        <p class="font-medium text-primary-900">{{ z.tytul|default:"(bez tytułu)" }}</p>
+                        <p class="text-xs text-primary-500 mb-2">{{ z.autor_imie|default:"Anonim" }}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-primary-700">❤ {{ z.liczba_glosow }}</span>
+                            <form method="post" action="{% url 'groby:konkurs_glosuj' z.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-sm px-2 py-1 bg-cream-100 hover:bg-cream-200 rounded">Głosuj</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-primary-500 italic">Brak zaakceptowanych zgłoszeń. Bądź pierwszy!</p>
+    {% endif %}
+</section>
+{% endblock %}

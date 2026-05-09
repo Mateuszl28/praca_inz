@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Analityka wyszukiwań — staff{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-6">Analityka wyszukiwań</h1>
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-3">TOP 50 fraz</h2>
+            <table class="w-full text-sm">
+                <thead class="bg-cream-100"><tr><th class="px-2 py-1 text-left">Fraza</th><th class="px-2 py-1 text-right">Wystąpienia</th></tr></thead>
+                <tbody class="divide-y divide-cream-100">
+                    {% for f in top_frazy %}
+                        <tr><td class="px-2 py-1 font-mono text-xs">{{ f.fraza }}</td><td class="px-2 py-1 text-right">{{ f.n }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-3">Bez wyników</h2>
+            <p class="text-sm text-primary-500 mb-2">Frazy, które nikomu nic nie zwróciły — kandydaci do uzupełnienia bazy.</p>
+            <table class="w-full text-sm">
+                <thead class="bg-cream-100"><tr><th class="px-2 py-1 text-left">Fraza</th><th class="px-2 py-1 text-right">Razy</th></tr></thead>
+                <tbody class="divide-y divide-cream-100">
+                    {% for f in bez_wynikow %}
+                        <tr><td class="px-2 py-1 font-mono text-xs">{{ f.fraza }}</td><td class="px-2 py-1 text-right">{{ f.n }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="font-serif text-xl text-primary-900 mt-8 mb-3">Aktywność dziennie</h2>
+    <table class="w-full text-sm bg-white rounded-lg shadow-soft border border-cream-200">
+        <thead class="bg-cream-100"><tr><th class="px-2 py-1 text-left">Dzień</th><th class="px-2 py-1 text-right">Liczba zapytań</th></tr></thead>
+        <tbody class="divide-y divide-cream-100">
+            {% for d in dziennie %}
+                <tr><td class="px-2 py-1">{{ d.d|date:"j.n.Y" }}</td><td class="px-2 py-1 text-right">{{ d.n }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

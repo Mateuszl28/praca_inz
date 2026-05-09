@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Zdjęcia z drona — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Cmentarz z lotu ptaka</h1>
+    <p class="text-primary-600 mb-6">Zdjęcia wykonane dronem — pełen obraz układu cmentarza i sektorów.</p>
+
+    {% if zdjecia %}
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for z in zdjecia %}
+                <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+                    <a href="{{ z.plik.url }}" target="_blank">
+                        <img src="{{ z.plik.url }}" alt="{{ z.tytul }}" class="w-full h-56 object-cover" loading="lazy">
+                    </a>
+                    <div class="p-3">
+                        <p class="font-medium text-primary-900">{{ z.tytul }}</p>
+                        {% if z.sektor %}<p class="text-xs text-primary-500">Sektor {{ z.sektor.nazwa }}</p>{% endif %}
+                        {% if z.data_wykonania %}<p class="text-xs text-primary-500">{{ z.data_wykonania|date:"j.n.Y" }}</p>{% endif %}
+                        {% if z.opis %}<p class="text-sm text-primary-700 mt-2">{{ z.opis }}</p>{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-primary-500 italic">Brak zdjęć. Dodaj pierwsze przez panel administracyjny.</p>
+    {% endif %}
+</section>
+{% endblock %}

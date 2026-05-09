@@ -660,6 +660,72 @@ class Webhook(models.Model):
         return f'{self.nazwa} → {self.url}'
 
 
+class WyszukiwanieLog(models.Model):
+    fraza = models.CharField(max_length=200)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64, blank=True)
+    liczba_wynikow = models.IntegerField(default=0)
+    data = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Log wyszukiwania'
+        verbose_name_plural = 'Logi wyszukiwań'
+        ordering = ['-data']
+
+
+class ZdjecieDronowe(models.Model):
+    plik = models.ImageField(upload_to='drony/')
+    tytul = models.CharField(max_length=200)
+    opis = models.TextField(blank=True)
+    data_wykonania = models.DateField(null=True, blank=True)
+    sektor = models.ForeignKey(Sektor, on_delete=models.SET_NULL, null=True, blank=True)
+    kolejnosc = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Zdjęcie z drona'
+        verbose_name_plural = 'Zdjęcia z drona'
+        ordering = ['kolejnosc']
+
+    def __str__(self):
+        return self.tytul
+
+
+class KonkursFoto(models.Model):
+    nazwa = models.CharField(max_length=200)
+    opis = models.TextField(blank=True)
+    data_start = models.DateField()
+    data_koniec = models.DateField()
+    aktywny = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Konkurs fotograficzny'
+        verbose_name_plural = 'Konkursy fotograficzne'
+
+    def __str__(self):
+        return self.nazwa
+
+
+class ZgloszenieKonkursowe(models.Model):
+    konkurs = models.ForeignKey(KonkursFoto, on_delete=models.CASCADE, related_name='zgloszenia_foto')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    plik = models.ImageField(upload_to='konkurs/')
+    tytul = models.CharField(max_length=200, blank=True)
+    grob = models.ForeignKey(Grob, on_delete=models.SET_NULL, null=True, blank=True)
+    zaakceptowane = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+
+class GlosKonkursowy(models.Model):
+    zgloszenie = models.ForeignKey(ZgloszenieKonkursowe, on_delete=models.CASCADE, related_name='glosy')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64)
+    data = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['zgloszenie', 'ip_hash']]
+
+
 class GeoCache(models.Model):
     """Cache geokodowania (miejsce -> lat/lng)."""
     nazwa = models.CharField(max_length=200, unique=True)

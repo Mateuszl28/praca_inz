@@ -146,4 +146,47 @@
     </div>
 </section>
 
+<section class="max-w-5xl mx-auto px-4 pb-20" id="dzis-i-stats">
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h3 class="font-serif text-xl text-primary-900 mb-3">Dziś rocznica</h3>
+            <ul id="dzis-rocznice" class="space-y-1 text-sm text-primary-700"></ul>
+            <p id="dzis-puste" class="text-primary-500 italic text-sm hidden">Brak rocznic na dziś.</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+            <h3 class="font-serif text-xl text-primary-900 mb-3">Statystyki na żywo</h3>
+            <dl class="grid grid-cols-2 gap-3 text-sm">
+                <dt class="text-primary-500">Świece (24h)</dt><dd id="ls-swiece" class="font-medium text-primary-900">—</dd>
+                <dt class="text-primary-500">Wspomnienia (24h)</dt><dd id="ls-wspom" class="font-medium text-primary-900">—</dd>
+                <dt class="text-primary-500">Wyszukiwania (24h)</dt><dd id="ls-szuk" class="font-medium text-primary-900">—</dd>
+            </dl>
+        </div>
+    </div>
+</section>
+
+<script>
+(function () {
+    fetch('{% url "groby:dzis_rocznica" %}').then(r => r.json()).then(d => {
+        const ul = document.getElementById('dzis-rocznice');
+        const wszystkie = [...d.rocznice_smierci.map(o => `† ${o.imie_nazwisko} (${o.lat} lat temu)`),
+                          ...d.urodziny.map(o => `🎂 ${o.imie_nazwisko}`)];
+        if (!wszystkie.length) {
+            document.getElementById('dzis-puste').classList.remove('hidden');
+            return;
+        }
+        ul.innerHTML = wszystkie.slice(0, 8).map(t => `<li>${t}</li>`).join('');
+    }).catch(() => {});
+
+    function refreshStats() {
+        fetch('{% url "groby:live_stats" %}').then(r => r.json()).then(d => {
+            document.getElementById('ls-swiece').textContent = d.swiece_24h;
+            document.getElementById('ls-wspom').textContent = d.wspomnienia_24h;
+            document.getElementById('ls-szuk').textContent = d.wyszukiwania_24h;
+        }).catch(() => {});
+    }
+    refreshStats();
+    setInterval(refreshStats, 30000);
+})();
+</script>
+
 {% endblock %}

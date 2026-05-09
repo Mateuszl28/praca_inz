@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Cmentarz w czasie — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <h1 class="font-serif text-3xl text-primary-900 mb-2">Cmentarz w czasie</h1>
+    <p class="text-primary-600 mb-6">Liczba pochówków według dekad, na podstawie daty śmierci.</p>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-4 mb-6">
+        <canvas id="chart" height="100"></canvas>
+    </div>
+
+    <table class="w-full text-sm bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden">
+        <thead class="bg-cream-100"><tr><th class="px-3 py-2 text-left">Dekada</th><th class="px-3 py-2 text-right">Liczba</th></tr></thead>
+        <tbody class="divide-y divide-cream-100">
+            {% for d, n in dekady %}
+                <tr><td class="px-3 py-2">{{ d }}–{{ d|add:9 }}</td><td class="px-3 py-2 text-right">{{ n }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const dane = {{ dekady_json|safe }};
+    new Chart(document.getElementById('chart'), {
+        type: 'bar',
+        data: {
+            labels: dane.map(d => d[0] + '–' + (d[0]+9)),
+            datasets: [{ label: 'Pochówki', data: dane.map(d => d[1]), backgroundColor: '#8B7355' }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+</script>
+{% endblock %}

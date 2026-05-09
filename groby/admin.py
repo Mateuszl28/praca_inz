@@ -6,6 +6,7 @@ from .models import (
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache, ZdjecieWpisu,
     List, PytanieQuiz, WatekForum, PostForum, Webhook,
+    WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
 )
 
 
@@ -368,4 +369,42 @@ class HistoriaZmianAdmin(admin.ModelAdmin):
     list_filter = ('akcja', 'model')
     search_fields = ('obiekt_repr',)
     readonly_fields = ('model', 'obiekt_id', 'obiekt_repr', 'akcja', 'pola', 'user', 'data')
+
+
+@admin.register(WyszukiwanieLog)
+class WyszukiwanieLogAdmin(admin.ModelAdmin):
+    list_display = ('fraza', 'liczba_wynikow', 'user', 'data')
+    list_filter = ('liczba_wynikow',)
+    search_fields = ('fraza',)
+    readonly_fields = ('fraza', 'user', 'ip_hash', 'liczba_wynikow', 'data')
+
+
+@admin.register(ZdjecieDronowe)
+class ZdjecieDronoweAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'sektor', 'data_wykonania', 'kolejnosc')
+    list_filter = ('sektor',)
+    search_fields = ('tytul', 'opis')
+
+
+@admin.register(KonkursFoto)
+class KonkursFotoAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'data_start', 'data_koniec', 'aktywny')
+    list_filter = ('aktywny',)
+
+
+@admin.register(ZgloszenieKonkursowe)
+class ZgloszenieKonkursoweAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'konkurs', 'autor_imie', 'zaakceptowane', 'data_dodania')
+    list_filter = ('zaakceptowane', 'konkurs')
+    actions = ['zaakceptuj']
+
+    @admin.action(description='Zaakceptuj zgłoszenia')
+    def zaakceptuj(self, request, qs):
+        qs.update(zaakceptowane=True)
+
+
+@admin.register(GlosKonkursowy)
+class GlosKonkursowyAdmin(admin.ModelAdmin):
+    list_display = ('zgloszenie', 'user', 'data')
+    readonly_fields = ('zgloszenie', 'user', 'ip_hash', 'data')
     date_hierarchy = 'data'

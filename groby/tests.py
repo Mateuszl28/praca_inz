@@ -472,3 +472,66 @@ class PWATest(TestCase):
     def test_sw(self):
         r = self.client.get(reverse('groby:sw'))
         self.assertEqual(r.status_code, 200)
+
+
+class Batch89Test(TestCase):
+    def test_prometheus_metrics_dziala(self):
+        r = self.client.get(reverse('groby:prometheus_metrics'))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'groby_total', r.content)
+        self.assertIn(b'osoby_total', r.content)
+
+    def test_live_stats_json(self):
+        r = self.client.get(reverse('groby:live_stats'))
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertIn('osoby', d)
+        self.assertIn('swiece_24h', d)
+
+    def test_dzis_rocznica_json(self):
+        r = self.client.get(reverse('groby:dzis_rocznica'))
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertIn('rocznice_smierci', d)
+        self.assertIn('urodziny', d)
+
+    def test_konkurs_lista_publiczna(self):
+        r = self.client.get(reverse('groby:konkurs_lista'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_dronowe_publiczne(self):
+        r = self.client.get(reverse('groby:dronowe'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_cmentarz_w_czasie(self):
+        r = self.client.get(reverse('groby:cmentarz_w_czasie'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_powracajacy(self):
+        r = self.client.get(reverse('groby:powracajacy'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_szukaj_loguje_wyszukiwanie(self):
+        from .models import WyszukiwanieLog
+        przed = WyszukiwanieLog.objects.count()
+        self.client.get(reverse('groby:szukaj') + '?q=Kowalski')
+        self.assertEqual(WyszukiwanieLog.objects.count(), przed + 1)
+
+    def test_search_analytics_wymaga_staffu(self):
+        r = self.client.get(reverse('groby:search_analytics'))
+        self.assertEqual(r.status_code, 302)
+
+    def test_ulotka_pdf(self):
+        r = self.client.get(reverse('groby:ulotka_pdf'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'application/pdf')
+
+    def test_folder_turystyczny_pdf(self):
+        r = self.client.get(reverse('groby:folder_turystyczny_pdf'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'application/pdf')
+
+    def test_ksiega_cmentarna_pdf(self):
+        r = self.client.get(reverse('groby:ksiega_cmentarna_pdf'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'application/pdf')

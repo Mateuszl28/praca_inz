@@ -94,6 +94,24 @@ urlpatterns = [
     path('sw.js', views.service_worker, name='sw'),
     path('api/zapisz-pozycje/', views.zapisz_pozycje, name='zapisz_pozycje'),
 
+    # Batch 89
+    path('staff/wyszukiwania/', views.search_analytics, name='search_analytics'),
+    path('dronowe/', views.dronowe, name='dronowe'),
+    path('cmentarz-w-czasie/', views.cmentarz_w_czasie, name='cmentarz_w_czasie'),
+    path('powracajacy/', views.powracajacy, name='powracajacy'),
+    path('konkurs/', views.konkurs_lista, name='konkurs_lista'),
+    path('konkurs/<int:pk>/', views.konkurs_detail, name='konkurs_detail'),
+    path('konkurs/<int:pk>/zglos/', views.konkurs_zgloszenie, name='konkurs_zgloszenie'),
+    path('konkurs/glos/<int:pk>/', views.konkurs_glosuj, name='konkurs_glosuj'),
+    path('ksiega-cmentarna.pdf', views.cmentarna_ksiega_pdf, name='ksiega_cmentarna_pdf'),
+    path('osoba/<int:osoba_id>/ksiega-rodu.pdf', views.family_book_pdf, name='family_book_pdf'),
+    path('folder-turystyczny.pdf', views.folder_turystyczny_pdf, name='folder_turystyczny_pdf'),
+    path('ulotka.pdf', views.ulotka_pdf, name='ulotka_pdf'),
+    path('metrics', views.prometheus_metrics, name='prometheus_metrics'),
+    path('api/live-stats/', views.live_stats_json, name='live_stats'),
+    path('api/dzis/', views.dzis_rocznica_json, name='dzis_rocznica'),
+    path('staff/ai-biogram/<int:osoba_id>/', views.ai_biogram, name='ai_biogram'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 
