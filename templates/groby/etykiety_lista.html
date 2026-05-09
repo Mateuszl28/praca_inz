@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Etykiety osób — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Społeczność</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Etykiety osób</h1>
+    <p class="text-primary-700 mb-6">Zasługi, profesje, role społeczne — szybki sposób na odnalezienie osób z konkretnej kategorii.</p>
+
+    {% if etykiety %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for et in etykiety %}
+                <a href="{% url 'groby:etykieta_detail' slug=et.slug %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 p-4 hover:shadow-lift hover:border-primary-300 transition">
+                    <div class="flex items-center gap-2">
+                        {% if et.ikona %}<span class="text-2xl">{{ et.ikona }}</span>{% endif %}
+                        <span class="font-serif text-lg text-primary-900">{{ et.nazwa }}</span>
+                    </div>
+                    {% if et.opis %}<p class="text-sm text-primary-600 mt-1">{{ et.opis }}</p>{% endif %}
+                    <div class="mt-2 text-xs text-primary-500">{{ et.n }} {% if et.n == 1 %}osoba{% elif et.n < 5 %}osoby{% else %}osób{% endif %}</div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Etykiety są sukcesywnie dodawane przez staff (np. Powstaniec, Żołnierz AK, Nauczyciel, Lekarz, Duchowny).
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

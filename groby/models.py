@@ -946,3 +946,51 @@ class HasloSlownik(models.Model):
 
     def __str__(self):
         return self.haslo
+
+
+# ===== Batch 92 =====
+
+
+class EtykietaOsoby(models.Model):
+    """Kategorie zasług/zawodów osoby (Powstaniec, Żołnierz AK, Nauczyciel, Lekarz, Duchowny…)."""
+    nazwa = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    opis = models.CharField(max_length=300, blank=True)
+    ikona = models.CharField(max_length=8, blank=True, help_text='Krótki znak/emoji do listy')
+    kolor = models.CharField(max_length=20, blank=True, help_text='Klasa Tailwind kolor (np. bg-amber-100 text-amber-800)')
+    osoby = models.ManyToManyField(Osoba, blank=True, related_name='etykiety')
+
+    class Meta:
+        verbose_name = 'Etykieta osoby'
+        verbose_name_plural = 'Etykiety osób'
+        ordering = ['nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class WydarzenieParafialne(models.Model):
+    """Wydarzenia w kościele/na cmentarzu (msze, procesje, modlitwy za zmarłych)."""
+    TYP_CHOICES = [
+        ('msza', 'Msza święta'),
+        ('procesja', 'Procesja'),
+        ('modlitwa', 'Modlitwa za zmarłych'),
+        ('porzadkowanie', 'Porządkowanie cmentarza'),
+        ('inne', 'Inne'),
+    ]
+    tytul = models.CharField(max_length=200)
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='msza')
+    data_start = models.DateTimeField(db_index=True)
+    data_koniec = models.DateTimeField(null=True, blank=True)
+    miejsce = models.CharField(max_length=200, blank=True, help_text='Np. Kościół św. Władysława, brama cmentarza')
+    opis = models.TextField(blank=True)
+    intencja = models.CharField(max_length=300, blank=True, help_text='Intencja mszy / modlitwy (opcjonalnie)')
+    opublikowane = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Wydarzenie parafialne'
+        verbose_name_plural = 'Wydarzenia parafialne'
+        ordering = ['data_start']
+
+    def __str__(self):
+        return f'{self.data_start:%Y-%m-%d %H:%M} — {self.tytul}'

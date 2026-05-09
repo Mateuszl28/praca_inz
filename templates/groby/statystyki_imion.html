@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Statystyki imion i nazwisk — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Statystyki</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Imiona i nazwiska</h1>
+    <p class="text-primary-700 mb-8">Analiza {{ razem }} osób w bazie. Imiona klasyfikowane heurystycznie po końcówce „-a”.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-4">Top imiona męskie</h2>
+            <ol class="space-y-1 text-sm">
+                {% for im, n in top_m %}
+                    <li class="flex items-center justify-between border-b border-cream-100 py-1">
+                        <span class="text-primary-800">{{ forloop.counter }}. {{ im }}</span>
+                        <span class="text-primary-500">{{ n }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+            <h2 class="font-serif text-xl text-primary-900 mb-4">Top imiona żeńskie</h2>
+            <ol class="space-y-1 text-sm">
+                {% for im, n in top_k %}
+                    <li class="flex items-center justify-between border-b border-cream-100 py-1">
+                        <span class="text-primary-800">{{ forloop.counter }}. {{ im }}</span>
+                        <span class="text-primary-500">{{ n }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5 mb-8">
+        <h2 class="font-serif text-xl text-primary-900 mb-4">Top nazwiska</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 text-sm">
+            {% for naz, n in top_nazwiska %}
+                <div class="flex items-center justify-between border-b border-cream-100 py-1">
+                    <span class="text-primary-800">{{ forloop.counter }}. {{ naz }}</span>
+                    <span class="text-primary-500">{{ n }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if dekady_top %}
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5">
+        <h2 class="font-serif text-xl text-primary-900 mb-4">Najpopularniejsze imiona w dekadzie urodzenia</h2>
+        <table class="w-full text-sm">
+            <thead class="text-primary-600">
+                <tr>
+                    <th class="text-left py-1">Dekada</th>
+                    <th class="text-left py-1">Top 5 imion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d, top5 in dekady_top %}
+                    <tr class="border-t border-cream-100">
+                        <td class="py-2 text-primary-800 align-top whitespace-nowrap pr-4">{{ d }}–{{ d|add:9 }}</td>
+                        <td class="py-2 text-primary-700">
+                            {% for im, n in top5 %}
+                                <span class="inline-block bg-cream-100 text-primary-800 rounded px-2 py-0.5 text-xs mr-1 mb-1">{{ im }} <span class="text-primary-500">({{ n }})</span></span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

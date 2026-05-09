@@ -140,6 +140,16 @@ urlpatterns = [
     path('slownik/<slug:slug>/', views.slownik_haslo, name='slownik_haslo'),
     path('statystyki/dlugowiecznosc/', views.statystyki_dlugowiecznosci, name='statystyki_dlugowiecznosci'),
 
+    # Batch 92
+    path('etykiety/', views.etykiety_lista, name='etykiety'),
+    path('etykieta/<slug:slug>/', views.etykieta_detail, name='etykieta_detail'),
+    path('statystyki/imiona/', views.statystyki_imion, name='statystyki_imion'),
+    path('wydarzenia/', views.wydarzenia_parafialne, name='wydarzenia'),
+    path('wydarzenia.ics', views.wydarzenia_ical, name='wydarzenia_ical'),
+    path('moje-notatki.pdf', views.eksport_notatek_pdf, name='eksport_notatek_pdf'),
+    path('statystyki/sezonowosc/', views.sezonowosc_zgonow, name='sezonowosc_zgonow'),
+    path('swiece-live/', views.swiece_live, name='swiece_live'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 

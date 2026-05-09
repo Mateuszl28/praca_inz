@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Świece zapalone teraz — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #mapa-swiec { height: 70vh; border-radius: 0.5rem; background: #f4eede; }
+    .swieca-marker {
+        font-size: 22px;
+        text-shadow: 0 0 4px rgba(255,180,0,0.7), 0 0 8px rgba(255,160,0,0.5);
+        animation: migotanie 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes migotanie {
+        from { opacity: 0.85; transform: scale(1); }
+        to   { opacity: 1; transform: scale(1.1); }
+    }
+</style>
+
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pamięć</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Świece zapalone w ostatnich 24 godzinach</h1>
+    <p class="text-primary-700 mb-6">Aktualnie pali się <strong>{{ liczba }}</strong> {% if liczba == 1 %}świeca{% elif liczba < 5 %}świece{% else %}świec{% endif %}. Każdy płomyk to czyjaś pamięć.</p>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-3">
+        <div id="mapa-swiec"></div>
+    </div>
+
+    <p class="text-xs text-primary-500 mt-4">Dane odświeżają się co minutę. <a href="?format=json" class="underline">Eksport JSON</a></p>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const swiece = {{ swiece_json|safe }};
+    const planUrl = {% if plan_url %}'{{ plan_url }}'{% else %}null{% endif %};
+    const planW = {{ plan_w|default:0 }};
+    const planH = {{ plan_h|default:0 }};
+
+    const mapa = L.map('mapa-swiec', {
+        crs: L.CRS.Simple,
+        minZoom: -3,
+        maxZoom: 3,
+        zoomSnap: 0.25,
+        attributionControl: false,
+    });
+
+    if (planUrl && planW && planH) {
+        const bounds = [[0, 0], [planH, planW]];
+        L.imageOverlay(planUrl, bounds).addTo(mapa);
+        mapa.setMaxBounds([[-planH * 0.2, -planW * 0.2], [planH * 1.2, planW * 1.2]]);
+        mapa.fitBounds(bounds);
+    } else {
+        mapa.setView([0, 0], 0);
+    }
+
+    const ikonaSwieca = L.divIcon({
+        className: 'swieca-marker',
+        html: '🕯️',
+        iconSize: [22, 22],
+        iconAnchor: [11, 22],
+    });
+
+    function rysuj(dane) {
+        dane.forEach(s => {
+            const marker = L.marker([s.y, s.x], { icon: ikonaSwieca });
+            const intencja = s.intencja ? '<div class="text-xs italic mt-1">„' + s.intencja + '"</div>' : '';
+            marker.bindPopup(
+                '<div class="font-serif text-base">' + s.osoba + '</div>' +
+                '<div class="text-xs text-gray-500">Grób: ' + s.grob + ' · zapalono ' + s.godz + '</div>' +
+                intencja +
+                '<a href="/osoba/' + s.osoba_id + '/" class="text-xs underline">Zobacz profil →</a>'
+            );
+            marker.addTo(mapa);
+        });
+    }
+    rysuj(swiece);
+
+    // Auto-odświeżanie co 60s
+    setInterval(() => {
+        fetch(window.location.pathname + '?format=json')
+            .then(r => r.json())
+            .then(d => {
+                // Najprostsze - przeładuj stronę przy zmianie liczby świec
+                if (d.liczba !== {{ liczba }}) {
+                    window.location.reload();
+                }
+            }).catch(() => {});
+    }, 60000);
+</script>
+{% endblock %}

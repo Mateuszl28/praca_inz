@@ -74,8 +74,17 @@
             {% endif %}
         </div>
 
-        {% if osoba.miejsce_urodzenia or osoba.biogram %}
+        {% if osoba.miejsce_urodzenia or osoba.biogram or osoba.etykiety.all %}
             <div class="px-10 py-10">
+                {% if osoba.etykiety.all %}
+                    <div class="flex justify-center flex-wrap gap-2 mb-6">
+                        {% for et in osoba.etykiety.all %}
+                            <a href="{% url 'groby:etykieta_detail' slug=et.slug %}" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-accent-400 bg-cream-50 text-primary-800 hover:bg-cream-100">
+                                {% if et.ikona %}<span>{{ et.ikona }}</span>{% endif %}{{ et.nazwa }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 {% if osoba.miejsce_urodzenia %}
                     <dl class="flex justify-center gap-3 mb-8 text-sm">
                         <dt class="text-primary-500">Miejsce urodzenia:</dt>

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ et.nazwa }} — Etykieta osób{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <a href="{% url 'groby:etykiety' %}" class="text-sm text-primary-600 hover:underline">← wszystkie etykiety</a>
+    <div class="mt-2 text-xs uppercase tracking-widest text-accent-600">Etykieta</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">
+        {% if et.ikona %}<span class="mr-2">{{ et.ikona }}</span>{% endif %}{{ et.nazwa }}
+    </h1>
+    {% if et.opis %}<p class="text-primary-700 mb-6">{{ et.opis }}</p>{% endif %}
+
+    {% if osoby %}
+        <ul class="space-y-2">
+            {% for o in osoby %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-4 flex items-center justify-between">
+                    <div>
+                        <a href="{% url 'groby:osoba_detail' pk=o.pk %}" class="font-serif text-lg text-primary-900 hover:underline">{{ o }}</a>
+                        <div class="text-xs text-primary-500">
+                            {% if o.data_urodzenia %}ur. {{ o.data_urodzenia|date:"Y" }}{% endif %}
+                            {% if o.data_smierci %} · zm. {{ o.data_smierci|date:"Y" }}{% endif %}
+                            {% if o.grob %} · sektor {{ o.grob.sektor.nazwa }}/{{ o.grob.numer }}{% endif %}
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Brak osób przypisanych do tej etykiety.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

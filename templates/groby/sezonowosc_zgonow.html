@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Sezonowość zgonów — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Statystyki</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Sezonowość zgonów</h1>
+    <p class="text-primary-700 mb-2">Liczba zgonów w poszczególnych miesiącach kalendarzowych — niezależnie od roku.</p>
+    <p class="text-sm text-primary-500 mb-8">Razem przeanalizowano: <strong>{{ razem }}</strong> osób z odnotowaną datą śmierci.</p>
+
+    <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+        <ul class="space-y-2">
+            {% for d in dane %}
+                <li>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-primary-800 capitalize">{{ d.nazwa }}</span>
+                        <span class="text-primary-500">{{ d.liczba }} ({{ d.procent }}%)</span>
+                    </div>
+                    <div class="h-3 bg-cream-100 rounded mt-1 overflow-hidden">
+                        <div class="h-full bg-primary-500" style="width: {% widthratio d.liczba najwyzszy 100 %}%;"></div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <p class="text-xs text-primary-500 mt-4">Najczęściej obserwuje się więcej zgonów w miesiącach zimowych (grudzień–marzec). Wykres pomaga zauważyć takie zależności.</p>
+</section>
+{% endblock %}

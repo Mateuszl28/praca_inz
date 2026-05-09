@@ -14,6 +14,8 @@
             <a href="{% url 'groby:moje_statystyki' %}" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700 text-sm">📊 Moja aktywność</a>
             <a href="{% url 'groby:moja_rodzina' %}" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700 text-sm">🌳 Moja rodzina</a>
             <a href="{% url 'groby:eksport_moich_danych' %}" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700 text-sm">📥 Pobierz dane</a>
+            <a href="{% url 'groby:eksport_notatek_pdf' %}" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700 text-sm">📝 Notatki PDF</a>
+            <a href="{% url 'groby:powiadomienia' %}" class="px-4 py-2 border border-cream-200 rounded hover:bg-cream-100 text-primary-700 text-sm">🔔 Powiadomienia</a>
             <a href="{% url 'groby:usun_konto' %}" class="px-4 py-2 border border-red-200 rounded hover:bg-red-50 text-red-700 text-sm">🗑 Usuń konto</a>
             <form method="post" action="{% url 'groby:wylogowanie' %}">
                 {% csrf_token %}

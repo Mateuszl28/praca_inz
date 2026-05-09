@@ -148,6 +148,23 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **Discord/Slack webhooki** — `Webhook.typ` z formaterem payloadu (`/discord/`, `/slack/` URL → POST JSON)
 - **Security headers middleware** — CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
 
+### Powiadomienia, opieka, notatki (batch 91)
+- **Powiadomienia in-app** (`/powiadomienia/`) — dzwonek w nagłówku z licznikiem, automatyczne polling co 60 s
+- Sygnały automatyczne: nowy komentarz pod Twoim wspomnieniem, odpowiedź w Twoim wątku forum, status zgłoszenia opieki, nowe zgłoszenie opieki (dla staffu)
+- **Opiekun grobu** (`/grob/<id>/opieka/`) — workflow `oczekuje → aktywny / odrzucony / zakończony`, publiczna lista (`/opiekunowie/`), akcje admina do akceptacji/odrzucenia
+- **Prywatne notatki** (`/osoba/<id>/notatki/`) — szkicownik badacza, widoczny tylko dla autora; eksport wszystkich do PDF (`/moje-notatki.pdf`)
+- **Niedawno zmarli** (`/niedawno-zmarli/?dni=30|60|90|180|365`)
+- **Słownik historii Szydłowa** (`/slownik/`) — `HasloSlownik` z kategoriami (postać/miejsce/wydarzenie/termin), źródła, opcjonalne powiązanie z osobą w bazie
+- **Statystyki długowieczności** (`/statystyki/dlugowiecznosc/`) — średni wiek per sektor i per dekada urodzenia
+
+### Etykiety, statystyki imion, kalendarz parafii (batch 92)
+- **Etykiety osób** (`/etykiety/`) — zasługi i profesje (np. Powstaniec, Żołnierz AK, Nauczyciel) jako M2M na `Osoba` z ikoną; widok osoby pokazuje przypięte etykiety jako tagi
+- **Statystyki imion i nazwisk** (`/statystyki/imiona/`) — top imiona męskie/żeńskie (heurystyka po końcówce „-a"), top nazwiska, popularność imion w dekadach urodzenia
+- **Kalendarz wydarzeń parafialnych** (`/wydarzenia/`) — `WydarzenieParafialne` (msze, procesje, modlitwy), iCal feed (`/wydarzenia.ics`)
+- **Sezonowość zgonów** (`/statystyki/sezonowosc/`) — liczba zgonów per miesiąc kalendarzowy, paski
+- **Mapa świec aktywnych live** (`/swiece-live/`) — animowane płomyki na planie cmentarza, tylko zapalone w ostatnich 24h, auto-reload co minutę
+- **Eksport notatek prywatnych do PDF** (`/moje-notatki.pdf`) — szkicownik badacza w kieszonkowym formacie
+
 ## Szybki start (lokalnie)
 
 ```bash
@@ -226,7 +243,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | CI                 | GitHub Actions (matrix Python 3.10 + 3.12)                           |
 | Monitoring         | Sentry (opcjonalnie)                                                 |
 
-## Modele danych (~40)
+## Modele danych (~50)
 
 ```
 Sektor 1───n Grob 1───n Osoba ───n Wspomnienie ───n Komentarz
@@ -260,6 +277,16 @@ TagWpisu ───m Wpis (tagi tematyczne blogu)
 PlanZwiedzania (user/sesja) ───── Grob (lista „do odwiedzenia")
 OdwiedzinyOsoba (counter dziennych wyświetleń per osoba)
 FeaturedTygodnia — wyróżnienie na home (rotacja po `isoweek`)
+
+# Batch 91
+Powiadomienie (user, typ: komentarz/forum/zgłoszenie/opieka, przeczytane)
+OpiekunGrobu (user ↔ Grob, status: oczekuje/aktywny/odrzucony/zakończony)
+PrywatnaNotatka (user, Osoba, treść — widoczna tylko dla autora)
+HasloSlownik (postać/miejsce/wydarzenie/termin, źródła, powiązana Osoba)
+
+# Batch 92
+EtykietaOsoby ──m──n Osoba (zasługi/zawód: Powstaniec, Nauczyciel…)
+WydarzenieParafialne (msza/procesja/modlitwa, intencja, opublikowane)
 ```
 
 Pełny opis architektury: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).

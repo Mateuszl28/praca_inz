@@ -9,6 +9,7 @@ from .models import (
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
+    EtykietaOsoby, WydarzenieParafialne,
 )
 
 
@@ -479,3 +480,26 @@ class HasloSlownikAdmin(admin.ModelAdmin):
     search_fields = ('haslo', 'tresc', 'skrot')
     prepopulated_fields = {'slug': ('haslo',)}
     autocomplete_fields = ('powiazana_osoba',)
+
+
+# ----- Batch 92 -----
+
+
+@admin.register(EtykietaOsoby)
+class EtykietaOsobyAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'ikona', 'liczba_osob')
+    search_fields = ('nazwa',)
+    prepopulated_fields = {'slug': ('nazwa',)}
+    filter_horizontal = ('osoby',)
+
+    def liczba_osob(self, obj):
+        return obj.osoby.count()
+    liczba_osob.short_description = 'Liczba osób'
+
+
+@admin.register(WydarzenieParafialne)
+class WydarzenieParafialneAdmin(admin.ModelAdmin):
+    list_display = ('data_start', 'tytul', 'typ', 'miejsce', 'opublikowane')
+    list_filter = ('typ', 'opublikowane')
+    search_fields = ('tytul', 'opis', 'intencja', 'miejsce')
+    date_hierarchy = 'data_start'

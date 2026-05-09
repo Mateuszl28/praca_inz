@@ -21,6 +21,7 @@ from .models import (
     WyszukiwanieLog, ZdjecieDronowe, KonkursFoto, ZgloszenieKonkursowe, GlosKonkursowy,
     TagWpisu, PlanZwiedzania, OdwiedzinyOsoba, FeaturedTygodnia,
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
+    EtykietaOsoby, WydarzenieParafialne,
 )
 
 
@@ -2859,4 +2860,194 @@ def statystyki_dlugowiecznosci(request):
         'dekady': dekady,
         'srednia_calosc': srednia_calosc,
         'razem': len(wszyscy),
+    })
+
+
+# ===== Batch 92 =====
+
+
+def etykiety_lista(request):
+    """Lista wszystkich etykiet osób z liczbą oznaczonych."""
+    etykiety = EtykietaOsoby.objects.annotate(n=Count('osoby')).order_by('-n', 'nazwa')
+    return render(request, 'groby/etykiety_lista.html', {'etykiety': etykiety})
+
+
+def etykieta_detail(request, slug):
+    et = get_object_or_404(EtykietaOsoby, slug=slug)
+    osoby = et.osoby.select_related('grob__sektor').order_by('nazwisko', 'imie')
+    return render(request, 'groby/etykieta_detail.html', {'et': et, 'osoby': osoby})
+
+
+def statystyki_imion(request):
+    """Top imiona m/k, top nazwiska, popularność imion w dekadach urodzenia."""
+    osoby = list(Osoba.objects.values('imie', 'nazwisko', 'data_urodzenia'))
+    KONCOWKI_K = ('a', 'A')
+    imiona_m, imiona_k = Counter(), Counter()
+    nazwiska = Counter()
+    dekady_imiona = defaultdict(Counter)
+    for o in osoby:
+        im = (o['imie'] or '').strip()
+        naz = (o['nazwisko'] or '').strip()
+        if im:
+            (imiona_k if im.endswith(KONCOWKI_K) else imiona_m)[im] += 1
+            if o.get('data_urodzenia'):
+                dek = (o['data_urodzenia'].year // 10) * 10
+                dekady_imiona[dek][im] += 1
+        if naz:
+            nazwiska[naz] += 1
+    top_m = imiona_m.most_common(20)
+    top_k = imiona_k.most_common(20)
+    top_naz = nazwiska.most_common(30)
+    dekady_top = sorted(
+        [(d, c.most_common(5)) for d, c in dekady_imiona.items() if c],
+        key=lambda x: x[0],
+    )
+    return render(request, 'groby/statystyki_imion.html', {
+        'top_m': top_m,
+        'top_k': top_k,
+        'top_nazwiska': top_naz,
+        'dekady_top': dekady_top,
+        'razem': len(osoby),
+    })
+
+
+def wydarzenia_parafialne(request):
+    from django.utils import timezone
+    teraz = timezone.now()
+    nadchodzace = WydarzenieParafialne.objects.filter(opublikowane=True, data_start__gte=teraz).order_by('data_start')[:50]
+    archiwum = WydarzenieParafialne.objects.filter(opublikowane=True, data_start__lt=teraz).order_by('-data_start')[:20]
+    return render(request, 'groby/wydarzenia.html', {
+        'nadchodzace': nadchodzace,
+        'archiwum': archiwum,
+    })
+
+
+def wydarzenia_ical(request):
+    """iCal feed wydarzeń parafialnych (subscribe-able)."""
+    from django.utils import timezone
+    teraz = timezone.now()
+    qs = WydarzenieParafialne.objects.filter(opublikowane=True, data_start__gte=teraz - __import__('datetime').timedelta(days=30))
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Cmentarz Szydlow//Wydarzenia//PL',
+        'CALSCALE:GREGORIAN',
+        'X-WR-CALNAME:Wydarzenia parafialne — Szydlow',
+    ]
+    for w in qs:
+        koniec = w.data_koniec or w.data_start + __import__('datetime').timedelta(hours=1)
+        opis = (w.opis or w.intencja or '').replace('\n', '\\n')[:500]
+        lines += [
+            'BEGIN:VEVENT',
+            f'UID:wydarzenie-{w.pk}@szydlow',
+            f'DTSTAMP:{teraz.strftime("%Y%m%dT%H%M%SZ")}',
+            f'DTSTART:{w.data_start.strftime("%Y%m%dT%H%M%SZ")}',
+            f'DTEND:{koniec.strftime("%Y%m%dT%H%M%SZ")}',
+            f'SUMMARY:{w.tytul}',
+            f'LOCATION:{w.miejsce or "Cmentarz parafialny w Szydlowie"}',
+            f'DESCRIPTION:{opis}',
+            'END:VEVENT',
+        ]
+    lines.append('END:VCALENDAR')
+    return HttpResponse('\r\n'.join(lines), content_type='text/calendar; charset=utf-8')
+
+
+@login_required
+def eksport_notatek_pdf(request):
+    """PDF z wszystkimi prywatnymi notatkami zalogowanego użytkownika (do druku/notebook)."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet
+    from django.utils import timezone
+    notatki = (PrywatnaNotatka.objects.filter(user=request.user)
+               .select_related('osoba__grob__sektor')
+               .order_by('osoba__nazwisko', 'osoba__imie', 'data_dodania'))
+    if not notatki.exists():
+        messages.info(request, 'Nie masz jeszcze prywatnych notatek.')
+        return redirect('groby:profil')
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, title='Moje notatki')
+    style = getSampleStyleSheet()
+    flow = [
+        Paragraph(f'Prywatne notatki — {request.user.username}', style['Title']),
+        Paragraph(f'Wygenerowano: {timezone.now():%Y-%m-%d %H:%M}', style['Italic']),
+        Spacer(1, 12),
+    ]
+    aktualna_osoba = None
+    for n in notatki:
+        if n.osoba_id != aktualna_osoba:
+            flow.append(Spacer(1, 8))
+            grob_str = f' (grób {n.osoba.grob.sektor.nazwa}/{n.osoba.grob.numer})' if n.osoba.grob_id else ''
+            flow.append(Paragraph(f'<b>{n.osoba}{grob_str}</b>', style['Heading3']))
+            aktualna_osoba = n.osoba_id
+        flow.append(Paragraph(f'<i>{n.data_dodania:%Y-%m-%d %H:%M}</i>', style['Italic']))
+        flow.append(Paragraph(n.tresc.replace('\n', '<br/>'), style['Normal']))
+        flow.append(Spacer(1, 6))
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="notatki_{request.user.username}.pdf"'
+    return resp
+
+
+def sezonowosc_zgonow(request):
+    """Liczba zgonów per miesiąc kalendarzowy (cały okres) — sezonowość."""
+    qs = Osoba.objects.exclude(data_smierci=None).values_list('data_smierci', flat=True)
+    miesiace = [0] * 12
+    for d in qs:
+        miesiace[d.month - 1] += 1
+    nazwy = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec',
+             'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień']
+    razem = sum(miesiace) or 1
+    dane = [
+        {'nazwa': n, 'liczba': miesiace[i], 'procent': round(miesiace[i] * 100 / razem, 1)}
+        for i, n in enumerate(nazwy)
+    ]
+    najwyzszy = max(miesiace) or 1
+    return render(request, 'groby/sezonowosc_zgonow.html', {
+        'dane': dane,
+        'razem': razem,
+        'najwyzszy': najwyzszy,
+    })
+
+
+def swiece_live(request):
+    """Mapa świec aktywnych (zapalonych w ostatnich 24h)."""
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.conf import settings as dj_settings
+    od = timezone.now() - timedelta(hours=24)
+    swiece = (Swieca.objects.filter(data_zapalenia__gte=od, osoba__grob__plan_x__isnull=False)
+              .select_related('osoba__grob__sektor')[:500])
+    punkty = [
+        {
+            'x': s.osoba.grob.plan_x,
+            'y': s.osoba.grob.plan_y,
+            'osoba': str(s.osoba),
+            'grob': str(s.osoba.grob),
+            'osoba_id': s.osoba_id,
+            'intencja': (s.intencja or '')[:200],
+            'godz': s.data_zapalenia.strftime('%H:%M'),
+        }
+        for s in swiece if s.osoba.grob and s.osoba.grob.plan_x is not None
+    ]
+    if request.GET.get('format') == 'json':
+        return JsonResponse({'swiece': punkty, 'liczba': len(punkty)})
+
+    plan_url = dj_settings.MEDIA_URL + dj_settings.PLAN_IMAGE if getattr(dj_settings, 'PLAN_IMAGE', '') else None
+    plan_w = plan_h = 0
+    if plan_url:
+        try:
+            from PIL import Image
+            sciezka = dj_settings.MEDIA_ROOT / dj_settings.PLAN_IMAGE
+            with Image.open(sciezka) as im:
+                plan_w, plan_h = im.size
+        except (FileNotFoundError, OSError, ImportError):
+            plan_url = None
+
+    return render(request, 'groby/swiece_live.html', {
+        'swiece_json': json.dumps(punkty),
+        'liczba': len(punkty),
+        'plan_url': plan_url,
+        'plan_w': plan_w,
+        'plan_h': plan_h,
     })

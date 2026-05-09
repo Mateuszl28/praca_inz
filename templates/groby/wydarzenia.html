@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Wydarzenia parafialne — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Życie parafii</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Wydarzenia parafialne</h1>
+    <p class="text-primary-700 mb-4">Msze, modlitwy za zmarłych, procesje i porządkowanie cmentarza.</p>
+    <p class="text-sm text-primary-500 mb-8">
+        <a href="{% url 'groby:wydarzenia_ical' %}" class="underline">📅 Subskrybuj kalendarz iCal</a>
+    </p>
+
+    <h2 class="font-serif text-2xl text-primary-900 mb-3">Nadchodzące</h2>
+    {% if nadchodzace %}
+        <ul class="space-y-3 mb-10">
+            {% for w in nadchodzace %}
+                <li class="bg-white rounded-lg shadow-soft border border-cream-200 p-4">
+                    <div class="flex items-baseline justify-between gap-3 flex-wrap">
+                        <div>
+                            <div class="font-serif text-lg text-primary-900">{{ w.tytul }}</div>
+                            <div class="text-sm text-primary-500">
+                                <span class="px-2 py-0.5 bg-cream-100 rounded text-xs">{{ w.get_typ_display }}</span>
+                                {% if w.miejsce %} · {{ w.miejsce }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="text-right text-sm text-primary-700 font-medium">{{ w.data_start|date:"d.m.Y H:i" }}</div>
+                    </div>
+                    {% if w.intencja %}<div class="mt-2 text-sm text-primary-700"><strong>Intencja:</strong> {{ w.intencja }}</div>{% endif %}
+                    {% if w.opis %}<p class="mt-2 text-sm text-primary-700">{{ w.opis|linebreaksbr }}</p>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-6 text-center text-primary-600 mb-10">
+            Aktualnie nie ma zaplanowanych wydarzeń. Wróć później.
+        </div>
+    {% endif %}
+
+    {% if archiwum %}
+        <h2 class="font-serif text-2xl text-primary-900 mb-3">Archiwum</h2>
+        <ul class="space-y-2">
+            {% for w in archiwum %}
+                <li class="bg-cream-50 border border-cream-200 rounded p-3 flex items-baseline justify-between gap-3">
+                    <div>
+                        <span class="text-primary-800">{{ w.tytul }}</span>
+                        <span class="text-xs text-primary-500 ml-2">{{ w.get_typ_display }}</span>
+                    </div>
+                    <span class="text-sm text-primary-500">{{ w.data_start|date:"d.m.Y" }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+{% endblock %}
