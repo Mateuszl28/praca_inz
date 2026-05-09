@@ -23,11 +23,14 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **Kalendarz rocznic** + eksport iCal (.ics)
 - **Top 10 rankingi** — najmłodsi/najstarsi/najczęstsze nazwiska
 - **Plebiscyt nagrobków** — głosowanie na najpiękniejsze, ranking miesiąca
+- **Quiz historyczny** „Czy znasz cmentarz?" — 10 losowych pytań, gamifikacja
 
 ### Pamięć i zaangażowanie
 - **Świeczki online** — zapal znicz, świeci 24h, intencja, animowany płomień
 - **Wirtualne kwiaty** — róża/lilia/chryzantema/tulipan, 7 dni, opcjonalna wiadomość
 - **Wspomnienia + komentarze** zatwierdzane przez moderatora
+- **Listy do zmarłych** — wirtualne listy + publiczna ściana
+- **Forum dyskusyjne** per grób — wątki z odpowiedziami dla zalogowanych
 - **Speech-to-text** w formularzu wspomnień (dyktowanie głosem)
 - **Nagrania audio/video** pożegnań, dodawane do grobu (po moderacji)
 - **Drzewo genealogiczne** w SVG: rodzice, małżonkowie, rodzeństwo, dzieci
@@ -45,6 +48,9 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **2FA TOTP** (Google Authenticator / Authy / 1Password) — QR + weryfikacja
 - **Zapisane wyszukiwania** w profilu
 - **Newsletter** — miesięczne podsumowanie najbliższych rocznic i wpisów
+- **Auto-przypomnienia urodzinowe** — e-mail w urodziny obserwowanej osoby
+- **Onboarding wizard** — interaktywny tour po pierwszym logowaniu
+- **Apple Wallet pass** — `/grob/<pk>/wallet.json` z QR i lokalizacją grobu
 - **System odznak** — Strażnik pamięci, Kronikarz, Genealog, Przewodnik, Historyk
 - **Statystyki użytkownika** — Twoja aktywność: świeczki, kwiaty, wspomnienia, głosy, odznaki
 - **„Moja rodzina"** — wszyscy obserwowani + ich relacje rodzinne
@@ -59,6 +65,8 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **PWA** — instalowalne na telefonie (banner instalacji), działa offline
 - **Strony błędów** 404/500/403 stylowane
 - **Empty states + spinner + skeleton** loadery
+- **Print stylesheet** — uniwersalny dla wszystkich stron (URL-e drukowane jako `(...)` po linkach)
+- **Sezonowe banery** — Wszystkich Świętych, Boże Narodzenie, Wielkanoc (auto-detekcja daty + algorytm Gaussa dla Wielkanocy)
 
 ### GDPR / compliance
 - **Polityka prywatności** i **regulamin**
@@ -75,11 +83,12 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **Bulk import zdjęć ZIP** z konwencją nazw `SEKTOR_NUMER.jpg`
 - **Bulk operacje** w admin (zmień typ, wyczyść pozycje, zaakceptuj wiele)
 - **Inline edit** kluczowych pól w widoku publicznym (dla staffu)
+- **Audit rollback** — staff może cofnąć zmiany pól z historii (`/staff/cofnij/<pk>/`)
 - **Druk naklejek QR** dla całych sektorów (A4, 4 kolumny)
 - **Eksport** wyników szukajki: PDF, CSV, XLSX
 - **Eksport całego drzewa** w GEDCOM 5.5
 - **Eksport galerii sektora** do ZIP
-- **Backup do ZIP** (`manage.py backup`) — dump.json + media
+- **Backup do ZIP** (`manage.py backup --keep 4`) — dump.json + media z retention
 - **Moderacja:** wspomnienia, komentarze, zgłoszenia, nagrania, intencje
 - **Newsletter** — wysyłka komendą (`manage.py wyslij_newsletter`)
 - **Panoramy 360°** + hotspoty do grobów (admin z inline edytorem)
@@ -87,7 +96,9 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 
 ### Integracje i API
 - **REST API** — `/api/v1/sektory/`, `/groby/`, `/osoby/` z filtrami, search, ordering, paginacją (DRF + django-filter)
+- **OpenAPI 3 + Swagger UI** — `/api/docs/` (interaktywny), `/api/redoc/` (czytelny), `/api/schema/` (YAML/JSON) — drf-spectacular
 - **GraphQL** — `/graphql/` z GraphiQL UI (graphene-django)
+- **Webhooki** — model `Webhook` z eventami (`zgloszenie.nowe`, `wspomnienie.zaakceptowane`, …) — POST do dowolnego URL przy zmianach
 - **API Tokens + throttling** — DRF `TokenAuth` + rate limit (anon: 60/h, user: 1000/h)
 - **Embedded widget** — `/widget/?q=` do osadzenia w iframe parafii
 - **iCal feed** — `/kalendarz.ics` rocznice do Google Calendar / Outlook
@@ -103,6 +114,7 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **FAQ** — 7 najczęstszych pytań
 - **Pomoc** — instrukcja krok po kroku
 - **Dla mediów** (`/dla-mediow/`) — press kit dla dziennikarzy
+- **Wesprzyj cmentarz** (`/wesprzyj/`) — strona donate z numerem konta i szkieletem płatności online
 
 ## Szybki start (lokalnie)
 
@@ -168,7 +180,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | Warstwa            | Technologia                                                          |
 |--------------------|----------------------------------------------------------------------|
 | Backend            | Python 3.10+, Django 5.2, SQLite + FTS5                              |
-| API                | Django REST Framework, django-filter, graphene-django                |
+| API                | Django REST Framework, django-filter, drf-spectacular (OpenAPI 3), graphene-django |
 | Frontend           | Tailwind CSS (CDN), Inter + Cormorant Garamond, vanilla JS           |
 | Mapa               | Leaflet 1.9 (CRS.Simple) + markercluster + heat                      |
 | Wizualizacje       | Chart.js 4 + canvas timeline + D3.js (drzewo)                        |
@@ -246,6 +258,7 @@ python manage.py optymalizuj_zdjecia --max 2000      # bulk resize zdjęć (oszc
 ```bash
 python manage.py wyslij_newsletter --dry-run         # podgląd, kogo by wysłać
 python manage.py wyslij_przypomnienia --dni 7        # 7 dni przed rocznicą obserwowanym
+python manage.py wyslij_urodziny                     # przypomnienia urodzinowe
 ```
 
 ## Testy
@@ -322,6 +335,8 @@ data/                   — fixtura JSON
 - **FTS5** zamiast `LIKE` w wyszukiwarce.
 - **PWA service worker** cache statycznych zasobów po pierwszym wejściu.
 - **Auto-optymalizacja zdjęć** (`optymalizuj_zdjecia`) — bulk resize do max 2000px.
+- **PostgreSQL** — opcjonalnie przez `DATABASE_URL` env (np. `postgres://user:pass@host/db`).
+- **Redis cache** — opcjonalnie przez `DJANGO_REDIS_URL` env zamiast LocMemCache.
 
 ## Licencja
 
