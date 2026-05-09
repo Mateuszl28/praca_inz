@@ -5,6 +5,7 @@ from .models import (
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache, ZdjecieWpisu,
+    List, PytanieQuiz, WatekForum, PostForum, Webhook,
 )
 
 
@@ -318,6 +319,47 @@ class GeoCacheAdmin(admin.ModelAdmin):
     list_display = ('nazwa', 'lat', 'lng', 'znaleziono', 'data_zapytania')
     list_filter = ('znaleziono',)
     search_fields = ('nazwa',)
+
+
+@admin.register(List)
+class ListAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'autor_str', 'publiczny', 'zaakceptowany', 'data_dodania')
+    list_filter = ('zaakceptowany', 'publiczny')
+    actions = ['zaakceptuj']
+
+    @admin.action(description='Zaakceptuj wybrane listy')
+    def zaakceptuj(self, request, qs):
+        qs.update(zaakceptowany=True)
+
+
+@admin.register(PytanieQuiz)
+class PytanieQuizAdmin(admin.ModelAdmin):
+    list_display = ('pytanie', 'aktywne', 'osoba')
+    list_filter = ('aktywne',)
+    autocomplete_fields = ('osoba',)
+
+
+@admin.register(WatekForum)
+class WatekForumAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'grob', 'autor', 'data_utworzenia')
+    autocomplete_fields = ('grob',)
+
+
+@admin.register(PostForum)
+class PostForumAdmin(admin.ModelAdmin):
+    list_display = ('watek', 'autor', 'zaakceptowany', 'data_dodania')
+    list_filter = ('zaakceptowany',)
+    actions = ['zaakceptuj']
+
+    @admin.action(description='Zaakceptuj posty')
+    def zaakceptuj(self, request, qs):
+        qs.update(zaakceptowany=True)
+
+
+@admin.register(Webhook)
+class WebhookAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'event', 'aktywny', 'licznik_wywolan')
+    list_filter = ('event', 'aktywny')
 
 
 @admin.register(HistoriaZmian)

@@ -17,6 +17,7 @@ from .models import (
     Tag, Panorama, HotspotPanoramy, SubskrypcjaPush, TokenLogowania, Komentarz,
     Trasa, TrasaPunkt, Odznaka, UzytkownikOdznaka, Newsletter,
     Kwiat, Nagranie, GlosNagrobek, IntencjaMszalna, Zaproszenie, GeoCache,
+    List, PytanieQuiz, WatekForum, PostForum, Webhook,
 )
 
 
@@ -1710,6 +1711,149 @@ def pomoc(request):
 
 def media_kit(request):
     return render(request, 'groby/media_kit.html')
+
+
+# ---- Listy do zmarłych ----
+
+@require_POST
+def dodaj_list(request, osoba_id):
+    if _antybot(request):
+        return redirect('groby:osoba_detail', pk=osoba_id)
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    tresc = (request.POST.get('tresc') or '').strip()
+    if not tresc:
+        return redirect('groby:osoba_detail', pk=osoba_id)
+    List.objects.create(
+        osoba=osoba,
+        autor_user=request.user if request.user.is_authenticated else None,
+        autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+        tresc=tresc[:5000],
+        publiczny=request.POST.get('publiczny') == 'on',
+    )
+    messages.success(request, '✉️ List wysłany. Po akceptacji może pojawić się publicznie.')
+    return redirect('groby:osoba_detail', pk=osoba_id)
+
+
+def sciana_listow(request):
+    listy = List.objects.filter(zaakceptowany=True, publiczny=True).select_related('osoba__grob__sektor', 'autor_user').order_by('-data_dodania')
+    page = Paginator(listy, 20).get_page(request.GET.get('page'))
+    return render(request, 'groby/sciana_listow.html', {'page': page})
+
+
+# ---- Quiz ----
+
+def quiz(request):
+    import random
+    pytania = list(PytanieQuiz.objects.filter(aktywne=True))
+    random.shuffle(pytania)
+    pytania = pytania[:10]
+    return render(request, 'groby/quiz.html', {'pytania': pytania})
+
+
+# ---- Forum ----
+
+def forum_grobu(request, grob_id):
+    grob = get_object_or_404(Grob.objects.select_related('sektor'), pk=grob_id)
+    watki = grob.watki.select_related('autor').prefetch_related('posty')
+    return render(request, 'groby/forum.html', {'grob': grob, 'watki': watki})
+
+
+@login_required
+@require_POST
+def utworz_watek(request, grob_id):
+    grob = get_object_or_404(Grob, pk=grob_id)
+    tytul = (request.POST.get('tytul') or '').strip()[:200]
+    tresc = (request.POST.get('tresc') or '').strip()
+    if not tytul or not tresc:
+        return redirect('groby:forum_grobu', grob_id=grob_id)
+    watek = WatekForum.objects.create(grob=grob, autor=request.user, tytul=tytul)
+    PostForum.objects.create(watek=watek, autor=request.user, tresc=tresc[:5000], zaakceptowany=True)
+    return redirect('groby:forum_grobu', grob_id=grob_id)
+
+
+@login_required
+@require_POST
+def dodaj_post(request, watek_id):
+    watek = get_object_or_404(WatekForum, pk=watek_id)
+    tresc = (request.POST.get('tresc') or '').strip()
+    if tresc:
+        PostForum.objects.create(watek=watek, autor=request.user, tresc=tresc[:5000])
+        from django.utils import timezone
+        watek.data_ostatniego_postu = timezone.now()
+        watek.save(update_fields=['data_ostatniego_postu'])
+    return redirect('groby:forum_grobu', grob_id=watek.grob_id)
+
+
+# ---- Audit rollback ----
+
+@login_required
+def cofnij_zmiane(request, pk):
+    if not request.user.is_staff:
+        return redirect('admin:login')
+    h = get_object_or_404(HistoriaZmian, pk=pk)
+    if h.akcja != 'zmieniono' or not h.pola:
+        messages.error(request, 'Można cofnąć tylko zmiany pól.')
+        return redirect('groby:historia')
+    Klasa = Grob if h.model == 'Grob' else (Osoba if h.model == 'Osoba' else None)
+    if not Klasa:
+        return redirect('groby:historia')
+    obj = Klasa.objects.filter(pk=h.obiekt_id).first()
+    if not obj:
+        messages.error(request, f'{h.model} #{h.obiekt_id} już nie istnieje.')
+        return redirect('groby:historia')
+    if request.method == 'POST':
+        for pole, dane in h.pola.items():
+            try:
+                setattr(obj, pole, dane.get('przed'))
+            except Exception:
+                pass
+        try:
+            obj.save()
+            messages.success(request, f'Cofnięto zmiany w {h.model}#{h.obiekt_id}.')
+        except Exception as e:
+            messages.error(request, f'Błąd: {e}')
+        return redirect('groby:historia')
+    return render(request, 'groby/cofnij_zmiane.html', {'h': h, 'obj': obj})
+
+
+# ---- Donation page ----
+
+def donate(request):
+    return render(request, 'groby/donate.html')
+
+
+# ---- Apple Wallet pass (skeleton) ----
+
+def wallet_pass(request, pk):
+    """Generuje JSON dla Apple Wallet (uproszczony, bez podpisywania)."""
+    grob = get_object_or_404(Grob.objects.select_related('sektor').prefetch_related('osoby'), pk=pk)
+    pass_data = {
+        'formatVersion': 1,
+        'passTypeIdentifier': 'pass.cmentarz.szydlow',
+        'serialNumber': str(grob.pk),
+        'teamIdentifier': 'PLACEHOLDER',
+        'organizationName': 'Cmentarz Szydłów',
+        'description': f'Sektor {grob.sektor.nazwa} · grób {grob.numer}',
+        'generic': {
+            'primaryFields': [{'key': 'lokalizacja', 'label': 'Lokalizacja', 'value': f'Sektor {grob.sektor.nazwa}/{grob.numer}'}],
+            'secondaryFields': [{'key': 'osoby', 'label': 'Pochowani', 'value': ', '.join(f'{o.imie} {o.nazwisko}' for o in grob.osoby.all()[:3])}],
+            'backFields': [{'key': 'url', 'label': 'Strona', 'value': request.build_absolute_uri(reverse('groby:grob_detail', args=[grob.pk]))}],
+        },
+        'barcodes': [{'message': request.build_absolute_uri(reverse('groby:grob_detail', args=[grob.pk])),
+                      'format': 'PKBarcodeFormatQR', 'messageEncoding': 'iso-8859-1'}],
+    }
+    return JsonResponse(pass_data)
+
+
+# ---- Onboarding ----
+
+@login_required
+@require_POST
+def zakoncz_onboarding(request):
+    profil_obj, _ = Profil.objects.get_or_create(user=request.user)
+    profil_obj.onboarding_zakonczony = True
+    profil_obj.save(update_fields=['onboarding_zakonczony'])
+    return JsonResponse({'ok': True})
 
 
 def manifest(request):

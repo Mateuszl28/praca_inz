@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
     'django_filters',
     'django_otp',
     'django_otp.plugins.otp_totp',
@@ -57,7 +58,40 @@ REST_FRAMEWORK = {
         'anon': '60/hour',
         'user': '1000/hour',
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Informator Cmentarny — Szydłów API',
+    'DESCRIPTION': 'REST API do bazy grobów cmentarza parafialnego w Szydłowie.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {'email': 'admin@example.com'},
+    'LICENSE': {'name': 'MIT'},
+}
+
+# Redis cache (opcjonalny, gdy DJANGO_REDIS_URL ustawione)
+if os.getenv('DJANGO_REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('DJANGO_REDIS_URL'),
+        }
+    }
+
+# PostgreSQL przez DATABASE_URL (np. postgres://user:pass@host/db)
+if os.getenv('DATABASE_URL'):
+    import urllib.parse
+    urllib.parse.uses_netloc.append('postgres')
+    u = urllib.parse.urlparse(os.getenv('DATABASE_URL'))
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': u.path[1:],
+        'USER': u.username,
+        'PASSWORD': u.password,
+        'HOST': u.hostname,
+        'PORT': u.port or 5432,
+    }
 
 CACHES = {
     'default': {

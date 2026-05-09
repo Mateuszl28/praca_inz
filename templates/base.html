@@ -106,6 +106,21 @@
         html.dark input, html.dark select, html.dark textarea { background-color: #1a2719 !important; color: #e0e7df !important; border-color: #2e4430 !important; }
         html.dark input::placeholder { color: #6a8a68 !important; }
 
+        /* Print stylesheet — uniwersalny */
+        @media print {
+            html.dark, html.kontrast { background: #fff !important; color: #000 !important; }
+            .lightbox, [data-galeria], video, audio, iframe { display: none !important; }
+            .grid { display: block !important; }
+            .grid > * { margin-bottom: 0.5rem; }
+            details summary { list-style: none; }
+            details > *:not(summary) { display: block !important; }
+            a[href]:after { content: ' (' attr(href) ')'; font-size: 8pt; color: #666; }
+            a[href^="#"]:after, a[href^="javascript:"]:after, .no-print a[href]:after { content: ''; }
+            img { max-width: 100% !important; height: auto !important; page-break-inside: avoid; }
+            table { page-break-inside: avoid; }
+            h1, h2, h3 { page-break-after: avoid; }
+        }
+
         /* Wydruk — ukrywa nawigację, stopkę, przyciski; oczyszcza tło i cienie */
         @media print {
             html.dark body { background: #fff !important; color: #000 !important; }
@@ -155,6 +170,43 @@
 <div class="bg-gradient-to-r from-accent-400 to-accent-500 text-primary-900 py-2 px-4 text-sm text-center no-print">
     🕯 Czas Wszystkich Świętych. Pamiętamy o tych, którzy odeszli — <a href="{% url 'groby:kalendarz' %}" class="underline font-medium">zobacz kalendarz rocznic</a>.
 </div>
+{% elif banner_boze_narodzenie %}
+<div class="bg-gradient-to-r from-red-700 to-red-800 text-cream-50 py-2 px-4 text-sm text-center no-print">
+    ⭐ Spokojnych i błogosławionych Świąt Bożego Narodzenia.
+</div>
+{% elif banner_wielkanoc %}
+<div class="bg-gradient-to-r from-yellow-300 to-yellow-400 text-primary-900 py-2 px-4 text-sm text-center no-print">
+    🌷 Radosnych Świąt Wielkanocnych — Chrystus Zmartwychwstał.
+</div>
+{% endif %}
+
+{% if request.user.is_authenticated and request.user.profil.onboarding_zakonczony is False %}
+<div id="onboarding-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-lg shadow-lift max-w-md w-full p-6">
+        <h2 class="font-serif text-2xl text-primary-900 mb-3">Witamy {{ request.user.username }}!</h2>
+        <p class="text-primary-700 mb-4 text-sm">Kilka rzeczy, które warto zrobić na start:</p>
+        <ol class="text-sm text-primary-700 space-y-2 mb-5 list-decimal pl-5">
+            <li>Wyszukaj bliską osobę i kliknij <strong>Obserwuj</strong> — dostaniesz powiadomienia o zmianach.</li>
+            <li>Włącz <a href="{% url 'groby:totp_setup' %}" class="text-primary-900 underline">2FA TOTP</a> dla bezpieczeństwa.</li>
+            <li>Dodaj <strong>pokrewieństwo</strong> w profilu (krewny, badacz, inne).</li>
+            <li>Subskrybuj <a href="#" onclick="document.getElementById('push-toggle')?.click();return false;" class="text-primary-900 underline">powiadomienia push</a>.</li>
+        </ol>
+        <button id="onboarding-close" class="w-full px-4 py-2 bg-primary-700 text-cream-50 rounded">Zaczynamy!</button>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('onboarding-close');
+    const modal = document.getElementById('onboarding-modal');
+    if (btn && modal) {
+        btn.addEventListener('click', async () => {
+            const csrf = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1];
+            await fetch('{% url "groby:zakoncz_onboarding" %}', { method: 'POST', headers: { 'X-CSRFToken': csrf } });
+            modal.style.display = 'none';
+        });
+    }
+});
+</script>
 {% endif %}
 
 <div id="cookies-banner" class="hidden fixed bottom-0 inset-x-0 bg-primary-900 text-cream-50 p-4 z-50 shadow-lift no-print">

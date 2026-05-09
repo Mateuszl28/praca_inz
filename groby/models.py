@@ -187,6 +187,7 @@ class Profil(models.Model):
     obserwowane_groby = models.ManyToManyField(Grob, blank=True, related_name='obserwujacy', verbose_name='Obserwowane groby')
     obserwowane_osoby = models.ManyToManyField(Osoba, blank=True, related_name='obserwujacy', verbose_name='Obserwowane osoby')
     pokrewienstwo = models.CharField(max_length=200, blank=True, verbose_name='Pokrewieństwo / opis')
+    onboarding_zakonczony = models.BooleanField(default=False)
     data_utworzenia = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -568,6 +569,95 @@ class ZdjecieWpisu(models.Model):
         verbose_name = 'Zdjęcie wpisu'
         verbose_name_plural = 'Zdjęcia wpisów'
         ordering = ['kolejnosc']
+
+
+class List(models.Model):
+    """List wirtualny do zmarłej osoby."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='listy')
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    tresc = models.TextField()
+    publiczny = models.BooleanField(default=False, verbose_name='Publiczny (widoczny na ścianie)')
+    zaakceptowany = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'List do zmarłego'
+        verbose_name_plural = 'Listy do zmarłych'
+        ordering = ['-data_dodania']
+
+    @property
+    def autor_str(self):
+        if self.autor_user:
+            return self.autor_user.username
+        return self.autor_imie or 'Anonim'
+
+
+class PytanieQuiz(models.Model):
+    pytanie = models.CharField(max_length=500)
+    odpowiedzi = models.JSONField(help_text='Lista 4 odpowiedzi (pierwsza jest poprawna).')
+    wyjasnienie = models.TextField(blank=True)
+    osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True, help_text='Osoba związana z pytaniem.')
+    aktywne = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Pytanie quiz'
+        verbose_name_plural = 'Pytania quizu'
+
+    def __str__(self):
+        return self.pytanie[:80]
+
+
+class WatekForum(models.Model):
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='watki')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tytul = models.CharField(max_length=200)
+    data_utworzenia = models.DateTimeField(auto_now_add=True)
+    data_ostatniego_postu = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Wątek forum'
+        verbose_name_plural = 'Wątki forum'
+        ordering = ['-data_ostatniego_postu']
+
+    def __str__(self):
+        return self.tytul
+
+
+class PostForum(models.Model):
+    watek = models.ForeignKey(WatekForum, on_delete=models.CASCADE, related_name='posty')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    tresc = models.TextField()
+    zaakceptowany = models.BooleanField(default=False)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Post w forum'
+        verbose_name_plural = 'Posty w forum'
+        ordering = ['data_dodania']
+
+
+class Webhook(models.Model):
+    EVENT_CHOICES = [
+        ('zgloszenie.nowe', 'Nowe zgłoszenie'),
+        ('wspomnienie.zaakceptowane', 'Zaakceptowane wspomnienie'),
+        ('osoba.dodano', 'Dodana osoba'),
+        ('grob.zmieniono', 'Zmieniono grób'),
+    ]
+    nazwa = models.CharField(max_length=100)
+    url = models.URLField(max_length=500)
+    event = models.CharField(max_length=50, choices=EVENT_CHOICES)
+    sekret = models.CharField(max_length=64, blank=True, help_text='Sekret do HMAC walidacji')
+    aktywny = models.BooleanField(default=True)
+    licznik_wywolan = models.PositiveIntegerField(default=0)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Webhook'
+        verbose_name_plural = 'Webhooki'
+
+    def __str__(self):
+        return f'{self.nazwa} → {self.url}'
 
 
 class GeoCache(models.Model):

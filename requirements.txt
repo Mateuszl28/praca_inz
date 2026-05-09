@@ -13,3 +13,4 @@ sentry-sdk
 django-otp
 graphene-django
 pywebpush
+drf-spectacular

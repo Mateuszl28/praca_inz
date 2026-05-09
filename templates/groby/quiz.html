@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz historyczny — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Edukacja</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Quiz: Czy znasz cmentarz w Szydłowie?</h1>
+    <p class="text-primary-600 mb-8">10 pytań o osoby i historię. Sprawdź swoją wiedzę.</p>
+
+    {% if pytania %}
+        <form id="quiz-form" class="space-y-4">
+            {% for p in pytania %}
+                <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-5" data-pytanie="{{ forloop.counter0 }}" data-poprawna="{{ p.odpowiedzi.0|escape }}">
+                    <h3 class="font-serif text-lg text-primary-900 mb-3">{{ forloop.counter }}. {{ p.pytanie }}</h3>
+                    <div class="space-y-2">
+                        {% for o in p.odpowiedzi %}
+                            <label class="flex items-center gap-2 px-3 py-2 hover:bg-cream-50 rounded cursor-pointer">
+                                <input type="radio" name="p{{ forloop.parentloop.counter0 }}" value="{{ o }}" required>
+                                <span>{{ o }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {% if p.wyjasnienie %}
+                        <div class="hidden mt-3 p-3 bg-cream-50 text-primary-700 text-sm rounded" data-wyjasnienie>{{ p.wyjasnienie }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="button" id="submit-quiz" class="w-full px-5 py-3 bg-primary-700 text-cream-50 rounded hover:bg-primary-800">Sprawdź odpowiedzi</button>
+        </form>
+
+        <div id="wynik" class="hidden mt-6 bg-accent-400/15 border border-accent-400 rounded-lg p-6 text-center">
+            <div class="font-serif text-4xl text-primary-900 mb-2"><span id="wynik-punkty"></span> / {{ pytania|length }}</div>
+            <p class="text-primary-700 mb-4" id="wynik-tekst"></p>
+            <a href="{% url 'groby:quiz' %}" class="px-4 py-2 bg-primary-700 text-cream-50 rounded">Zagraj jeszcze raz</a>
+        </div>
+
+        <script>
+        document.getElementById('submit-quiz').addEventListener('click', () => {
+            let punkty = 0;
+            const pytania = document.querySelectorAll('[data-pytanie]');
+            pytania.forEach(p => {
+                const idx = p.dataset.pytanie;
+                const poprawna = p.dataset.poprawna;
+                const wybrana = document.querySelector(`input[name="p${idx}"]:checked`);
+                if (wybrana && wybrana.value === poprawna) {
+                    punkty++;
+                    p.style.borderColor = '#94ae93';
+                    p.style.background = '#f3f5f3';
+                } else {
+                    p.style.borderColor = '#dc2626';
+                    p.style.background = '#fef2f2';
+                    if (wybrana) wybrana.parentElement.style.background = '#fee';
+                    p.querySelectorAll('input').forEach(i => {
+                        if (i.value === poprawna) i.parentElement.style.background = '#dcfce7';
+                    });
+                }
+                const wyj = p.querySelector('[data-wyjasnienie]');
+                if (wyj) wyj.classList.remove('hidden');
+                p.querySelectorAll('input').forEach(i => i.disabled = true);
+            });
+            document.getElementById('wynik-punkty').textContent = punkty;
+            document.getElementById('wynik-tekst').textContent =
+                punkty >= 8 ? '🎉 Świetnie! Znasz historię Szydłowa.' :
+                punkty >= 5 ? 'Dobrze, ale możesz lepiej.' :
+                'Czas zwiedzić cmentarz i wpisy.';
+            document.getElementById('wynik').classList.remove('hidden');
+            document.getElementById('wynik').scrollIntoView({ behavior: 'smooth' });
+        });
+        </script>
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+            Pytania w przygotowaniu. Administrator może je dodać w panelu Django.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

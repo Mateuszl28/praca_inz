@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Listy do zmarłych — Informator Cmentarny Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Pamięć</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Listy do tych, którzy odeszli</h1>
+    <p class="text-primary-600 mb-8">Publiczne listy, jakie żywi piszą do swoich bliskich.</p>
+
+    {% if page.object_list %}
+        <div class="space-y-6">
+            {% for l in page.object_list %}
+                <article class="bg-white rounded-lg shadow-soft border border-cream-200 p-6">
+                    <div class="text-xs text-accent-600 mb-2">Do: <a href="{% url 'groby:osoba_detail' l.osoba.pk %}" class="hover:underline">{{ l.osoba.imie }} {{ l.osoba.nazwisko }}</a></div>
+                    <div class="font-serif italic text-primary-800 leading-relaxed whitespace-pre-line">{{ l.tresc }}</div>
+                    <div class="mt-4 text-xs text-primary-500 text-right">— {{ l.autor_str }}, {{ l.data_dodania|date:"j.n.Y" }}</div>
+                </article>
+            {% endfor %}
+        </div>
+        {% if page.paginator.num_pages > 1 %}
+            <div class="mt-8 flex justify-center gap-2 text-sm">
+                {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">‹</a>{% endif %}
+                <span class="px-3 py-1 text-primary-600">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+                {% if page.has_next %}<a href="?page={{ page.next_page_number }}" class="px-3 py-1 border border-cream-200 rounded hover:bg-cream-100">›</a>{% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white border border-cream-200 rounded-lg p-10 text-center text-primary-500">
+            Brak publicznych listów. Dodaj swój pod profilem osoby.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
