@@ -175,6 +175,14 @@ Aplikacja webowa do przeszukiwania i wizualizacji bazy grobów cmentarza parafia
 - **Mini-blog „Z życia cmentarza"** (`/notki/`) — krótkie wpisy staffu (max 500 zn.), 5 najnowszych jako widget na home (`/api/notki/`), opcja przypięcia
 - **Migracja FTS5 rebuild** (`0020`) — odtwarza triggery FTS po `ALTER TABLE` SQLite
 
+### Lapidarium, modlitwa, Open Data, karty PDF (batch 94)
+- **Lapidarium** (`/lapidarium/`) — kuratorska wystawa najpiękniejszych nagrobków: `WpisLapidarium` z kategorią (zabytek/artyzm/historia/symbolika), zdjęciem, opisem kuratorskim, autorem nagrobka i rokiem powstania
+- **Modlitwa za zmarłych** — przycisk „🙏 Modlę się" na profilu osoby, 1 modlitwa per IP per dzień, licznik dziennie i ogółem (`/api/modlitwy/<id>/`)
+- **Open Data** (`/open-data/`) — bulk eksport całej bazy w formacie CSV (`/open-data/osoby.csv`) i JSON (`/open-data/dump.json`), licencja CC BY-SA 4.0
+- **Karta okolicznościowa PDF** — generator eleganckiej kartki rocznicy/urodzin (`/osoba/<id>/karta.pdf?typ=rocznica|urodziny`), A5 landscape, cytat liturgiczny, do druku
+- **Oś czasu grobu** (`/grob/<id>/oscz/`) — wszystkie wydarzenia (zdjęcia, wspomnienia, świece, kwiaty, kondolencje, edycje) na jednej osi z ikonami
+- **Kalendarz świąt religijnych PL** (`/kalendarz-swiat/`) — święta stałe i ruchome (Wielkanoc liczona algorytmem Gaussa, Boże Ciało, Wszystkich Świętych, Zaduszki); JSON dla widgetów (`/api/kalendarz-swiat/`)
+
 ## Szybki start (lokalnie)
 
 ```bash
@@ -253,7 +261,7 @@ Szczegóły: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | CI                 | GitHub Actions (matrix Python 3.10 + 3.12)                           |
 | Monitoring         | Sentry (opcjonalnie)                                                 |
 
-## Modele danych (~55)
+## Modele danych (~57)
 
 ```
 Sektor 1───n Grob 1───n Osoba ───n Wspomnienie ───n Komentarz
@@ -304,6 +312,10 @@ Kondolencja per Osoba (z moderacją)
 ZbiorkaRenowacja per Grob (cel_pln, zebrano_pln, status, % postępu)
 NotkaCmentarna — mini-blog staffu (max 500 zn., przypinanie)
 Osoba.epitafium — cytat/motto z nagrobka
+
+# Batch 94
+WpisLapidarium per Grob (kuratorska wystawa: kategoria, opis, foto, rok)
+ModlitwaDziennie per Osoba (1 per IP per dzień, counter)
 ```
 
 Pełny opis architektury: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).

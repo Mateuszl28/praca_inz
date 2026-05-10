@@ -1118,3 +1118,51 @@ class NotkaCmentarna(models.Model):
 
     def __str__(self):
         return f'{self.data_dodania:%Y-%m-%d}: {self.tresc[:60]}'
+
+
+# ===== Batch 94 =====
+
+
+class WpisLapidarium(models.Model):
+    """Kuratorska wystawa najpiękniejszych nagrobków cmentarza."""
+    KAT_CHOICES = [
+        ('zabytek', 'Nagrobek zabytkowy'),
+        ('artyzm', 'Walory artystyczne'),
+        ('historia', 'Znaczenie historyczne'),
+        ('symbolika', 'Symbolika'),
+        ('inne', 'Inne'),
+    ]
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='wpisy_lapidarium')
+    tytul = models.CharField(max_length=200)
+    kategoria = models.CharField(max_length=20, choices=KAT_CHOICES, default='zabytek')
+    opis_kuratorski = models.TextField(help_text='Co warto zauważyć w tym nagrobku')
+    foto = models.ImageField(upload_to='lapidarium/', blank=True, null=True)
+    rok_powstania = models.PositiveSmallIntegerField(null=True, blank=True)
+    autor_nagrobka = models.CharField(max_length=200, blank=True, help_text='Kamieniarz / artysta, jeśli znany')
+    kolejnosc = models.PositiveSmallIntegerField(default=0, help_text='Kolejność na liście (mniejsza = wyżej)')
+    opublikowany = models.BooleanField(default=True, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Wpis lapidarium'
+        verbose_name_plural = 'Lapidarium'
+        ordering = ['kolejnosc', '-data_dodania']
+
+    def __str__(self):
+        return self.tytul
+
+
+class ModlitwaDziennie(models.Model):
+    """Counter dziennych modlitw za osobę (1 modlitwa per IP per osoba per dzień)."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='modlitwy')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64)
+    data = models.DateField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Modlitwa za zmarłego'
+        verbose_name_plural = 'Modlitwy za zmarłych'
+        constraints = [
+            models.UniqueConstraint(fields=['osoba', 'ip_hash', 'data'], name='modlitwa_uniq'),
+        ]
+        indexes = [models.Index(fields=['osoba', 'data'])]

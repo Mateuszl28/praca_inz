@@ -11,6 +11,7 @@ from .models import (
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
     EtykietaOsoby, WydarzenieParafialne,
     Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
+    WpisLapidarium, ModlitwaDziennie,
 )
 
 
@@ -566,3 +567,22 @@ class NotkaCmentarnaAdmin(admin.ModelAdmin):
     list_display = ('data_dodania', 'tresc', 'autor', 'przypiety', 'opublikowana')
     list_filter = ('opublikowana', 'przypiety')
     search_fields = ('tresc',)
+
+
+# ----- Batch 94 -----
+
+
+@admin.register(WpisLapidarium)
+class WpisLapidariumAdmin(admin.ModelAdmin):
+    list_display = ('tytul', 'grob', 'kategoria', 'rok_powstania', 'opublikowany', 'kolejnosc')
+    list_filter = ('kategoria', 'opublikowany')
+    search_fields = ('tytul', 'opis_kuratorski', 'autor_nagrobka')
+    autocomplete_fields = ('grob',)
+
+
+@admin.register(ModlitwaDziennie)
+class ModlitwaDziennieAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'user', 'data')
+    list_filter = ('data',)
+    search_fields = ('osoba__nazwisko', 'osoba__imie')
+    readonly_fields = ('osoba', 'user', 'ip_hash', 'data')

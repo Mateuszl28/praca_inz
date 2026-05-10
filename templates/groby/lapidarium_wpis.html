@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ wpis.tytul }} — Lapidarium{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-10">
+    <a href="{% url 'groby:lapidarium' %}" class="text-sm text-primary-600 hover:underline">← lapidarium</a>
+    <div class="text-xs uppercase tracking-widest text-accent-600 mt-2">{{ wpis.get_kategoria_display }}</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">{{ wpis.tytul }}</h1>
+    <p class="text-primary-600 text-sm mb-6">
+        Grób: <a href="{% url 'groby:grob_detail' pk=wpis.grob_id %}" class="underline text-primary-800">{{ wpis.grob }}</a>
+        {% if wpis.rok_powstania %} · powstał {{ wpis.rok_powstania }}{% endif %}
+        {% if wpis.autor_nagrobka %} · {{ wpis.autor_nagrobka }}{% endif %}
+    </p>
+
+    {% if wpis.foto %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 overflow-hidden mb-6">
+            <img src="{{ wpis.foto.url }}" alt="{{ wpis.tytul }}" class="w-full max-h-[70vh] object-contain bg-cream-50">
+        </div>
+    {% endif %}
+
+    <article class="prose max-w-none text-primary-800 whitespace-pre-wrap bg-white rounded-lg shadow-soft border border-cream-200 p-6 leading-relaxed">{{ wpis.opis_kuratorski }}</article>
+</section>
+{% endblock %}

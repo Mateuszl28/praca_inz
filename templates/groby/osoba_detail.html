@@ -352,9 +352,40 @@
                 </button>
             </form>
             <a href="{% url 'groby:prywatne_notatki' osoba_id=osoba.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">📝 Moje notatki</a>
+            <a href="{% url 'groby:karta_okolicznosciowa' osoba_id=osoba.pk %}?typ=rocznica" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">🕊 Karta rocznicy</a>
         {% endif %}
+        <button type="button" id="modl-btn" data-osoba="{{ osoba.pk }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">🙏 Modlę się <span id="modl-licznik" class="text-xs text-primary-500"></span></button>
         <button type="button" onclick="document.getElementById('zglos-osoba').classList.toggle('hidden')" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Zgłoś poprawkę</button>
     </div>
+    <script>
+        (function () {
+            const btn = document.getElementById('modl-btn');
+            if (!btn) return;
+            const id = btn.dataset.osoba;
+            const lic = document.getElementById('modl-licznik');
+            function refresh() {
+                fetch('/api/modlitwy/' + id + '/').then(r => r.json()).then(d => {
+                    lic.textContent = '· dziś: ' + d.dzis + ' · ogółem: ' + d.ogolem;
+                    if (d.ja_dzis) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-60', 'cursor-not-allowed');
+                        btn.firstChild.nodeValue = '✓ Modliłeś się dziś ';
+                    }
+                }).catch(() => {});
+            }
+            refresh();
+            btn.addEventListener('click', () => {
+                const fd = new FormData();
+                fetch('/osoba/' + id + '/modl-sie/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': document.cookie.split('csrftoken=')[1]?.split(';')[0] || ''},
+                    body: fd, credentials: 'same-origin',
+                }).then(r => r.json()).then(d => {
+                    if (d.ok) refresh();
+                }).catch(() => {});
+            });
+        })();
+    </script>
 
     <form id="zglos-osoba" method="post" action="{% url 'groby:zglos_poprawke' 'osoba' osoba.pk %}" class="hidden mt-4 bg-cream-50 border border-cream-200 rounded-lg p-4 space-y-3 no-print">
         {% csrf_token %}{% antybot_pola %}

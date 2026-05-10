@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Oś czasu — {{ grob }}{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <a href="{% url 'groby:grob_detail' pk=grob.pk %}" class="text-sm text-primary-600 hover:underline">← powrót do grobu</a>
+    <div class="text-xs uppercase tracking-widest text-accent-600 mt-2">Oś czasu</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">{{ grob }}</h1>
+    <p class="text-primary-700 mb-6">Wszystkie wydarzenia związane z grobem — łącznie {{ liczba }}.</p>
+
+    {% if eventy %}
+        <ol class="relative border-l-2 border-cream-200 ml-3 space-y-5">
+            {% for e in eventy %}
+                <li class="ml-6">
+                    <span class="absolute -left-[14px] flex items-center justify-center w-7 h-7 bg-white rounded-full ring-2 ring-cream-200 text-base">{{ e.ikona }}</span>
+                    <div class="bg-white border border-cream-200 rounded-lg p-3 shadow-soft">
+                        <div class="text-xs text-primary-500 mb-1">{{ e.data|date:"d.m.Y H:i" }} · {{ e.typ }}</div>
+                        <div class="text-sm text-primary-800">{{ e.tresc }}</div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ol>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Brak wydarzeń. Dodaj zdjęcie, zapal świecę, zostaw wspomnienie.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

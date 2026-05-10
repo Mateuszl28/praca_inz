@@ -156,6 +156,7 @@
         {% if grob.plan_x and grob.plan_y %}
             <a href="{% url 'groby:mapa' %}?sektor={{ grob.sektor.pk }}#g{{ grob.pk }}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">Pokaż na mapie</a>
         {% endif %}
+        <a href="{% url 'groby:os_czasu_grobu' pk=grob.pk %}" class="px-4 py-2 rounded border border-cream-200 text-primary-700 hover:bg-cream-100">⏱ Oś czasu</a>
     </div>
 
     {% with zb=grob.zbiorki.all %}

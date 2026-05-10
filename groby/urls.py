@@ -163,6 +163,19 @@ urlpatterns = [
     path('api/notki/', views.notki_cmentarne_json, name='notki_json'),
     path('notki/', views.notki_cmentarne_lista, name='notki'),
 
+    # Batch 94
+    path('lapidarium/', views.lapidarium, name='lapidarium'),
+    path('lapidarium/<int:pk>/', views.lapidarium_wpis, name='lapidarium_wpis'),
+    path('osoba/<int:osoba_id>/modl-sie/', views.modl_sie, name='modl_sie'),
+    path('api/modlitwy/<int:osoba_id>/', views.modlitwy_stats, name='modlitwy_stats'),
+    path('open-data/', views.open_data_index, name='open_data'),
+    path('open-data/osoby.csv', views.open_data_csv, name='open_data_csv'),
+    path('open-data/dump.json', views.open_data_json, name='open_data_json'),
+    path('osoba/<int:osoba_id>/karta.pdf', views.karta_okolicznosciowa_pdf, name='karta_okolicznosciowa'),
+    path('grob/<int:pk>/oscz/', views.os_czasu_grobu, name='os_czasu_grobu'),
+    path('kalendarz-swiat/', views.kalendarz_swiat, name='kalendarz_swiat'),
+    path('api/kalendarz-swiat/', views.kalendarz_swiat_json, name='kalendarz_swiat_json'),
+
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
 

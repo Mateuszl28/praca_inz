@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Lapidarium — wystawa nagrobków — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Wystawa</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Lapidarium</h1>
+    <p class="text-primary-700 mb-6">Kuratorska wystawa najpiękniejszych i najciekawszych nagrobków cmentarza w Szydłowie.</p>
+
+    <div class="mb-6 flex flex-wrap gap-2 text-sm">
+        <a href="?" class="px-3 py-1 rounded border {% if not aktywna_kat %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">Wszystkie</a>
+        {% for v, lbl in kategorie %}
+            <a href="?kat={{ v }}" class="px-3 py-1 rounded border {% if v == aktywna_kat %}bg-primary-700 text-white border-primary-700{% else %}border-cream-200 text-primary-700 hover:bg-cream-50{% endif %}">{{ lbl }}</a>
+        {% endfor %}
+    </div>
+
+    {% if wpisy %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for w in wpisy %}
+                <a href="{% url 'groby:lapidarium_wpis' pk=w.pk %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 hover:shadow-lift hover:border-primary-300 transition overflow-hidden">
+                    {% if w.foto %}
+                        <img src="{{ w.foto.url }}" alt="{{ w.tytul }}" class="w-full h-48 object-cover">
+                    {% else %}
+                        <div class="w-full h-48 bg-cream-100 flex items-center justify-center text-cream-300 text-5xl">⊕</div>
+                    {% endif %}
+                    <div class="p-4">
+                        <div class="text-xs uppercase tracking-widest text-accent-600">{{ w.get_kategoria_display }}</div>
+                        <h2 class="font-serif text-xl text-primary-900 mt-1">{{ w.tytul }}</h2>
+                        <div class="text-xs text-primary-500 mt-1">{{ w.grob }}{% if w.rok_powstania %} · {{ w.rok_powstania }}{% endif %}</div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-8 text-center text-primary-600">
+            Wystawa jest sukcesywnie tworzona przez staff.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

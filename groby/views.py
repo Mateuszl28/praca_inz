@@ -23,6 +23,7 @@ from .models import (
     Powiadomienie, OpiekunGrobu, PrywatnaNotatka, HasloSlownik,
     EtykietaOsoby, WydarzenieParafialne,
     Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
+    WpisLapidarium, ModlitwaDziennie,
 )
 
 
@@ -3252,3 +3253,281 @@ def notki_cmentarne_lista(request):
     paginator = Paginator(qs, 30)
     page = paginator.get_page(request.GET.get('p', 1))
     return render(request, 'groby/notki.html', {'page': page})
+
+
+# ===== Batch 94 =====
+
+
+def lapidarium(request):
+    """Kuratorska wystawa najpiękniejszych nagrobków."""
+    kat = (request.GET.get('kat') or '').strip()
+    qs = (WpisLapidarium.objects.filter(opublikowany=True)
+          .select_related('grob__sektor'))
+    if kat:
+        qs = qs.filter(kategoria=kat)
+    return render(request, 'groby/lapidarium.html', {
+        'wpisy': qs,
+        'kategorie': WpisLapidarium.KAT_CHOICES,
+        'aktywna_kat': kat,
+    })
+
+
+def lapidarium_wpis(request, pk):
+    wpis = get_object_or_404(WpisLapidarium, pk=pk, opublikowany=True)
+    return render(request, 'groby/lapidarium_wpis.html', {'wpis': wpis})
+
+
+@require_POST
+def modl_sie(request, osoba_id):
+    """1 modlitwa per IP per osoba per dzień."""
+    from django.utils import timezone
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    iph = _hash_ip(request)
+    today = timezone.localdate()
+    obj, created = ModlitwaDziennie.objects.get_or_create(
+        osoba=osoba, ip_hash=iph, data=today,
+        defaults={'user': request.user if request.user.is_authenticated else None},
+    )
+    licznik = ModlitwaDziennie.objects.filter(osoba=osoba, data=today).count()
+    return JsonResponse({'ok': True, 'juz_dzis': not created, 'licznik_dzis': licznik})
+
+
+def modlitwy_stats(request, osoba_id):
+    """JSON: liczba modlitw za osobę dziś + ogółem."""
+    from django.utils import timezone
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    today = timezone.localdate()
+    iph = _hash_ip(request)
+    return JsonResponse({
+        'dzis': ModlitwaDziennie.objects.filter(osoba=osoba, data=today).count(),
+        'ogolem': ModlitwaDziennie.objects.filter(osoba=osoba).count(),
+        'ja_dzis': ModlitwaDziennie.objects.filter(osoba=osoba, ip_hash=iph, data=today).exists(),
+    })
+
+
+def open_data_index(request):
+    """Strona z linkami do bulk eksportu open data."""
+    return render(request, 'groby/open_data.html', {})
+
+
+def open_data_csv(request):
+    """CSV: wszystkie osoby z grobami (open data dla badań genealogicznych)."""
+    import csv
+    resp = HttpResponse(content_type='text/csv; charset=utf-8')
+    resp['Content-Disposition'] = 'attachment; filename="cmentarz-szydlow-osoby.csv"'
+    resp.write('﻿')  # BOM dla Excela
+    w = csv.writer(resp, delimiter=';')
+    w.writerow(['id', 'imie', 'drugie_imie', 'nazwisko', 'nazwisko_rodowe',
+                'data_urodzenia', 'data_smierci', 'miejsce_urodzenia',
+                'sektor', 'rzad', 'numer_grobu', 'typ_grobu', 'epitafium'])
+    qs = Osoba.objects.select_related('grob__sektor').order_by('grob__sektor__nazwa', 'grob__numer', 'nazwisko')
+    for o in qs:
+        w.writerow([
+            o.pk, o.imie, o.drugie_imie, o.nazwisko, o.nazwisko_rodowe,
+            o.data_urodzenia or '', o.data_smierci or '', o.miejsce_urodzenia,
+            o.grob.sektor.nazwa if o.grob and o.grob.sektor else '',
+            o.grob.rzad if o.grob else '',
+            o.grob.numer if o.grob else '',
+            o.grob.get_typ_display() if o.grob else '',
+            o.epitafium,
+        ])
+    return resp
+
+
+def open_data_json(request):
+    """JSON: wszystkie sektory + groby + osoby (open data)."""
+    from django.utils import timezone
+    sektory = []
+    for s in Sektor.objects.prefetch_related('groby__osoby').order_by('nazwa'):
+        groby = []
+        for g in s.groby.all():
+            groby.append({
+                'id': g.pk,
+                'numer': g.numer,
+                'rzad': g.rzad,
+                'typ': g.typ,
+                'osoby': [
+                    {
+                        'id': o.pk,
+                        'imie': o.imie,
+                        'nazwisko': o.nazwisko,
+                        'nazwisko_rodowe': o.nazwisko_rodowe,
+                        'data_urodzenia': o.data_urodzenia.isoformat() if o.data_urodzenia else None,
+                        'data_smierci': o.data_smierci.isoformat() if o.data_smierci else None,
+                        'miejsce_urodzenia': o.miejsce_urodzenia,
+                    }
+                    for o in g.osoby.all()
+                ],
+            })
+        sektory.append({'id': s.pk, 'nazwa': s.nazwa, 'groby': groby})
+    return JsonResponse({
+        'wygenerowano': timezone.now().isoformat(),
+        'licencja': 'CC BY-SA 4.0 — uznanie autorstwa, ta sama licencja',
+        'zrodlo': 'Cmentarz parafialny w Szydłowie — informatorcmentarny.pl',
+        'sektory': sektory,
+    }, json_dumps_params={'ensure_ascii': False, 'indent': 2})
+
+
+@login_required
+def karta_okolicznosciowa_pdf(request, osoba_id):
+    """PDF: karta okolicznościowa dla obserwowanej osoby (urodziny / rocznica)."""
+    from reportlab.lib.pagesizes import A5, landscape
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib import colors
+    from django.utils import timezone
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    typ = (request.GET.get('typ') or 'rocznica').strip()
+    today = timezone.localdate()
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A5),
+                             leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40,
+                             title=f'Karta {typ} {osoba}')
+    base = getSampleStyleSheet()
+    tytul = ParagraphStyle('T', parent=base['Title'], fontSize=24, alignment=TA_CENTER, textColor=colors.HexColor('#2e4430'))
+    pod = ParagraphStyle('P', parent=base['Italic'], fontSize=14, alignment=TA_CENTER, textColor=colors.HexColor('#5b6e51'))
+    tresc = ParagraphStyle('Tr', parent=base['Normal'], fontSize=12, alignment=TA_CENTER, leading=18)
+
+    if typ == 'urodziny':
+        naglowek = 'W rocznicę urodzin'
+        cytat = '„Pamięć jest darem trwalszym niż czas."'
+    else:
+        naglowek = 'W rocznicę śmierci'
+        cytat = '„Wieczny odpoczynek racz im dać, Panie."'
+
+    flow = [
+        Paragraph('❦', pod), Spacer(1, 8),
+        Paragraph(naglowek, pod), Spacer(1, 12),
+        Paragraph(f'<b>{osoba.imie or ""} {osoba.nazwisko or ""}</b>', tytul),
+    ]
+    if osoba.nazwisko_rodowe:
+        flow.append(Paragraph(f'<i>z domu {osoba.nazwisko_rodowe}</i>', pod))
+    flow.append(Spacer(1, 16))
+    daty = []
+    if osoba.data_urodzenia:
+        daty.append(f'ur. {osoba.data_urodzenia.strftime("%d.%m.%Y")}')
+    if osoba.data_smierci:
+        daty.append(f'zm. {osoba.data_smierci.strftime("%d.%m.%Y")}')
+    if daty:
+        flow.append(Paragraph(' · '.join(daty), tresc))
+    flow.append(Spacer(1, 24))
+    flow.append(Paragraph(cytat, ParagraphStyle('Cy', parent=tresc, fontName='Times-Italic', fontSize=14)))
+    flow.append(Spacer(1, 24))
+    flow.append(Paragraph(f'Karta wygenerowana {today.strftime("%d.%m.%Y")} na informatorcmentarny.pl', pod))
+
+    doc.build(flow)
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="karta_{typ}_{osoba.nazwisko or "osoba"}.pdf"'
+    return resp
+
+
+def os_czasu_grobu(request, pk):
+    """Oś czasu wszystkich wydarzeń grobu (wspomnienia, świece, kwiaty, kondolencje, zdjęcia)."""
+    grob = get_object_or_404(Grob.objects.select_related('sektor'), pk=pk)
+    osoby_pks = list(grob.osoby.values_list('pk', flat=True))
+    eventy = []
+    for z in grob.zdjecia.all():
+        eventy.append({'data': z.data_dodania, 'typ': 'foto', 'tresc': z.podpis or 'Dodano zdjęcie', 'ikona': '📷'})
+    for w in Wspomnienie.objects.filter(osoba_id__in=osoby_pks, status='zaakceptowane'):
+        eventy.append({'data': w.data_dodania, 'typ': 'wspomnienie', 'tresc': f'„{w.tresc[:120]}…" — {w.autor_str}', 'ikona': '✒️'})
+    for s in Swieca.objects.filter(osoba_id__in=osoby_pks):
+        eventy.append({'data': s.data_zapalenia, 'typ': 'świeca', 'tresc': f'Zapalono świecę dla {s.osoba}' + (f' — „{s.intencja}"' if s.intencja else ''), 'ikona': '🕯️'})
+    for k in Kwiat.objects.filter(osoba_id__in=osoby_pks):
+        eventy.append({'data': k.data_zlozenia, 'typ': 'kwiat', 'tresc': f'Złożono kwiat dla {k.osoba}', 'ikona': '🌹'})
+    for kon in Kondolencja.objects.filter(osoba_id__in=osoby_pks, zaakceptowana=True):
+        eventy.append({'data': kon.data_dodania, 'typ': 'kondolencja', 'tresc': f'Kondolencje od {kon.autor_str}: „{kon.tresc[:120]}…"', 'ikona': '🤍'})
+    for h in HistoriaZmian.objects.filter(model='Grob', obiekt_id=grob.pk)[:50]:
+        eventy.append({'data': h.data, 'typ': 'edycja', 'tresc': f'{h.get_akcja_display()} przez {h.user.username if h.user else "system"}', 'ikona': '✏️'})
+    eventy.sort(key=lambda e: e['data'], reverse=True)
+    return render(request, 'groby/os_czasu_grobu.html', {
+        'grob': grob,
+        'eventy': eventy[:200],
+        'liczba': len(eventy),
+    })
+
+
+def _wielkanoc(rok):
+    """Algorytm Gaussa - data Wielkanocy."""
+    a = rok % 19
+    b = rok // 100
+    c = rok % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    miesiac = (h + l - 7 * m + 114) // 31
+    dzien = ((h + l - 7 * m + 114) % 31) + 1
+    from datetime import date as dt_date
+    return dt_date(rok, miesiac, dzien)
+
+
+def kalendarz_swiat(request):
+    """Lista świąt religijnych PL na bieżący rok (stałe + ruchome)."""
+    from django.utils import timezone
+    from datetime import date as dt_date, timedelta
+    rok = int(request.GET.get('rok') or timezone.localdate().year)
+    if rok < 1900 or rok > 2100:
+        rok = timezone.localdate().year
+    wielkanoc = _wielkanoc(rok)
+    swieta = [
+        (dt_date(rok, 1, 1), 'Nowy Rok', 'state'),
+        (dt_date(rok, 1, 6), 'Trzech Króli (Objawienie Pańskie)', 'koscielne'),
+        (dt_date(rok, 2, 2), 'Ofiarowanie Pańskie (Matki Boskiej Gromnicznej)', 'koscielne'),
+        (wielkanoc - timedelta(days=46), 'Środa Popielcowa', 'koscielne'),
+        (wielkanoc - timedelta(days=7), 'Niedziela Palmowa', 'koscielne'),
+        (wielkanoc - timedelta(days=3), 'Wielki Czwartek', 'koscielne'),
+        (wielkanoc - timedelta(days=2), 'Wielki Piątek', 'koscielne'),
+        (wielkanoc - timedelta(days=1), 'Wielka Sobota', 'koscielne'),
+        (wielkanoc, 'Niedziela Wielkanocna', 'koscielne'),
+        (wielkanoc + timedelta(days=1), 'Poniedziałek Wielkanocny', 'koscielne'),
+        (wielkanoc + timedelta(days=49), 'Zesłanie Ducha Świętego (Zielone Świątki)', 'koscielne'),
+        (wielkanoc + timedelta(days=60), 'Boże Ciało', 'koscielne'),
+        (dt_date(rok, 8, 15), 'Wniebowzięcie NMP', 'koscielne'),
+        (dt_date(rok, 11, 1), 'Wszystkich Świętych', 'cmentarz'),
+        (dt_date(rok, 11, 2), 'Dzień Zaduszny', 'cmentarz'),
+        (dt_date(rok, 11, 11), 'Niepodległości / św. Marcina', 'state'),
+        (dt_date(rok, 12, 8), 'Niepokalane Poczęcie NMP', 'koscielne'),
+        (dt_date(rok, 12, 24), 'Wigilia Bożego Narodzenia', 'koscielne'),
+        (dt_date(rok, 12, 25), 'Boże Narodzenie', 'koscielne'),
+        (dt_date(rok, 12, 26), 'św. Szczepana', 'koscielne'),
+    ]
+    swieta.sort(key=lambda s: s[0])
+    today = timezone.localdate()
+    return render(request, 'groby/kalendarz_swiat.html', {
+        'swieta': [(d, n, k, (d - today).days) for d, n, k in swieta],
+        'rok': rok,
+        'today': today,
+    })
+
+
+def kalendarz_swiat_json(request):
+    """JSON dla paska/widgetu - 5 najbliższych świąt."""
+    from django.utils import timezone
+    from datetime import date as dt_date, timedelta
+    today = timezone.localdate()
+    rok = today.year
+    wielkanoc = _wielkanoc(rok)
+    nadchodzace = []
+    daty = [
+        (dt_date(rok, 1, 6), 'Trzech Króli'),
+        (dt_date(rok, 2, 2), 'Matki Boskiej Gromnicznej'),
+        (wielkanoc - timedelta(days=7), 'Niedziela Palmowa'),
+        (wielkanoc, 'Wielkanoc'),
+        (wielkanoc + timedelta(days=60), 'Boże Ciało'),
+        (dt_date(rok, 8, 15), 'Wniebowzięcie NMP'),
+        (dt_date(rok, 11, 1), 'Wszystkich Świętych'),
+        (dt_date(rok, 11, 2), 'Dzień Zaduszny'),
+        (dt_date(rok, 12, 25), 'Boże Narodzenie'),
+    ]
+    for d, n in daty:
+        if d >= today:
+            nadchodzace.append({'data': d.isoformat(), 'nazwa': n, 'dni': (d - today).days})
+    nadchodzace.sort(key=lambda x: x['dni'])
+    return JsonResponse({'najblizsze': nadchodzace[:5]})

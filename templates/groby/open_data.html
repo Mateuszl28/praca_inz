@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Open Data — Cmentarz Szydłów{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-10">
+    <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Otwarte dane</div>
+    <h1 class="font-serif text-4xl text-primary-900 mb-2">Open Data</h1>
+    <p class="text-primary-700 mb-2">Pełna baza grobów i osób cmentarza w Szydłowie do swobodnego pobrania — dla badaczy genealogicznych, historyków, dziennikarzy.</p>
+    <p class="text-sm text-primary-500 mb-8">Licencja: <strong>CC BY-SA 4.0</strong> — uznanie autorstwa, ta sama licencja.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <a href="{% url 'groby:open_data_csv' %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 p-6 hover:shadow-lift hover:border-primary-300 transition">
+            <div class="text-3xl mb-2">📊</div>
+            <h2 class="font-serif text-xl text-primary-900 mb-1">CSV — wszystkie osoby</h2>
+            <p class="text-sm text-primary-600">Spis wszystkich osób z lokalizacją grobu, datami i miejscem urodzenia. Otwierane w Excelu / LibreOffice / Pandas.</p>
+        </a>
+        <a href="{% url 'groby:open_data_json' %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 p-6 hover:shadow-lift hover:border-primary-300 transition">
+            <div class="text-3xl mb-2">{ }</div>
+            <h2 class="font-serif text-xl text-primary-900 mb-1">JSON — pełen dump</h2>
+            <p class="text-sm text-primary-600">Hierarchiczna struktura: sektor → groby → osoby. Idealne do API i programistycznych analiz.</p>
+        </a>
+        <a href="{% url 'groby:eksport_gedcom' %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 p-6 hover:shadow-lift hover:border-primary-300 transition">
+            <div class="text-3xl mb-2">🌳</div>
+            <h2 class="font-serif text-xl text-primary-900 mb-1">GEDCOM 5.5</h2>
+            <p class="text-sm text-primary-600">Standard genealogiczny — import do MyHeritage, Ancestry, GeneaPro, Family Historian.</p>
+        </a>
+        <a href="{% url 'groby:kalendarz_ical' %}" class="block bg-white rounded-lg shadow-soft border border-cream-200 p-6 hover:shadow-lift hover:border-primary-300 transition">
+            <div class="text-3xl mb-2">📅</div>
+            <h2 class="font-serif text-xl text-primary-900 mb-1">iCal rocznice</h2>
+            <p class="text-sm text-primary-600">Subskrybowalny kalendarz rocznic (Google Calendar / Outlook / Apple Calendar).</p>
+        </a>
+    </div>
+
+    <div class="mt-8 bg-cream-50 border border-cream-200 rounded-lg p-5 text-sm text-primary-700">
+        <h3 class="font-serif text-lg text-primary-900 mb-2">Programistyczne API</h3>
+        <p class="mb-2">Do dynamicznych zapytań użyj REST API: <code class="bg-white px-2 py-0.5 rounded text-primary-900">/api/v1/</code> (DRF) lub GraphQL: <code class="bg-white px-2 py-0.5 rounded text-primary-900">/graphql/</code>.</p>
+        <p>Dokumentacja: <a href="/api/docs/" class="underline">Swagger UI</a>, <a href="/api/redoc/" class="underline">ReDoc</a>.</p>
+    </div>
+</section>
+{% endblock %}
