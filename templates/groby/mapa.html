@@ -268,26 +268,38 @@
         mapa.invalidateSize();
     }
 
+    function usunWybrany() {
+        if (znacznikWybranego) { mapa.removeLayer(znacznikWybranego); znacznikWybranego = null; }
+    }
+
+    // Wyszukany grób: na planie tylko jego znacznik (bez pozostałych punktów), przybliżony i z otwartym opisem.
     function pokazGrob(g) {
         pokazMape();
-        if (znacznikWybranego) { mapa.removeLayer(znacznikWybranego); znacznikWybranego = null; }
-        const marker = markeryPoId[g.id];
+        usunWybrany();
+        if (mapa.hasLayer(grupa)) mapa.removeLayer(grupa);
         const tytul = 'Grób ' + g.sektor + (g.rzad ? '/' + g.rzad : '') + '/' + g.numer;
-        // Pulsujące podświetlenie wybranego grobu
-        znacznikWybranego = L.circleMarker([g.y, g.x], {
-            radius: 22, color: '#b3261e', weight: 3, fillColor: '#b3261e', fillOpacity: 0.15, interactive: false,
-        }).addTo(mapa);
-        mapa.setView([g.y, g.x], 1);
-        if (marker) {
-            grupa.zoomToShowLayer ? grupa.zoomToShowLayer(marker, () => marker.openPopup()) : marker.openPopup();
-        } else {
-            // Grób spoza aktualnych filtrów — pokaż tymczasowy popup
-            L.popup().setLatLng([g.y, g.x]).setContent(
-                '<div class="grob-popup-tytul">' + esc(tytul) + '</div>' +
-                '<div class="grob-popup-osoby">' + esc(g.osoby) + '</div>' +
-                '<a href="' + esc(g.url) + '">Zobacz szczegóły →</a>'
-            ).openOn(mapa);
-        }
+        const zrodlo = markeryPoId[g.id];
+        const tresc = zrodlo && zrodlo.getPopup()
+            ? zrodlo.getPopup().getContent()
+            : '<div class="grob-popup-tytul">' + esc(tytul) + '</div>' +
+              '<div class="grob-popup-osoby">' + esc(g.osoby) + '</div>' +
+              '<a href="' + esc(g.url) + '">Zobacz szczegóły →</a>';
+        const marker = L.marker([g.y, g.x], {
+            icon: L.divIcon({
+                className: 'marker-wybrany',
+                html: '<div style="width:22px;height:22px;border-radius:50%;background:#b3261e;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);"></div>',
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+            }),
+        }).bindPopup(tresc);
+        znacznikWybranego = L.featureGroup([
+            L.circleMarker([g.y, g.x], {
+                radius: 34, color: '#b3261e', weight: 3, fillColor: '#b3261e', fillOpacity: 0.12, interactive: false,
+            }),
+            marker,
+        ]).addTo(mapa);
+        mapa.setView([g.y, g.x], 1, { animate: false });
+        marker.openPopup();
         sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -355,6 +367,9 @@
 
     document.getElementById('btn-caly-plan').addEventListener('click', function () {
         pokazMape();
+        usunWybrany();
+        mapa.closePopup();
+        if (!mapa.hasLayer(grupa)) grupa.addTo(mapa);
         sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
