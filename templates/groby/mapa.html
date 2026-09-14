@@ -28,9 +28,24 @@
     <div class="mb-6">
         <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Mapa</div>
         <h1 class="font-serif text-4xl text-primary-900 mb-2">Plan cmentarza</h1>
-        <p class="text-primary-600">Skan planu z oznaczeniami sektorów i rzędów. Kliknij marker, aby zobaczyć szczegóły grobu.</p>
+        <p class="text-primary-600">Wpisz imię i nazwisko pochowanej osoby — pokażemy na planie, gdzie znajduje się jej grób.</p>
     </div>
 
+    <div class="bg-white border border-cream-200 rounded-lg shadow-soft p-5 mb-6 no-print">
+        <label for="szukaj-pochowanego" class="block text-xs text-primary-600 uppercase tracking-wider mb-2">Szukaj pochowanego</label>
+        <div class="relative">
+            <input type="search" id="szukaj-pochowanego" autocomplete="off" autofocus
+                   placeholder="np. Jan Kowalski"
+                   class="block w-full px-4 py-3 text-lg border border-cream-200 rounded focus:outline-none focus:border-primary-600">
+            <ul id="wyniki-szukania" style="z-index:1000" class="absolute left-0 right-0 mt-1 bg-white border border-cream-200 rounded shadow-soft max-h-80 overflow-y-auto" hidden></ul>
+        </div>
+        <div id="szukaj-info" class="mt-2 text-sm text-primary-500">Wpisz co najmniej 2 znaki.</div>
+        <div class="mt-3 text-sm">
+            <button type="button" id="btn-caly-plan" class="text-primary-700 hover:underline">…lub pokaż cały plan cmentarza</button>
+        </div>
+    </div>
+
+    <div id="sekcja-mapy" {% if not aktywne_filtry %}hidden{% endif %}>
     <form method="get" class="bg-white border border-cream-200 rounded-lg p-4 mb-4 flex flex-wrap items-end gap-3 no-print">
         <label class="block">
             <span class="text-xs text-primary-600 uppercase tracking-wider">Sektor</span>
@@ -84,6 +99,7 @@
             <span class="text-accent-700">Włącz tryb edycji powyżej i kliknij na planie, aby przypisać pozycję wybranemu grobowi.</span>
         {% endif %}
     </div>
+    </div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -96,7 +112,13 @@
     const planH    = {{ plan_h|default:0 }};
     const trybEdycji = {{ tryb_edycji|yesno:"true,false" }};
 
-    const mapa = L.map('mapa', {
+    let mapa = null, grupa = null;
+    const markeryPoId = {};
+
+    // Mapa inicjowana dopiero po odsłonięciu kontenera (Leaflet źle liczy rozmiar ukrytego diva).
+    function initMapa() {
+    if (mapa) return;
+    mapa = L.map('mapa', {
         crs: L.CRS.Simple,
         minZoom: -3,
         maxZoom: 3,
@@ -121,7 +143,7 @@
         iconAnchor: [9, 9],
     });
 
-    const grupa = L.markerClusterGroup
+    grupa = L.markerClusterGroup
         ? L.markerClusterGroup({ maxClusterRadius: 30, disableClusteringAtZoom: 1 })
         : L.featureGroup();
     groby.forEach(function(g) {
@@ -138,6 +160,7 @@
             '<a href="' + g.url + '">Zobacz szczegóły →</a>'
         );
         grupa.addLayer(marker);
+        markeryPoId[g.id] = marker;
     });
     grupa.addTo(mapa);
 
@@ -200,21 +223,6 @@
     });
     new L.Control.Geo({ position: 'topright' }).addTo(mapa);
 
-    // Skok do konkretnego grobu po hashu, np. #g123
-    (function () {
-        const m = (location.hash || '').match(/^#g(\d+)/);
-        if (!m) return;
-        const id = parseInt(m[1], 10);
-        const cel = groby.find(g => g.id === id);
-        if (!cel) return;
-        mapa.setView([cel.y, cel.x], 1);
-        grupa.eachLayer(function (l) {
-            if (l.getLatLng && Math.abs(l.getLatLng().lat - cel.y) < 0.01 && Math.abs(l.getLatLng().lng - cel.x) < 0.01) {
-                l.openPopup();
-            }
-        });
-    })();
-
     if (trybEdycji) {
         const csrf = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
         const status = document.getElementById('edytor-status');
@@ -241,6 +249,125 @@
             }).catch(err => { status.textContent = 'Błąd sieci: ' + err; });
         });
     }
+
+    }  // koniec initMapa
+
+    const sekcjaMapy = document.getElementById('sekcja-mapy');
+    const poleSzukaj = document.getElementById('szukaj-pochowanego');
+    const listaWynikow = document.getElementById('wyniki-szukania');
+    const szukajInfo = document.getElementById('szukaj-info');
+    let znacznikWybranego = null;
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function pokazMape() {
+        sekcjaMapy.hidden = false;
+        initMapa();
+        mapa.invalidateSize();
+    }
+
+    function pokazGrob(g) {
+        pokazMape();
+        if (znacznikWybranego) { mapa.removeLayer(znacznikWybranego); znacznikWybranego = null; }
+        const marker = markeryPoId[g.id];
+        const tytul = 'Grób ' + g.sektor + (g.rzad ? '/' + g.rzad : '') + '/' + g.numer;
+        // Pulsujące podświetlenie wybranego grobu
+        znacznikWybranego = L.circleMarker([g.y, g.x], {
+            radius: 22, color: '#b3261e', weight: 3, fillColor: '#b3261e', fillOpacity: 0.15, interactive: false,
+        }).addTo(mapa);
+        mapa.setView([g.y, g.x], 1);
+        if (marker) {
+            grupa.zoomToShowLayer ? grupa.zoomToShowLayer(marker, () => marker.openPopup()) : marker.openPopup();
+        } else {
+            // Grób spoza aktualnych filtrów — pokaż tymczasowy popup
+            L.popup().setLatLng([g.y, g.x]).setContent(
+                '<div class="grob-popup-tytul">' + esc(tytul) + '</div>' +
+                '<div class="grob-popup-osoby">' + esc(g.osoby) + '</div>' +
+                '<a href="' + esc(g.url) + '">Zobacz szczegóły →</a>'
+            ).openOn(mapa);
+        }
+        sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    let ostatnieWyniki = [];
+    let timerSzukania = null;
+    let nrZapytania = 0;
+
+    function renderujWyniki(wyniki) {
+        ostatnieWyniki = wyniki;
+        listaWynikow.innerHTML = '';
+        if (!wyniki.length) {
+            listaWynikow.hidden = true;
+            szukajInfo.textContent = 'Nie znaleziono grobu z oznaczoną pozycją na planie.';
+            return;
+        }
+        szukajInfo.textContent = 'Znaleziono: ' + wyniki.length + '. Wybierz osobę z listy.';
+        wyniki.forEach(function (g) {
+            const li = document.createElement('li');
+            li.innerHTML =
+                '<button type="button" class="w-full text-left px-4 py-2 hover:bg-cream-100 focus:bg-cream-100 focus:outline-none">' +
+                '<div class="text-primary-900 font-medium">' + esc(g.osoby) + '</div>' +
+                '<div class="text-xs text-primary-500">Sektor ' + esc(g.sektor) + (g.rzad ? ', rząd ' + esc(g.rzad) : '') + ', nr ' + esc(g.numer) + '</div>' +
+                '</button>';
+            li.querySelector('button').addEventListener('click', function () {
+                listaWynikow.hidden = true;
+                poleSzukaj.value = g.osoby;
+                szukajInfo.textContent = 'Pokazano na planie: sektor ' + g.sektor + (g.rzad ? ', rząd ' + g.rzad : '') + ', nr ' + g.numer + '.';
+                pokazGrob(g);
+            });
+            listaWynikow.appendChild(li);
+        });
+        listaWynikow.hidden = false;
+    }
+
+    poleSzukaj.addEventListener('input', function () {
+        clearTimeout(timerSzukania);
+        const q = poleSzukaj.value.trim();
+        if (q.length < 2) {
+            listaWynikow.hidden = true;
+            szukajInfo.textContent = 'Wpisz co najmniej 2 znaki.';
+            return;
+        }
+        szukajInfo.textContent = 'Szukam…';
+        timerSzukania = setTimeout(function () {
+            const nr = ++nrZapytania;
+            fetch('{% url "groby:szukaj_na_mapie" %}?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(d => { if (nr === nrZapytania) renderujWyniki(d.wyniki || []); })
+                .catch(() => { szukajInfo.textContent = 'Błąd wyszukiwania. Spróbuj ponownie.'; });
+        }, 250);
+    });
+
+    poleSzukaj.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && ostatnieWyniki.length) {
+            e.preventDefault();
+            listaWynikow.querySelector('button').click();
+        } else if (e.key === 'Escape') {
+            listaWynikow.hidden = true;
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!listaWynikow.contains(e.target) && e.target !== poleSzukaj) listaWynikow.hidden = true;
+    });
+
+    document.getElementById('btn-caly-plan').addEventListener('click', function () {
+        pokazMape();
+        sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Aktywne filtry — mapa widoczna od razu
+    if (!sekcjaMapy.hidden) initMapa();
+
+    // Skok do konkretnego grobu po hashu, np. #g123
+    (function () {
+        const m = (location.hash || '').match(/^#g(\d+)/);
+        if (!m) return;
+        const cel = groby.find(g => g.id === parseInt(m[1], 10));
+        if (cel) pokazGrob({ ...cel, osoby: cel.osoby.join(', ') });
+    })();
 
     document.getElementById('btn-png').addEventListener('click', function () {
         const node = document.getElementById('mapa');
