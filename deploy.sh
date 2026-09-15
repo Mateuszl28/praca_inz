@@ -123,7 +123,11 @@ if [ ! -f "$APP_DIR/media/plan_cmentarza/scan_oznaczenia.jpg" ] \
 fi
 # (W repo plan zawsze siedzi w media/, wiec po git pull bedzie na miejscu.)
 
-# Rozmiesc groby na planie tylko jesli nie maja jeszcze pozycji.
+# Rzeczywiste pozycje grobow odczytane ze skanu planu (groby/data/pozycje_grobow.json).
+echo "  - ustawiam pozycje grobow wg planu..."
+"$APP_DIR/venv/bin/python" manage.py pozycje_z_planu || true
+
+# Groby spoza pliku pozycji: siatka zastepcza tylko dla tych bez pozycji.
 NEEDS_LAYOUT=$("$APP_DIR/venv/bin/python" -c "
 import django, os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -133,7 +137,7 @@ print('1' if Grob.objects.filter(plan_x__isnull=True).exists() else '0')
 ")
 if [ "$NEEDS_LAYOUT" = "1" ]; then
     echo "  - rozmieszczam groby na planie..."
-    "$APP_DIR/venv/bin/python" manage.py rozmiesc_groby \
+    "$APP_DIR/venv/bin/python" manage.py rozmiesc_groby --tylko-puste \
         --x-min 730 --x-max 1290 --y-min 100 --y-max 3950 || true
 fi
 

@@ -341,7 +341,8 @@ python manage.py backup --output /var/backups        # ZIP z dump.json + media
 ### Pomocnicze
 
 ```bash
-python manage.py rozmiesc_groby                      # auto-układ markerów na planie
+python manage.py pozycje_z_planu                     # rzeczywiste pozycje grobów ze skanu planu (groby/data/pozycje_grobow.json)
+python manage.py rozmiesc_groby --tylko-puste        # siatka zastępcza dla grobów bez pozycji
 python manage.py waliduj                             # spójność danych (--json dla CI)
 python manage.py seed_odznaki                        # utwórz 5 odznak gamifikacji
 python manage.py geokoduj --limit 100                # geokodowanie miejsc urodzenia (Nominatim)
