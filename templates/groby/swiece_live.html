@@ -62,7 +62,8 @@
 
     function rysuj(dane) {
         dane.forEach(s => {
-            const marker = L.marker([s.y, s.x], { icon: ikonaSwieca });
+            // s.y liczone od góry obrazu; w CRS.Simple oś Y rośnie w górę.
+            const marker = L.marker([planH - s.y, s.x], { icon: ikonaSwieca });
             const intencja = s.intencja ? '<div class="text-xs italic mt-1">„' + s.intencja + '"</div>' : '';
             marker.bindPopup(
                 '<div class="font-serif text-base">' + s.osoba + '</div>' +

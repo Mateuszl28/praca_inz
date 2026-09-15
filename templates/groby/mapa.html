@@ -115,6 +115,10 @@
     let mapa = null, grupa = null;
     const markeryPoId = {};
 
+    // plan_x/plan_y to piksele obrazu liczone od górnego-lewego rogu, a w CRS.Simple
+    // oś Y rośnie w górę (obraz rozpięty na [[0,0],[planH,planW]]) — trzeba odwrócić Y.
+    function naMape(x, y) { return [planH - y, x]; }
+
     // Mapa inicjowana dopiero po odsłonięciu kontenera (Leaflet źle liczy rozmiar ukrytego diva).
     function initMapa() {
     if (mapa) return;
@@ -127,7 +131,7 @@
     });
 
     if (planUrl && planW && planH) {
-        // CRS.Simple używa współrzędnych [y, x]; górny-lewy = (0, 0).
+        // CRS.Simple: [lat, lng] = [y, x], y rośnie w górę — górny-lewy róg obrazu = (planH, 0).
         const bounds = [[0, 0], [planH, planW]];
         L.imageOverlay(planUrl, bounds).addTo(mapa);
         mapa.setMaxBounds([[-planH * 0.2, -planW * 0.2], [planH * 1.2, planW * 1.2]]);
@@ -143,12 +147,10 @@
         iconAnchor: [9, 9],
     });
 
-    grupa = L.markerClusterGroup
-        ? L.markerClusterGroup({ maxClusterRadius: 30, disableClusteringAtZoom: 1 })
-        : L.featureGroup();
+    // Bez klastrowania: każdy znacznik stoi dokładnie na swoim grobie (klaster pokazywałby środek grupy).
+    grupa = L.featureGroup();
     groby.forEach(function(g) {
-        // g.x = poziomo (kolumna), g.y = pionowo (wiersz). W CRS.Simple [lat, lng] = [y, x].
-        const marker = L.marker([g.y, g.x], { icon: ikonaGrobu });
+        const marker = L.marker(naMape(g.x, g.y), { icon: ikonaGrobu });
         const osobyHtml = g.osoby.length
             ? '<div class="grob-popup-osoby">' + g.osoby.join('<br>') + '</div>'
             : '';
@@ -176,7 +178,7 @@
                     mapa.removeLayer(warstwa_heatmap);
                     warstwa_heatmap = null;
                 } else if (window.L && L.heatLayer) {
-                    const punkty = groby.map(g => [g.y, g.x, 0.5]);
+                    const punkty = groby.map(g => [...naMape(g.x, g.y), 0.5]);
                     warstwa_heatmap = L.heatLayer(punkty, { radius: 25, blur: 15, maxZoom: 1 }).addTo(mapa);
                 }
                 return false;
@@ -209,10 +211,10 @@
                     // Przyjmujemy 1 px planu ≈ 0.1 m (dostosuj jeśli inny rozmiar)
                     const px = PLAN_W / 2 + dx * 10;
                     const py = PLAN_H / 2 + dy * 10;
-                    const me = L.circleMarker([py, px], {
+                    const me = L.circleMarker(naMape(px, py), {
                         radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 0.9,
                     }).addTo(mapa).bindPopup('Jesteś tu (przybliżona pozycja).');
-                    mapa.setView([py, px], 0.5);
+                    mapa.setView(naMape(px, py), 0.5);
                     me.openPopup();
                 }, err => alert('Błąd GPS: ' + err.message));
                 return false;
@@ -233,7 +235,7 @@
             if (!tryb.checked) return;
             const id = parseInt(idInput.value, 10);
             if (!id) { status.textContent = 'Najpierw wpisz ID grobu.'; return; }
-            const x = e.latlng.lng, y = e.latlng.lat;
+            const x = e.latlng.lng, y = planH - e.latlng.lat;
             status.textContent = 'Zapisuję pozycję grobu ' + id + '…';
             fetch('{% url "groby:zapisz_pozycje" %}', {
                 method: 'POST',
@@ -242,7 +244,7 @@
             }).then(r => r.json()).then(d => {
                 if (d.ok) {
                     status.textContent = 'Zapisano: ' + d.tytul + '. Wpisz kolejne ID i klikaj.';
-                    L.marker([y, x], { icon: ikonaGrobu }).addTo(grupa).bindPopup(d.tytul);
+                    L.marker(e.latlng, { icon: ikonaGrobu }).addTo(grupa).bindPopup(d.tytul);
                 } else {
                     status.textContent = 'Błąd: ' + (d.error || 'nieznany');
                 }
@@ -284,7 +286,8 @@
             : '<div class="grob-popup-tytul">' + esc(tytul) + '</div>' +
               '<div class="grob-popup-osoby">' + esc(g.osoby) + '</div>' +
               '<a href="' + esc(g.url) + '">Zobacz szczegóły →</a>';
-        const marker = L.marker([g.y, g.x], {
+        const pozycja = naMape(g.x, g.y);
+        const marker = L.marker(pozycja, {
             icon: L.divIcon({
                 className: 'marker-wybrany',
                 html: '<div style="width:22px;height:22px;border-radius:50%;background:#b3261e;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);"></div>',
@@ -293,12 +296,12 @@
             }),
         }).bindPopup(tresc);
         znacznikWybranego = L.featureGroup([
-            L.circleMarker([g.y, g.x], {
+            L.circleMarker(pozycja, {
                 radius: 34, color: '#b3261e', weight: 3, fillColor: '#b3261e', fillOpacity: 0.12, interactive: false,
             }),
             marker,
         ]).addTo(mapa);
-        mapa.setView([g.y, g.x], 1, { animate: false });
+        mapa.setView(pozycja, 1, { animate: false });
         marker.openPopup();
         sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }

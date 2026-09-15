@@ -41,7 +41,8 @@
     const grupa = L.featureGroup();
     const wsp = punkty.filter(p => p.plan_x && p.plan_y);
     wsp.forEach((p, i) => {
-        const m = L.marker([p.plan_y, p.plan_x], {
+        // plan_y liczone od góry obrazu; w CRS.Simple oś Y rośnie w górę.
+        const m = L.marker([-p.plan_y, p.plan_x], {
             icon: L.divIcon({
                 className: 'm-trasa',
                 html: `<div style="background:#2e4430;color:#fbf9f4;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;">${p.kolejnosc}</div>`,
@@ -53,7 +54,7 @@
         grupa.addLayer(m);
     });
     if (wsp.length >= 2) {
-        L.polyline(wsp.map(p => [p.plan_y, p.plan_x]), { color: '#b08d48', weight: 3, dashArray: '6 4' }).addTo(mapa);
+        L.polyline(wsp.map(p => [-p.plan_y, p.plan_x]), { color: '#b08d48', weight: 3, dashArray: '6 4' }).addTo(mapa);
     }
     grupa.addTo(mapa);
     if (wsp.length) mapa.fitBounds(grupa.getBounds().pad(0.1));
