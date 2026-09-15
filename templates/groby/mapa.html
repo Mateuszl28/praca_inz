@@ -17,18 +17,18 @@
     .leaflet-popup-content .grob-popup-meta { font-size: 0.8125rem; color: #4c6b4a; margin-top: 2px; }
     .leaflet-popup-content .grob-popup-osoby { font-size: 0.8125rem; color: #2d3b2c; margin-top: 6px; border-top: 1px solid #ebe3d0; padding-top: 6px; }
     .leaflet-popup-content a { color: #2e4430; text-decoration: underline; font-size: 0.8125rem; display: inline-block; margin-top: 6px; }
-    .edytor-pasek { background: #fff5d6; border: 1px solid #e6c97a; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 0.75rem; font-size: 0.875rem; }
-    .edytor-pasek .pole { margin-right: 0.75rem; }
-    .edytor-pasek input { padding: 0.25rem 0.5rem; border: 1px solid #c9a96a; border-radius: 0.25rem; font-family: 'Inter', sans-serif; }
+    .edytor-pasek { background: #fff5d6; border: 1px solid #e6c97a; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 0.75rem; font-size: 0.875rem; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+    .edytor-pasek input, .edytor-pasek select { padding: 0.25rem 0.5rem; border: 1px solid #c9a96a; border-radius: 0.25rem; font-family: 'Inter', sans-serif; background: #fff; }
     .edytor-pasek button { padding: 0.25rem 0.75rem; background: #2e4430; color: white; border-radius: 0.25rem; cursor: pointer; }
-    .edytor-pasek .status { margin-left: 0.75rem; color: #4c6b4a; }
+    .edytor-pasek button.drugorzedny { background: #fff; color: #2e4430; border: 1px solid #c9a96a; }
+    .edytor-pasek .status { color: #4c6b4a; flex-basis: 100%; }
 </style>
 
 <section class="max-w-6xl mx-auto px-4 py-10">
     <div class="mb-6">
         <div class="text-xs uppercase tracking-widest text-accent-600 mb-2">Mapa</div>
         <h1 class="font-serif text-4xl text-primary-900 mb-2">Plan cmentarza</h1>
-        <p class="text-primary-600">Wpisz imię i nazwisko pochowanej osoby — pokażemy na planie, gdzie znajduje się jej grób.</p>
+        <p class="text-primary-600">Wpisz imię i nazwisko pochowanej osoby — pokażemy na planie, gdzie znajduje się jej grób i jak do niego dojść od bramy.</p>
     </div>
 
     <div class="bg-white border border-cream-200 rounded-lg shadow-soft p-5 mb-6 no-print">
@@ -40,8 +40,10 @@
             <ul id="wyniki-szukania" style="z-index:1000" class="absolute left-0 right-0 mt-1 bg-white border border-cream-200 rounded shadow-soft max-h-80 overflow-y-auto" hidden></ul>
         </div>
         <div id="szukaj-info" class="mt-2 text-sm text-primary-500">Wpisz co najmniej 2 znaki.</div>
-        <div class="mt-3 text-sm">
+        <div class="mt-3 text-sm flex flex-wrap items-center gap-x-5 gap-y-1">
             <button type="button" id="btn-caly-plan" class="text-primary-700 hover:underline">…lub pokaż cały plan cmentarza</button>
+            <button type="button" id="btn-offline" class="text-primary-700 hover:underline" hidden>📥 Zapisz mapę w telefonie (bez zasięgu)</button>
+            <span id="offline-status" class="text-primary-500" role="status"></span>
         </div>
     </div>
 
@@ -78,13 +80,33 @@
     </form>
 
     {% if tryb_edycji %}
-    <div class="edytor-pasek">
+    <div class="edytor-pasek no-print">
         <strong>Tryb edycji:</strong>
-        <span class="pole">ID grobu: <input type="number" id="grob-id" min="1" placeholder="np. 12" style="width: 90px;"></span>
-        <span class="pole"><label><input type="checkbox" id="tryb-klikania"> klikaj, aby zaznaczyć</label></span>
-        <span class="status" id="edytor-status">Wpisz ID grobu i włącz klikanie. Każde kliknięcie zapisuje pozycję.</span>
+        <select id="tryb-edycji" aria-label="Co edytować">
+            <option value="">— wyłączony —</option>
+            <option value="grob">Pozycja grobu</option>
+            <option value="alejka">Rysuj alejkę</option>
+            <option value="brama">Wstaw bramę</option>
+        </select>
+        <span data-tryb="grob">ID grobu: <input type="number" id="grob-id" min="1" placeholder="np. 12" style="width: 90px;"></span>
+        <span data-tryb="alejka">
+            Nazwa: <input type="text" id="alejka-nazwa" maxlength="100" placeholder="np. Aleja główna" style="width: 170px;">
+            <button type="button" id="alejka-zapisz">Zapisz alejkę</button>
+            <button type="button" id="alejka-cofnij" class="drugorzedny">Cofnij punkt</button>
+        </span>
+        <span data-tryb="brama">Nazwa: <input type="text" id="brama-nazwa" maxlength="100" value="Brama główna" style="width: 170px;"></span>
+        <span class="status" id="edytor-status"></span>
     </div>
     {% endif %}
+
+    <div id="panel-trasy" class="bg-white border border-cream-200 rounded-lg shadow-soft p-5 mb-4" hidden>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="font-serif text-2xl text-primary-900">🧭 Jak dojść do grobu</h2>
+            <div id="trasa-podsumowanie" class="text-sm font-medium text-primary-700"></div>
+        </div>
+        <ol id="trasa-kroki" class="mt-3 space-y-1.5 text-primary-800 list-decimal list-inside"></ol>
+        <p id="trasa-uwaga" class="mt-3 text-xs text-primary-500"></p>
+    </div>
 
     <div class="bg-white rounded-lg shadow-soft border border-cream-200 p-3 mb-4">
         <div id="mapa"></div>
@@ -111,6 +133,10 @@
     const planW    = {{ plan_w|default:0 }};
     const planH    = {{ plan_h|default:0 }};
     const trybEdycji = {{ tryb_edycji|yesno:"true,false" }};
+    const graf = {{ graf_json|safe }};        // sieć alejek: {wezly: [[x,y]], krawedzie: [[i,j,nazwa]]}
+    const bramy = {{ bramy_json|safe }};
+    const alejki = {{ alejki_json|safe }};    // surowe łamane — tylko dla staffu
+    const M_NA_PX = {{ metry_na_px_json|safe }};
 
     let mapa = null, grupa = null;
     const markeryPoId = {};
@@ -118,6 +144,185 @@
     // plan_x/plan_y to piksele obrazu liczone od górnego-lewego rogu, a w CRS.Simple
     // oś Y rośnie w górę (obraz rozpięty na [[0,0],[planH,planW]]) — trzeba odwrócić Y.
     function naMape(x, y) { return [planH - y, x]; }
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ---------- Wskazówki dojścia ----------
+
+    function odl(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+
+    function rzut(p, a, b) {
+        const dx = b[0] - a[0], dy = b[1] - a[1], dl2 = dx * dx + dy * dy;
+        let t = dl2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / dl2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        const x = a[0] + t * dx, y = a[1] + t * dy;
+        return { t, x, y, d: Math.hypot(p[0] - x, p[1] - y) };
+    }
+
+    // Najkrótsza droga od najbliższej bramy do grobu (Dijkstra po grafie alejek).
+    // Grób i bramy podpinamy do najbliższego punktu na alejce. Zwraca punkty w kolejności marszu;
+    // punkty[n].nazwa to alejka odcinka od punktu n do n+1.
+    function wyznaczTrase(cel) {
+        if (!bramy.length) return null;
+        const W = graf.wezly.map(w => [w[0], w[1]]);
+        const K = graf.krawedzie;
+        const rzutyNaKrawedz = K.map(() => []);
+        const dojscia = [];
+
+        function podepnij(p) {
+            const i = W.push([p[0], p[1]]) - 1;
+            let najlepszy = null, nrK = -1;
+            K.forEach(([a, b], k) => {
+                const r = rzut(p, W[a], W[b]);
+                if (!najlepszy || r.d < najlepszy.d) { najlepszy = r; nrK = k; }
+            });
+            if (najlepszy) {
+                const j = W.push([najlepszy.x, najlepszy.y]) - 1;
+                rzutyNaKrawedz[nrK].push({ t: najlepszy.t, j });
+                dojscia.push([i, j]);
+            }
+            return i;
+        }
+        const iCel = podepnij(cel);
+        const iBram = bramy.map(b => podepnij([b.x, b.y]));
+
+        const sasiedzi = W.map(() => []);
+        function polacz(i, j, nazwa) {
+            const d = odl(W[i], W[j]);
+            sasiedzi[i].push({ j, d, nazwa });
+            sasiedzi[j].push({ j: i, d, nazwa });
+        }
+        // Krawędź z podpiętymi punktami dzielimy na łańcuch a → rzuty (wg położenia) → b.
+        K.forEach(([a, b, nazwa], k) => {
+            const lancuch = [a, ...rzutyNaKrawedz[k].sort((u, v) => u.t - v.t).map(r => r.j), b];
+            for (let n = 1; n < lancuch.length; n++) polacz(lancuch[n - 1], lancuch[n], nazwa);
+        });
+        dojscia.forEach(([i, j]) => polacz(i, j, ''));
+        if (!K.length) iBram.forEach(i => polacz(i, iCel, ''));   // bez alejek: kierunek w linii prostej
+
+        // Jedno przejście Dijkstry od grobu daje odległości do wszystkich bram naraz.
+        const dyst = W.map(() => Infinity), poprz = W.map(() => -1), przez = W.map(() => '');
+        const gotowe = W.map(() => false);
+        dyst[iCel] = 0;
+        for (;;) {
+            let u = -1;
+            for (let n = 0; n < W.length; n++) {
+                if (!gotowe[n] && dyst[n] < Infinity && (u < 0 || dyst[n] < dyst[u])) u = n;
+            }
+            if (u < 0) break;
+            gotowe[u] = true;
+            sasiedzi[u].forEach(({ j, d, nazwa }) => {
+                if (dyst[u] + d < dyst[j]) { dyst[j] = dyst[u] + d; poprz[j] = u; przez[j] = nazwa; }
+            });
+        }
+        let nrBramy = -1;
+        iBram.forEach((i, n) => {
+            if (dyst[i] < Infinity && (nrBramy < 0 || dyst[i] < dyst[iBram[nrBramy]])) nrBramy = n;
+        });
+        if (nrBramy < 0) return null;
+        // Poprzedniki prowadzą od bramy w stronę grobu — to od razu kolejność marszu.
+        const punkty = [];
+        for (let v = iBram[nrBramy]; v >= 0; v = poprz[v]) punkty.push({ p: W[v], nazwa: przez[v] });
+        return { brama: bramy[nrBramy], punkty, dlugosc: dyst[iBram[nrBramy]] };
+    }
+
+    function metry(px) {
+        const m = px * M_NA_PX;
+        return m < 10 ? Math.max(1, Math.round(m)) + ' m' : Math.round(m / 5) * 5 + ' m';
+    }
+
+    // Oś Y obrazu rośnie w dół, więc dodatni iloczyn wektorowy oznacza skręt w prawo.
+    function kat(v1, v2) {
+        const cross = v1[0] * v2[1] - v1[1] * v2[0];
+        const stopnie = Math.atan2(Math.abs(cross), v1[0] * v2[0] + v1[1] * v2[1]) * 180 / Math.PI;
+        return { stopnie, prawo: cross > 0 };
+    }
+
+    function opiszTrase(trasa) {
+        const pts = trasa.punkty;
+        if (!graf.krawedzie.length) {
+            return ['Od bramy „' + trasa.brama.nazwa + '” grób jest ok. ' + metry(trasa.dlugosc) + ' w linii prostej — kieruj się według mapy.'];
+        }
+        const odcinki = [];
+        for (let n = 0; n + 1 < pts.length; n++) {
+            const a = pts[n].p, b = pts[n + 1].p, dl = odl(a, b);
+            if (dl < 0.5) continue;
+            odcinki.push({ dl, nazwa: pts[n].nazwa, v: [(b[0] - a[0]) / dl, (b[1] - a[1]) / dl] });
+        }
+        if (!odcinki.length) return ['Grób znajduje się tuż przy bramie.'];
+        const doGrobu = odcinki.length > 1 ? odcinki.pop() : null;   // zejście z alejki do nagrobka
+
+        // Scalamy kolejne odcinki tej samej alejki; bezimienne — gdy biegną prawie prosto.
+        const etapy = [];
+        odcinki.forEach(o => {
+            const ost = etapy[etapy.length - 1];
+            if (ost && o.nazwa === ost.nazwa && (o.nazwa || kat(ost.vKon, o.v).stopnie < 30)) {
+                ost.dl += o.dl;
+                ost.vKon = o.v;
+            } else {
+                etapy.push({ nazwa: o.nazwa, dl: o.dl, vPocz: o.v, vKon: o.v });
+            }
+        });
+        while (etapy.length > 1 && etapy[0].dl * M_NA_PX < 3) etapy.shift();   // krótkie podejście od bramy
+
+        const alejka = n => n ? 'alejką „' + n + '”' : 'alejką';
+        const kroki = etapy.map((e, n) => {
+            if (n === 0) return 'Wejdź przez: ' + trasa.brama.nazwa + ' i idź ' + alejka(e.nazwa) + ' ok. ' + metry(e.dl) + '.';
+            const k = kat(etapy[n - 1].vKon, e.vPocz);
+            let zwrot;
+            if (k.stopnie < 30) zwrot = 'Idź dalej prosto';
+            else if (k.stopnie > 150) zwrot = 'Zawróć i idź';
+            else zwrot = (k.stopnie < 60 ? 'Skręć lekko ' : 'Skręć ') + (k.prawo ? 'w prawo' : 'w lewo') + ' i idź';
+            return zwrot + ' ' + alejka(e.nazwa) + ' ok. ' + metry(e.dl) + '.';
+        });
+        if (doGrobu) {
+            const k = kat(etapy[etapy.length - 1].vKon, doGrobu.v);
+            const strona = (k.stopnie < 20 || k.stopnie > 160) ? '' : (k.prawo ? ' po prawej stronie' : ' po lewej stronie');
+            kroki.push('Grób jest' + strona + ', ok. ' + metry(doGrobu.dl) + ' od alejki.');
+        }
+        return kroki;
+    }
+
+    let warstwaTrasy = null;
+    const panelTrasy = document.getElementById('panel-trasy');
+
+    function ukryjTrase() {
+        if (warstwaTrasy) { mapa.removeLayer(warstwaTrasy); warstwaTrasy = null; }
+        panelTrasy.hidden = true;
+    }
+
+    function pokazTrase(g) {
+        ukryjTrase();
+        const trasa = wyznaczTrase([g.x, g.y]);
+        if (!trasa) return null;
+        const linia = trasa.punkty.map(t => naMape(t.p[0], t.p[1]));
+        warstwaTrasy = L.featureGroup([
+            L.polyline(linia, { color: '#fff', weight: 9, opacity: 0.9, interactive: false }),
+            L.polyline(linia, { color: '#1d4ed8', weight: 5, dashArray: '10 8', interactive: false }),
+            L.circleMarker(naMape(trasa.brama.x, trasa.brama.y), {
+                radius: 9, color: '#fff', weight: 2, fillColor: '#15803d', fillOpacity: 1,
+            }).bindTooltip(esc(trasa.brama.nazwa), { permanent: true, direction: 'top', offset: [0, -8] }),
+        ]).addTo(mapa);
+
+        const minuty = Math.max(1, Math.round(trasa.dlugosc * M_NA_PX / 70));
+        document.getElementById('trasa-podsumowanie').textContent = 'ok. ' + metry(trasa.dlugosc) + ' · ' + minuty + ' min pieszo';
+        const lista = document.getElementById('trasa-kroki');
+        lista.innerHTML = '';
+        opiszTrase(trasa).forEach(t => {
+            const li = document.createElement('li');
+            li.textContent = t;
+            lista.appendChild(li);
+        });
+        document.getElementById('trasa-uwaga').textContent = graf.krawedzie.length
+            ? 'Odległości są przybliżone — liczone ze skanu planu.'
+            : 'Alejki nie są jeszcze wyrysowane na planie, dlatego pokazujemy kierunek w linii prostej.';
+        panelTrasy.hidden = false;
+        return warstwaTrasy;
+    }
+
+    // ---------- Mapa ----------
 
     // Mapa inicjowana dopiero po odsłonięciu kontenera (Leaflet źle liczy rozmiar ukrytego diva).
     function initMapa() {
@@ -228,26 +433,116 @@
     if (trybEdycji) {
         const csrf = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
         const status = document.getElementById('edytor-status');
+        const wyborTrybu = document.getElementById('tryb-edycji');
         const idInput = document.getElementById('grob-id');
-        const tryb = document.getElementById('tryb-klikania');
+        const warstwaSieci = L.featureGroup().addTo(mapa);
+        const wierzcholki = [];   // punkty istniejących alejek — nowe kliknięcia się do nich przyciągają
 
-        mapa.on('click', function(e) {
-            if (!tryb.checked) return;
-            const id = parseInt(idInput.value, 10);
-            if (!id) { status.textContent = 'Najpierw wpisz ID grobu.'; return; }
-            const x = e.latlng.lng, y = planH - e.latlng.lat;
-            status.textContent = 'Zapisuję pozycję grobu ' + id + '…';
-            fetch('{% url "groby:zapisz_pozycje" %}', {
+        function wyslij(url, dane) {
+            return fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
-                body: JSON.stringify({grob_id: id, x: x, y: y}),
-            }).then(r => r.json()).then(d => {
-                if (d.ok) {
-                    status.textContent = 'Zapisano: ' + d.tytul + '. Wpisz kolejne ID i klikaj.';
-                    L.marker(e.latlng, { icon: ikonaGrobu }).addTo(grupa).bindPopup(d.tytul);
-                } else {
-                    status.textContent = 'Błąd: ' + (d.error || 'nieznany');
-                }
+                body: JSON.stringify(dane),
+            }).then(r => r.json());
+        }
+        const naPlan = latlng => [latlng.lng, planH - latlng.lat];
+
+        function narysujAlejke(a) {
+            const linia = L.polyline(a.punkty.map(p => naMape(p[0], p[1])), { color: '#7c3aed', weight: 4, opacity: 0.85 });
+            linia.bindPopup('<strong>' + esc(a.nazwa) + '</strong><br><button type="button" data-usun style="color:#b3261e;text-decoration:underline">Usuń alejkę</button>');
+            linia.on('popupopen', ev => {
+                ev.popup.getElement().querySelector('[data-usun]').onclick = () => {
+                    if (!confirm('Usunąć alejkę „' + a.nazwa + '”?')) return;
+                    wyslij('{% url "groby:usun_alejke" 0 %}'.replace('/0/', '/' + a.id + '/'), {}).then(d => {
+                        if (!d.ok) { status.textContent = 'Błąd: ' + (d.error || 'nieznany'); return; }
+                        warstwaSieci.removeLayer(linia);
+                        status.textContent = 'Usunięto alejkę. Odśwież stronę, aby trasy uwzględniły zmianę.';
+                    });
+                };
+            });
+            warstwaSieci.addLayer(linia);
+            a.punkty.forEach(p => wierzcholki.push(p));
+        }
+        function narysujBrame(b) {
+            warstwaSieci.addLayer(L.circleMarker(naMape(b.x, b.y), {
+                radius: 8, color: '#fff', weight: 2, fillColor: '#15803d', fillOpacity: 1,
+            }).bindTooltip(esc(b.nazwa)));
+        }
+        alejki.forEach(narysujAlejke);
+        bramy.forEach(narysujBrame);
+
+        let rysowana = [], liniaRysowana = null;
+        function odswiezRysowana() {
+            if (liniaRysowana) warstwaSieci.removeLayer(liniaRysowana);
+            liniaRysowana = rysowana.length
+                ? L.polyline(rysowana.map(p => naMape(p[0], p[1])), { color: '#7c3aed', weight: 4, dashArray: '6 6' }).addTo(warstwaSieci)
+                : null;
+            if (wyborTrybu.value === 'alejka') status.textContent = 'Punktów: ' + rysowana.length + '. Klikaj wzdłuż alejki, potem „Zapisz alejkę”.';
+        }
+        function przyciagnij(latlng) {
+            const klik = mapa.latLngToContainerPoint(latlng);
+            let najblizszy = null, minOdl = 14;   // px ekranu
+            wierzcholki.concat(rysowana).forEach(p => {
+                const d = klik.distanceTo(mapa.latLngToContainerPoint(naMape(p[0], p[1])));
+                if (d < minOdl) { minOdl = d; najblizszy = p; }
+            });
+            return najblizszy ? [najblizszy[0], najblizszy[1]] : naPlan(latlng);
+        }
+
+        const PODPOWIEDZI = {
+            '': 'Wybierz, co chcesz edytować.',
+            grob: 'Wpisz ID grobu i klikaj na planie — każde kliknięcie zapisuje pozycję.',
+            alejka: 'Klikaj kolejne punkty wzdłuż alejki (przyciągają się do istniejących — tak powstają skrzyżowania), potem „Zapisz alejkę”.',
+            brama: 'Kliknij na planie miejsce bramy wejściowej.',
+        };
+        wyborTrybu.addEventListener('change', () => {
+            document.querySelectorAll('[data-tryb]').forEach(el => { el.hidden = el.dataset.tryb !== wyborTrybu.value; });
+            status.textContent = PODPOWIEDZI[wyborTrybu.value];
+        });
+        wyborTrybu.dispatchEvent(new Event('change'));
+
+        mapa.on('click', function(e) {
+            const tryb = wyborTrybu.value;
+            if (tryb === 'grob') {
+                const id = parseInt(idInput.value, 10);
+                if (!id) { status.textContent = 'Najpierw wpisz ID grobu.'; return; }
+                const [x, y] = naPlan(e.latlng);
+                status.textContent = 'Zapisuję pozycję grobu ' + id + '…';
+                wyslij('{% url "groby:zapisz_pozycje" %}', {grob_id: id, x: x, y: y}).then(d => {
+                    if (d.ok) {
+                        status.textContent = 'Zapisano: ' + d.tytul + '. Wpisz kolejne ID i klikaj.';
+                        L.marker(e.latlng, { icon: ikonaGrobu }).addTo(grupa).bindPopup(d.tytul);
+                    } else {
+                        status.textContent = 'Błąd: ' + (d.error || 'nieznany');
+                    }
+                }).catch(err => { status.textContent = 'Błąd sieci: ' + err; });
+            } else if (tryb === 'alejka') {
+                rysowana.push(przyciagnij(e.latlng));
+                odswiezRysowana();
+            } else if (tryb === 'brama') {
+                const [x, y] = naPlan(e.latlng);
+                const nazwa = document.getElementById('brama-nazwa').value.trim() || 'Brama';
+                wyslij('{% url "groby:zapisz_brame" %}', {nazwa: nazwa, x: x, y: y}).then(d => {
+                    if (!d.ok) { status.textContent = 'Błąd: ' + (d.error || 'nieznany'); return; }
+                    const b = {id: d.id, nazwa: d.nazwa, x: x, y: y};
+                    bramy.push(b);
+                    narysujBrame(b);
+                    status.textContent = 'Zapisano bramę „' + d.nazwa + '”.';
+                }).catch(err => { status.textContent = 'Błąd sieci: ' + err; });
+            }
+        });
+
+        document.getElementById('alejka-cofnij').addEventListener('click', () => { rysowana.pop(); odswiezRysowana(); });
+        document.getElementById('alejka-zapisz').addEventListener('click', () => {
+            if (rysowana.length < 2) { status.textContent = 'Alejka potrzebuje co najmniej 2 punktów.'; return; }
+            const punkty = rysowana;
+            wyslij('{% url "groby:zapisz_alejke" %}', {nazwa: document.getElementById('alejka-nazwa').value, punkty: punkty}).then(d => {
+                if (!d.ok) { status.textContent = 'Błąd: ' + (d.error || 'nieznany'); return; }
+                narysujAlejke({id: d.id, nazwa: d.nazwa, punkty: punkty});
+                rysowana = [];
+                odswiezRysowana();
+                document.getElementById('alejka-nazwa').value = '';
+                status.textContent = 'Zapisano „' + d.nazwa + '”. Rysuj kolejną; po skończeniu odśwież stronę, aby przeliczyć trasy.';
             }).catch(err => { status.textContent = 'Błąd sieci: ' + err; });
         });
     }
@@ -260,10 +555,6 @@
     const szukajInfo = document.getElementById('szukaj-info');
     let znacznikWybranego = null;
 
-    function esc(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
     function pokazMape() {
         sekcjaMapy.hidden = false;
         initMapa();
@@ -272,9 +563,10 @@
 
     function usunWybrany() {
         if (znacznikWybranego) { mapa.removeLayer(znacznikWybranego); znacznikWybranego = null; }
+        ukryjTrase();
     }
 
-    // Wyszukany grób: na planie tylko jego znacznik (bez pozostałych punktów), przybliżony i z otwartym opisem.
+    // Wyszukany grób: na planie tylko jego znacznik i trasa od bramy, z otwartym opisem.
     function pokazGrob(g) {
         pokazMape();
         usunWybrany();
@@ -301,9 +593,31 @@
             }),
             marker,
         ]).addTo(mapa);
-        mapa.setView(pozycja, 1, { animate: false });
+        const trasa = pokazTrase(g);
+        if (trasa) {
+            mapa.fitBounds(trasa.getBounds().extend(pozycja), { padding: [40, 40], maxZoom: 1, animate: false });
+        } else {
+            mapa.setView(pozycja, 1, { animate: false });
+        }
         marker.openPopup();
         sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ---------- Wyszukiwarka (online przez API, offline po danych osadzonych w stronie) ----------
+
+    function normalizuj(s) {
+        return String(s || '').toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/[̀-ͯ]/g, '');
+    }
+
+    function szukajLokalnie(q) {
+        const slowa = normalizuj(q).split(/\s+/).filter(Boolean);
+        return groby
+            .filter(g => {
+                const tekst = normalizuj(g.osoby.join(' ') + ' ' + g.numer);
+                return slowa.every(s => tekst.includes(s));
+            })
+            .slice(0, 30)
+            .map(g => ({ ...g, osoby: g.osoby.join(', ') || '—' }));
     }
 
     let ostatnieWyniki = [];
@@ -337,6 +651,11 @@
         listaWynikow.hidden = false;
     }
 
+    function wynikiOffline(q) {
+        renderujWyniki(szukajLokalnie(q));
+        szukajInfo.textContent += ' (bez zasięgu — szukam w danych zapisanych w telefonie)';
+    }
+
     poleSzukaj.addEventListener('input', function () {
         clearTimeout(timerSzukania);
         const q = poleSzukaj.value.trim();
@@ -348,10 +667,11 @@
         szukajInfo.textContent = 'Szukam…';
         timerSzukania = setTimeout(function () {
             const nr = ++nrZapytania;
+            if (!navigator.onLine) { wynikiOffline(q); return; }
             fetch('{% url "groby:szukaj_na_mapie" %}?q=' + encodeURIComponent(q))
-                .then(r => r.json())
+                .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
                 .then(d => { if (nr === nrZapytania) renderujWyniki(d.wyniki || []); })
-                .catch(() => { szukajInfo.textContent = 'Błąd wyszukiwania. Spróbuj ponownie.'; });
+                .catch(() => { if (nr === nrZapytania) wynikiOffline(q); });
         }, 250);
     });
 
@@ -376,10 +696,41 @@
         sekcjaMapy.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
+    // ---------- Tryb offline (PWA) ----------
+    (function () {
+        const btn = document.getElementById('btn-offline');
+        const info = document.getElementById('offline-status');
+        if (!('serviceWorker' in navigator)) return;
+        btn.hidden = false;
+        btn.addEventListener('click', function () {
+            info.textContent = 'Zapisuję mapę…';
+            // Wszystkie skrypty, style i czcionki tej strony + skan planu (mógł jeszcze nie być wczytany).
+            const adresy = performance.getEntriesByType('resource')
+                .filter(e => ['script', 'link', 'css', 'img'].includes(e.initiatorType))
+                .map(e => e.name);
+            if (planUrl) adresy.push(new URL(planUrl, location.href).href);
+            navigator.serviceWorker.ready.then(function (reg) {
+                const kanal = new MessageChannel();
+                kanal.port1.onmessage = function (e) {
+                    info.textContent = e.data.ok
+                        ? '✓ Gotowe — mapa, wyszukiwarka i trasy zadziałają bez zasięgu.'
+                        : 'Zapisano ' + e.data.zapisano + ' plików, ' + e.data.bledy + ' się nie udało. Spróbuj ponownie przy lepszym zasięgu.';
+                };
+                reg.active.postMessage({ typ: 'zapisz-offline', adresy: adresy }, [kanal.port2]);
+            });
+        });
+        function stanPolaczenia() {
+            info.textContent = navigator.onLine ? '' : 'Brak zasięgu — wyszukiwanie działa na danych zapisanych w telefonie.';
+        }
+        window.addEventListener('online', stanPolaczenia);
+        window.addEventListener('offline', stanPolaczenia);
+        if (!navigator.onLine) stanPolaczenia();
+    })();
+
     // Aktywne filtry — mapa widoczna od razu
     if (!sekcjaMapy.hidden) initMapa();
 
-    // Skok do konkretnego grobu po hashu, np. #g123
+    // Skok do konkretnego grobu po hashu, np. #g123 (link „Jak dojść” z karty grobu)
     (function () {
         const m = (location.hash || '').match(/^#g(\d+)/);
         if (!m) return;

@@ -24,7 +24,11 @@ from .models import (
     EtykietaOsoby, WydarzenieParafialne,
     Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
     WpisLapidarium, ModlitwaDziennie,
+    ZadanieTranskrypcji, ProponowanaTranskrypcja, GlosTranskrypcja,
+    ArchiwalneZdjecie, OgloszenieGenealogiczne,
+    Alejka, Brama,
 )
+from .nawigacja import zbuduj_graf
 
 
 SZYDLOW_CENTRUM = (50.5847, 20.8327)
@@ -249,7 +253,44 @@ def statystyki(request):
     dekady_counter = Counter()
     for ds in Osoba.objects.filter(data_smierci__isnull=False).values_list('data_smierci', flat=True):
         dekady_counter[(ds.year // 10) * 10] += 1
-    dekady = [{'label': f'{d}.', 'value': v} for d, v in sorted(dekady_counter.items())]
+    dekady, narastajaco = [], 0
+    for d, v in sorted(dekady_counter.items()):
+        narastajaco += v
+        dekady.append({'label': f'{d}.', 'value': v, 'narastajaco': narastajaco})
+
+    # Pochówki w dekadach z podziałem na sektory — jak cmentarz się zapełniał.
+    wszystkie_dekady = sorted(dekady_counter)
+    dekady_sektory = defaultdict(Counter)
+    for nazwa, ds in Osoba.objects.filter(data_smierci__isnull=False).values_list('grob__sektor__nazwa', 'data_smierci'):
+        dekady_sektory[nazwa][(ds.year // 10) * 10] += 1
+    dekady_sektory_dane = {
+        'labels': [f'{d}.' for d in wszystkie_dekady],
+        'serie': [
+            {'label': f'Sektor {n}', 'data': [c.get(d, 0) for d in wszystkie_dekady]}
+            for n, c in sorted(dekady_sektory.items())
+        ],
+    }
+
+    # Zajętość kwater: grób zajęty = ma w bazie co najmniej jedną pochowaną osobę.
+    from django.db.models import Max
+    zajetosc = []
+    for s in Sektor.objects.annotate(
+        groby_lacznie=Count('groby', distinct=True),
+        groby_zajete=Count('groby', filter=Q(groby__osoby__isnull=False), distinct=True),
+        pochowanych=Count('groby__osoby', distinct=True),
+        ostatni=Max('groby__osoby__data_smierci'),
+    ).order_by('nazwa'):
+        pojemnosc = s.liczba_miejsc or s.groby_lacznie
+        zajetosc.append({
+            'sektor': s.nazwa,
+            'pojemnosc': pojemnosc,
+            'szacowana': not s.liczba_miejsc,
+            'zajete': s.groby_zajete,
+            'wolne': max(pojemnosc - s.groby_zajete, 0),
+            'pochowanych': s.pochowanych,
+            'procent': round(100 * s.groby_zajete / pojemnosc, 1) if pojemnosc else 0,
+            'ostatni_rok': s.ostatni.year if s.ostatni else None,
+        })
 
     wieki = []
     for o in Osoba.objects.filter(data_urodzenia__isnull=False, data_smierci__isnull=False):
@@ -280,6 +321,9 @@ def statystyki(request):
         'osob_na_grob_json': json.dumps(osob_na_grob, ensure_ascii=False),
         'heatmapa_json': json.dumps(heatmapa_dane, ensure_ascii=False),
         'miesiace_json': json.dumps(miesiace, ensure_ascii=False),
+        'dekady_sektory_json': json.dumps(dekady_sektory_dane, ensure_ascii=False),
+        'zajetosc': zajetosc,
+        'zajetosc_json': json.dumps(zajetosc, ensure_ascii=False),
         'sredni_wiek': sredni_wiek,
         'najstarsza': najstarsza,
         'najmlodsza': najmlodsza,
@@ -345,7 +389,19 @@ def mapa(request):
 
     tryb_edycji = request.user.is_authenticated and request.user.is_staff
 
+    alejki = list(Alejka.objects.order_by('pk'))
+    graf = zbuduj_graf((a.nazwa, a.punkty) for a in alejki)
+    bramy = [
+        {'id': b.pk, 'nazwa': b.nazwa, 'x': b.plan_x, 'y': b.plan_y}
+        for b in Brama.objects.order_by('nazwa')
+    ]
+    alejki_edytor = [{'id': a.pk, 'nazwa': str(a), 'punkty': a.punkty} for a in alejki] if tryb_edycji else []
+
     context = {
+        'graf_json': json.dumps(graf),
+        'bramy_json': json.dumps(bramy, ensure_ascii=False),
+        'alejki_json': json.dumps(alejki_edytor, ensure_ascii=False),
+        'metry_na_px_json': json.dumps(getattr(settings, 'PLAN_METRY_NA_PIKSEL', 0.0125)),
         'groby_json': json.dumps(dane, ensure_ascii=False),
         'liczba': len(dane),
         'liczba_wszystkich': Grob.objects.count(),
@@ -390,6 +446,55 @@ def zapisz_pozycje(request):
     grob.save(update_fields=['plan_x', 'plan_y', 'data_modyfikacji'])
     tytul = f'{grob.sektor.nazwa}/{grob.rzad}/{grob.numer}' if grob.rzad else f'{grob.sektor.nazwa}/{grob.numer}'
     return JsonResponse({'ok': True, 'tytul': tytul, 'id': grob.id})
+
+
+def _json_staff(request):
+    """Wczytuje JSON z POST-a staffu; zwraca (payload, None) albo (None, odpowiedź błędu)."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return None, JsonResponse({'ok': False, 'error': 'Brak uprawnień'}, status=403)
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        payload = None
+    if not isinstance(payload, dict):
+        return None, JsonResponse({'ok': False, 'error': 'Nieprawidłowe dane'}, status=400)
+    return payload, None
+
+
+@require_POST
+def zapisz_alejke(request):
+    payload, blad = _json_staff(request)
+    if blad:
+        return blad
+    try:
+        punkty = [[float(p[0]), float(p[1])] for p in payload.get('punkty') or []]
+    except (ValueError, TypeError, IndexError, KeyError):
+        return JsonResponse({'ok': False, 'error': 'Nieprawidłowe punkty'}, status=400)
+    if len(punkty) < 2:
+        return JsonResponse({'ok': False, 'error': 'Alejka musi mieć co najmniej 2 punkty'}, status=400)
+    alejka = Alejka.objects.create(nazwa=str(payload.get('nazwa') or '').strip()[:100], punkty=punkty)
+    return JsonResponse({'ok': True, 'id': alejka.pk, 'nazwa': str(alejka)})
+
+
+@require_POST
+def usun_alejke(request, pk):
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'ok': False, 'error': 'Brak uprawnień'}, status=403)
+    get_object_or_404(Alejka, pk=pk).delete()
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+def zapisz_brame(request):
+    payload, blad = _json_staff(request)
+    if blad:
+        return blad
+    try:
+        x, y = float(payload.get('x')), float(payload.get('y'))
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Nieprawidłowa pozycja'}, status=400)
+    brama = Brama.objects.create(nazwa=str(payload.get('nazwa') or '').strip()[:100] or 'Brama', plan_x=x, plan_y=y)
+    return JsonResponse({'ok': True, 'id': brama.pk, 'nazwa': brama.nazwa})
 
 
 def osoba_detail(request, pk):
@@ -1901,37 +2006,119 @@ def manifest(request):
 
 def service_worker(request):
     sw = """
-const CACHE = 'groby-v1';
-const ASSETY = ['/', '/szukaj/', '/sektory/', '/o-cmentarzu/', '/manifest.webmanifest'];
+// Strony: najpierw sieć (świeże dane), przy braku zasięgu kopia z pamięci.
+// Skrypty, style, skan planu: najpierw pamięć. Mapa zapisywana na żądanie z /mapa/.
+const CACHE = 'groby-v2';
+const ASSETY = ['/', '/mapa/', '/szukaj/', '/sektory/', '/o-cmentarzu/', '/manifest.webmanifest'];
+const POMIJANE = ['/admin', '/staff', '/api', '/sw.js', '/mapa/szukaj', '/mapa/alejki', '/mapa/bramy', '/health', '/logowanie', '/wylogowanie'];
+const CDN = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'd3js.org'];
+
 self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETY)).then(() => self.skipWaiting()));
+    e.waitUntil(caches.open(CACHE)
+        .then(c => Promise.all(ASSETY.map(u => c.add(u).catch(() => null))))
+        .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
     e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
+
+function stronaOffline() {
+    return new Response(
+        '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>Brak zasięgu</title><body style="font-family:sans-serif;padding:2rem;background:#fbf9f4;color:#1a2719">' +
+        '<h1>Brak zasięgu</h1><p>Ta strona nie została zapisana w telefonie.</p>' +
+        '<p><a href="/mapa/">Otwórz mapę cmentarza</a> — jeśli była zapisana, działa bez internetu.</p>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+async function najpierwSiec(req) {
+    const siec = fetch(req).then(r => {
+        if (r.ok) { const k = r.clone(); caches.open(CACHE).then(c => c.put(req, k)); }
+        return r;
+    });
+    siec.catch(() => null);
+    // Słaby zasięg na cmentarzu: po 4 s bierzemy kopię, jeśli jest.
+    const limit = new Promise(res => setTimeout(res, 4000, null));
+    try {
+        const r = await Promise.race([siec, limit]);
+        if (r) return r;
+    } catch (err) {}
+    const sciezka = new URL(req.url).pathname;
+    const kopia = await caches.match(req) || (sciezka.startsWith('/mapa') ? await caches.match('/mapa/') : null);
+    if (kopia) return kopia;
+    try { return await siec; } catch (err) { return stronaOffline(); }
+}
+
+async function najpierwCache(req) {
+    const kopia = await caches.match(req);
+    if (kopia) return kopia;
+    const r = await fetch(req);
+    if (r.ok || r.type === 'opaque') { const k = r.clone(); caches.open(CACHE).then(c => c.put(req, k)); }
+    return r;
+}
+
 self.addEventListener('fetch', e => {
-    if (e.request.method !== 'GET') return;
-    const u = new URL(e.request.url);
-    if (u.pathname.startsWith('/admin') || u.pathname.startsWith('/staff') || u.pathname.startsWith('/api')) return;
-    e.respondWith(
-        caches.match(e.request).then(c => c || fetch(e.request).then(r => {
-            if (r.ok && (r.type === 'basic' || r.type === 'cors')) {
-                const kopia = r.clone();
-                caches.open(CACHE).then(cc => cc.put(e.request, kopia));
-            }
-            return r;
-        }).catch(() => caches.match('/')))
-    );
+    const req = e.request;
+    if (req.method !== 'GET') return;
+    const u = new URL(req.url);
+    const lokalny = u.origin === self.location.origin;
+    if (lokalny && POMIJANE.some(p => u.pathname.startsWith(p))) return;
+    if (!lokalny && !CDN.includes(u.hostname)) return;
+    if (req.mode === 'navigate') {
+        e.respondWith(najpierwSiec(req));
+    } else if (!lokalny || u.pathname.startsWith('/static/') || u.pathname.startsWith('/media/')) {
+        e.respondWith(najpierwCache(req));
+    } else {
+        e.respondWith(fetch(req).catch(() => caches.match(req).then(k => k || Response.error())));
+    }
+});
+
+// „Zapisz mapę na telefonie”: strona przesyła adresy swoich zasobów (skrypty, style, skan planu).
+self.addEventListener('message', e => {
+    if (!e.data || e.data.typ !== 'zapisz-offline') return;
+    const port = e.ports[0];
+    e.waitUntil((async () => {
+        const cache = await caches.open(CACHE);
+        const adresy = [...new Set(['/', '/mapa/', ...(e.data.adresy || [])])];
+        let bledy = 0;
+        for (const adres of adresy) {
+            try {
+                let r;
+                try { r = await fetch(adres, { mode: 'cors', credentials: 'same-origin', cache: 'reload' }); }
+                catch (err) { r = await fetch(adres, { mode: 'no-cors' }); }
+                if (r.ok || r.type === 'opaque') await cache.put(adres, r); else bledy++;
+            } catch (err) { bledy++; }
+        }
+        if (port) port.postMessage({ ok: bledy === 0, zapisano: adresy.length - bledy, bledy });
+    })());
 });
 """
-    return HttpResponse(sw, content_type='application/javascript')
+    response = HttpResponse(sw, content_type='application/javascript')
+    # CSP workera obejmuje jego własne fetch() — musi dopuścić CDN-y, z których strona ładuje zasoby.
+    response['Content-Security-Policy'] = (
+        "default-src 'self'; connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net "
+        "https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com https://d3js.org"
+    )
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+def grob_krotki(request, pk):
+    """Krótki adres z naklejki QR — stały, nawet gdy zmieni się adres karty grobu."""
+    grob = get_object_or_404(Grob, pk=pk)
+    return redirect('groby:grob_detail', pk=grob.pk)
 
 
 def grob_qr(request, pk):
     import qrcode
+    from qrcode.constants import ERROR_CORRECT_H
     grob = get_object_or_404(Grob, pk=pk)
-    url = request.build_absolute_uri(reverse('groby:grob_detail', args=[grob.pk]))
-    img = qrcode.make(url)
+    # Krótki URL = rzadszy kod; poziom H czyta się nawet z porysowanej lub zabrudzonej naklejki.
+    url = request.build_absolute_uri(reverse('groby:grob_krotki', args=[grob.pk]))
+    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, box_size=10, border=4)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image()
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return HttpResponse(buf.getvalue(), content_type='image/png')
@@ -3531,3 +3718,195 @@ def kalendarz_swiat_json(request):
             nadchodzace.append({'data': d.isoformat(), 'nazwa': n, 'dni': (d - today).days})
     nadchodzace.sort(key=lambda x: x['dni'])
     return JsonResponse({'najblizsze': nadchodzace[:5]})
+
+
+# ===== Batch 95 =====
+
+
+def transkrypcje_lista(request):
+    status = (request.GET.get('status') or 'otwarte').strip()
+    qs = ZadanieTranskrypcji.objects.select_related('grob__sektor', 'autor').annotate(n_prop=Count('propozycje'))
+    if status in dict(ZadanieTranskrypcji.STATUS_CHOICES):
+        qs = qs.filter(status=status)
+    return render(request, 'groby/transkrypcje_lista.html', {
+        'zadania': qs,
+        'aktywny_status': status,
+        'statusy': ZadanieTranskrypcji.STATUS_CHOICES,
+    })
+
+
+def transkrypcja_detail(request, pk):
+    zadanie = get_object_or_404(ZadanieTranskrypcji.objects.select_related('grob__sektor'), pk=pk)
+    propozycje = zadanie.propozycje.select_related('autor').order_by('-glosy', 'data_dodania')
+    iph = _hash_ip(request)
+    glosowane = set(GlosTranskrypcja.objects.filter(ip_hash=iph, propozycja__zadanie=zadanie).values_list('propozycja_id', flat=True))
+    return render(request, 'groby/transkrypcja_detail.html', {
+        'zadanie': zadanie,
+        'propozycje': propozycje,
+        'glosowane': glosowane,
+    })
+
+
+@login_required
+def transkrypcja_dodaj(request):
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        foto = request.FILES.get('foto')
+        opis = (request.POST.get('opis') or '').strip()[:300]
+        grob_id = request.POST.get('grob_id') or None
+        if foto and opis:
+            zadanie = ZadanieTranskrypcji.objects.create(
+                foto=foto, opis=opis, autor=request.user,
+                grob_id=int(grob_id) if grob_id and grob_id.isdigit() else None,
+            )
+            messages.success(request, 'Dziękujemy! Zadanie transkrypcji jest teraz otwarte dla społeczności.')
+            return redirect('groby:transkrypcja_detail', pk=zadanie.pk)
+        messages.error(request, 'Dodaj zdjęcie i opis.')
+    return render(request, 'groby/transkrypcja_dodaj.html', {
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+@require_POST
+def transkrypcja_propozycja(request, pk):
+    zadanie = get_object_or_404(ZadanieTranskrypcji, pk=pk, status='otwarte')
+    if _antybot(request):
+        return JsonResponse({'ok': False}, status=400)
+    tresc = (request.POST.get('tresc') or '').strip()
+    if tresc:
+        ProponowanaTranskrypcja.objects.create(
+            zadanie=zadanie,
+            autor=request.user if request.user.is_authenticated else None,
+            autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+            tresc=tresc[:5000],
+        )
+        messages.success(request, 'Twoja propozycja została zapisana.')
+    return redirect('groby:transkrypcja_detail', pk=zadanie.pk)
+
+
+@require_POST
+def transkrypcja_glosuj(request, propozycja_id):
+    p = get_object_or_404(ProponowanaTranskrypcja, pk=propozycja_id)
+    iph = _hash_ip(request)
+    try:
+        GlosTranskrypcja.objects.create(
+            propozycja=p, ip_hash=iph,
+            user=request.user if request.user.is_authenticated else None,
+        )
+        ProponowanaTranskrypcja.objects.filter(pk=p.pk).update(glosy=F('glosy') + 1)
+    except Exception:
+        pass
+    return redirect('groby:transkrypcja_detail', pk=p.zadanie_id)
+
+
+def archiwalne_dodaj(request, osoba_id):
+    osoba = get_object_or_404(Osoba, pk=osoba_id)
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        foto = request.FILES.get('foto')
+        opis = (request.POST.get('opis') or '').strip()[:300]
+        try:
+            rok = int(request.POST.get('rok') or 0) or None
+        except ValueError:
+            rok = None
+        zrodlo = (request.POST.get('zrodlo') or '').strip()[:200]
+        if foto and opis:
+            ArchiwalneZdjecie.objects.create(
+                osoba=osoba, foto=foto, opis=opis, rok=rok, zrodlo=zrodlo,
+                autor_user=request.user if request.user.is_authenticated else None,
+                autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+                zaakceptowane=False,
+            )
+            messages.success(request, 'Zdjęcie czeka na akceptację moderatora. Dziękujemy.')
+            return redirect('groby:osoba_detail', pk=osoba.pk)
+        messages.error(request, 'Dodaj zdjęcie i opis.')
+    return render(request, 'groby/archiwalne_dodaj.html', {
+        'osoba': osoba,
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+def tablica_genealogiczna(request):
+    typ = (request.GET.get('typ') or '').strip()
+    nazwisko = (request.GET.get('nazwisko') or '').strip()
+    qs = OgloszenieGenealogiczne.objects.filter(zaakceptowane=True).select_related('autor', 'powiazana_osoba')
+    if typ:
+        qs = qs.filter(typ=typ)
+    if nazwisko:
+        qs = qs.filter(nazwisko__icontains=nazwisko)
+    return render(request, 'groby/tablica_genealogiczna.html', {
+        'ogloszenia': qs[:200],
+        'typy': OgloszenieGenealogiczne.TYP_CHOICES,
+        'aktywny_typ': typ,
+        'nazwisko': nazwisko,
+    })
+
+
+def tablica_dodaj(request):
+    if request.method == 'POST':
+        if _antybot(request):
+            return JsonResponse({'ok': False}, status=400)
+        tresc = (request.POST.get('tresc') or '').strip()
+        nazwisko = (request.POST.get('nazwisko') or '').strip()[:100]
+        kontakt = (request.POST.get('autor_kontakt') or '').strip()[:200]
+        typ = (request.POST.get('typ') or 'szukam_potomkow').strip()
+        if tresc and (kontakt or request.user.is_authenticated):
+            OgloszenieGenealogiczne.objects.create(
+                autor=request.user if request.user.is_authenticated else None,
+                autor_imie=(request.POST.get('autor_imie') or '').strip()[:100],
+                autor_kontakt=kontakt,
+                typ=typ if typ in dict(OgloszenieGenealogiczne.TYP_CHOICES) else 'szukam_potomkow',
+                nazwisko=nazwisko,
+                tresc=tresc[:5000],
+                zaakceptowane=False,
+            )
+            messages.success(request, 'Ogłoszenie czeka na akceptację moderatora.')
+            return redirect('groby:tablica_genealogiczna')
+        messages.error(request, 'Wypełnij treść i kontakt.')
+    return render(request, 'groby/tablica_dodaj.html', {
+        'typy': OgloszenieGenealogiczne.TYP_CHOICES,
+        'antybot_html': _pole_antybot_html(),
+    })
+
+
+def leaderboard(request):
+    """TOP 10 najaktywniejszych użytkowników (wspomnienia + świece + kwiaty + komentarze + listy + kondolencje)."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    rank = User.objects.annotate(
+        n_wsp=Count('wspomnienia', filter=Q(wspomnienia__status='zaakceptowane'), distinct=True),
+        n_swie=Count('swiece', distinct=True),
+    ).order_by('-n_wsp', '-n_swie')[:50]
+    dane = []
+    for u in rank:
+        n_kwiaty = Kwiat.objects.filter(autor_user=u).count()
+        n_kom = Komentarz.objects.filter(autor_user=u, zaakceptowany=True).count()
+        n_kond = Kondolencja.objects.filter(autor_user=u, zaakceptowana=True).count()
+        n_listy = List.objects.filter(autor_user=u).count() if hasattr(List, 'objects') else 0
+        suma = u.n_wsp + u.n_swie + n_kwiaty + n_kom + n_kond + n_listy
+        if suma > 0:
+            dane.append({
+                'user': u, 'wsp': u.n_wsp, 'swie': u.n_swie,
+                'kwiat': n_kwiaty, 'kom': n_kom, 'kond': n_kond, 'listy': n_listy,
+                'suma': suma,
+            })
+    dane.sort(key=lambda x: -x['suma'])
+    return render(request, 'groby/leaderboard.html', {'dane': dane[:25]})
+
+
+def ticker_zmian_json(request):
+    """JSON: 10 ostatnich aktywności na cmentarzu (zdjęcia, wspomnienia, świece, kondolencje)."""
+    from itertools import chain
+    eventy = []
+    for z in Zdjecie.objects.select_related('grob').order_by('-data_dodania')[:5]:
+        eventy.append({'typ': 'foto', 'ikona': '📷', 'tekst': f'Nowe zdjęcie grobu {z.grob}', 'url': f'/grob/{z.grob_id}/', 'kiedy': z.data_dodania.isoformat()})
+    for w in Wspomnienie.objects.filter(status='zaakceptowane').select_related('osoba').order_by('-data_dodania')[:5]:
+        eventy.append({'typ': 'wsp', 'ikona': '✒️', 'tekst': f'Nowe wspomnienie o {w.osoba}', 'url': f'/osoba/{w.osoba_id}/', 'kiedy': w.data_dodania.isoformat()})
+    for s in Swieca.objects.select_related('osoba').order_by('-data_zapalenia')[:5]:
+        eventy.append({'typ': 'sw', 'ikona': '🕯️', 'tekst': f'Zapalono świecę dla {s.osoba}', 'url': f'/osoba/{s.osoba_id}/', 'kiedy': s.data_zapalenia.isoformat()})
+    for kon in Kondolencja.objects.filter(zaakceptowana=True).select_related('osoba').order_by('-data_dodania')[:3]:
+        eventy.append({'typ': 'kond', 'ikona': '🤍', 'tekst': f'Kondolencje dla {kon.osoba}', 'url': f'/osoba/{kon.osoba_id}/', 'kiedy': kon.data_dodania.isoformat()})
+    eventy.sort(key=lambda e: e['kiedy'], reverse=True)
+    return JsonResponse({'eventy': eventy[:10]})

@@ -5,10 +5,45 @@ from django.db import models
 class Sektor(models.Model):
     nazwa = models.CharField(max_length=50, unique=True, verbose_name='Nazwa sektora')
     opis = models.TextField(blank=True, verbose_name='Opis')
+    liczba_miejsc = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name='Liczba miejsc (pojemność kwatery)',
+        help_text='Gdy puste, zajętość liczona jest względem liczby grobów w księdze.',
+    )
 
     class Meta:
         verbose_name = 'Sektor'
         verbose_name_plural = 'Sektory'
+        ordering = ['nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+
+class Alejka(models.Model):
+    """Alejka narysowana na skanie planu jako łamana — krawędzie grafu dojścia do grobów."""
+    nazwa = models.CharField(max_length=100, blank=True, verbose_name='Nazwa alejki')
+    punkty = models.JSONField(default=list, verbose_name='Punkty łamanej',
+                              help_text='Lista [x, y] w pikselach skanu planu.')
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Alejka'
+        verbose_name_plural = 'Alejki'
+        ordering = ['nazwa', 'pk']
+
+    def __str__(self):
+        return self.nazwa or f'Alejka #{self.pk}'
+
+
+class Brama(models.Model):
+    """Wejście na cmentarz — punkt startowy wskazówek dojścia."""
+    nazwa = models.CharField(max_length=100, default='Brama główna', verbose_name='Nazwa')
+    plan_x = models.FloatField(verbose_name='Pozycja X na planie (px)')
+    plan_y = models.FloatField(verbose_name='Pozycja Y na planie (px)')
+
+    class Meta:
+        verbose_name = 'Brama'
+        verbose_name_plural = 'Bramy'
         ordering = ['nazwa']
 
     def __str__(self):
@@ -1166,3 +1201,105 @@ class ModlitwaDziennie(models.Model):
             models.UniqueConstraint(fields=['osoba', 'ip_hash', 'data'], name='modlitwa_uniq'),
         ]
         indexes = [models.Index(fields=['osoba', 'data'])]
+
+
+# ===== Batch 95 =====
+
+
+class ZadanieTranskrypcji(models.Model):
+    """Foto nieczytelnego napisu z grobu — społeczność proponuje transkrypcje."""
+    STATUS_CHOICES = [
+        ('otwarte', 'Otwarte'),
+        ('zaakceptowane', 'Transkrypcja zaakceptowana'),
+        ('zamkniete', 'Zamknięte'),
+    ]
+    grob = models.ForeignKey(Grob, on_delete=models.CASCADE, related_name='zadania_transkrypcji', null=True, blank=True)
+    foto = models.ImageField(upload_to='transkrypcje/')
+    opis = models.CharField(max_length=300, help_text='Co widać, lokalizacja na nagrobku')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='otwarte', db_index=True)
+    zaakceptowana_tresc = models.TextField(blank=True, help_text='Finalna transkrypcja po akceptacji staffu')
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Zadanie transkrypcji'
+        verbose_name_plural = 'Zadania transkrypcji'
+        ordering = ['-data_dodania']
+
+    def __str__(self):
+        return f'Transkrypcja #{self.pk} ({self.get_status_display()})'
+
+
+class ProponowanaTranskrypcja(models.Model):
+    """Propozycja transkrypcji od użytkownika do zadania."""
+    zadanie = models.ForeignKey(ZadanieTranskrypcji, on_delete=models.CASCADE, related_name='propozycje')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    tresc = models.TextField()
+    glosy = models.PositiveIntegerField(default=0, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Propozycja transkrypcji'
+        verbose_name_plural = 'Propozycje transkrypcji'
+        ordering = ['-glosy', 'data_dodania']
+
+
+class GlosTranskrypcja(models.Model):
+    propozycja = models.ForeignKey(ProponowanaTranskrypcja, on_delete=models.CASCADE, related_name='glosujacy')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    ip_hash = models.CharField(max_length=64)
+    data = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['propozycja', 'ip_hash'], name='glos_transkrypcja_uniq'),
+        ]
+
+
+class ArchiwalneZdjecie(models.Model):
+    """Archiwalne foto osoby — rodzina dosyła stare zdjęcia (z moderacją)."""
+    osoba = models.ForeignKey(Osoba, on_delete=models.CASCADE, related_name='archiwalne')
+    foto = models.ImageField(upload_to='archiwalne/')
+    opis = models.CharField(max_length=300)
+    rok = models.PositiveSmallIntegerField(null=True, blank=True, help_text='Rok wykonania zdjęcia')
+    zrodlo = models.CharField(max_length=200, blank=True, help_text='Skąd zdjęcie (album rodzinny, archiwum…)')
+    autor_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    zaakceptowane = models.BooleanField(default=False, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Archiwalne zdjęcie'
+        verbose_name_plural = 'Archiwalne zdjęcia'
+        ordering = ['rok', 'data_dodania']
+
+    def __str__(self):
+        return f'Foto {self.osoba}{" ("+str(self.rok)+")" if self.rok else ""}'
+
+
+class OgloszenieGenealogiczne(models.Model):
+    """Tablica poszukiwań genealogicznych — 'Szukam potomków po X'."""
+    TYP_CHOICES = [
+        ('szukam_potomkow', 'Szukam potomków'),
+        ('szukam_przodkow', 'Szukam przodków'),
+        ('mam_dokumenty', 'Mam dokumenty / fotografie'),
+        ('inne', 'Inne'),
+    ]
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    autor_imie = models.CharField(max_length=100, blank=True)
+    autor_kontakt = models.CharField(max_length=200, blank=True, help_text='E-mail / telefon (publiczne)')
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='szukam_potomkow')
+    nazwisko = models.CharField(max_length=100, blank=True, db_index=True, help_text='Nazwisko, którego szukasz')
+    tresc = models.TextField()
+    powiazana_osoba = models.ForeignKey(Osoba, on_delete=models.SET_NULL, null=True, blank=True)
+    zaakceptowane = models.BooleanField(default=False, db_index=True)
+    data_dodania = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ogłoszenie genealogiczne'
+        verbose_name_plural = 'Tablica poszukiwań genealogicznych'
+        ordering = ['-data_dodania']
+
+    def __str__(self):
+        return f'{self.get_typ_display()}: {self.nazwisko or "—"}'

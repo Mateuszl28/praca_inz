@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import Alejka, Brama
 from .models import (
     Sektor, Grob, Osoba, Zdjecie, Relacja, Zgloszenie, Profil, HistoriaZmian,
     Wspomnienie, Swieca, ZapisaneSzukanie, Wpis,
@@ -12,6 +13,7 @@ from .models import (
     EtykietaOsoby, WydarzenieParafialne,
     Sonda, OdpowiedzSondy, GlosSondy, Kondolencja, ZbiorkaRenowacja, NotkaCmentarna,
     WpisLapidarium, ModlitwaDziennie,
+    ZadanieTranskrypcji, ProponowanaTranskrypcja, ArchiwalneZdjecie, OgloszenieGenealogiczne,
 )
 
 
@@ -32,9 +34,24 @@ class ZdjecieInline(admin.TabularInline):
     fields = ('plik', 'podpis', 'kolejnosc')
 
 
+@admin.register(Alejka)
+class AlejkaAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'liczba_punktow', 'data_dodania')
+    search_fields = ('nazwa',)
+
+    @admin.display(description='Punktów')
+    def liczba_punktow(self, obj):
+        return len(obj.punkty or [])
+
+
+@admin.register(Brama)
+class BramaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'plan_x', 'plan_y')
+
+
 @admin.register(Sektor)
 class SektorAdmin(admin.ModelAdmin):
-    list_display = ('nazwa', 'liczba_grobow')
+    list_display = ('nazwa', 'liczba_grobow', 'liczba_miejsc')
     search_fields = ('nazwa',)
 
     @admin.display(description='Liczba grobów')
@@ -586,3 +603,45 @@ class ModlitwaDziennieAdmin(admin.ModelAdmin):
     list_filter = ('data',)
     search_fields = ('osoba__nazwisko', 'osoba__imie')
     readonly_fields = ('osoba', 'user', 'ip_hash', 'data')
+
+
+# ----- Batch 95 -----
+
+
+class PropozycjaInline(admin.TabularInline):
+    model = ProponowanaTranskrypcja
+    extra = 0
+    readonly_fields = ('autor', 'autor_imie', 'tresc', 'glosy', 'data_dodania')
+
+
+@admin.register(ZadanieTranskrypcji)
+class ZadanieTranskrypcjiAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'opis', 'grob', 'status', 'data_dodania')
+    list_filter = ('status',)
+    search_fields = ('opis', 'zaakceptowana_tresc')
+    autocomplete_fields = ('grob',)
+    inlines = [PropozycjaInline]
+
+
+@admin.register(ArchiwalneZdjecie)
+class ArchiwalneZdjecieAdmin(admin.ModelAdmin):
+    list_display = ('osoba', 'rok', 'opis', 'zaakceptowane', 'data_dodania')
+    list_filter = ('zaakceptowane',)
+    search_fields = ('osoba__nazwisko', 'osoba__imie', 'opis', 'zrodlo')
+    actions = ['zaakceptuj']
+
+    def zaakceptuj(self, request, queryset):
+        queryset.update(zaakceptowane=True)
+    zaakceptuj.short_description = 'Zaakceptuj wybrane'
+
+
+@admin.register(OgloszenieGenealogiczne)
+class OgloszenieGenealogiczneAdmin(admin.ModelAdmin):
+    list_display = ('typ', 'nazwisko', 'autor_imie', 'zaakceptowane', 'data_dodania')
+    list_filter = ('typ', 'zaakceptowane')
+    search_fields = ('nazwisko', 'tresc', 'autor_imie', 'autor_kontakt')
+    actions = ['zaakceptuj']
+
+    def zaakceptuj(self, request, queryset):
+        queryset.update(zaakceptowane=True)
+    zaakceptuj.short_description = 'Zaakceptuj wybrane'

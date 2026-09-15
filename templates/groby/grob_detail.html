@@ -16,6 +16,11 @@
             <span class="text-primary-700">Grób nr {{ grob.numer }}</span>
         </nav>
         <div class="flex gap-2 no-print">
+            {% if grob.plan_x is not None and grob.plan_y is not None %}
+            <a href="{% url 'groby:mapa' %}#g{{ grob.pk }}" class="flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Trasa od bramy do grobu">
+                <span aria-hidden="true">🧭</span><span>Jak dojść</span>
+            </a>
+            {% endif %}
             <button type="button" onclick="document.getElementById('qr-modal').classList.toggle('hidden')" class="flex items-center gap-2 text-sm px-3 py-1.5 border border-cream-200 rounded-md text-primary-700 hover:bg-cream-100 transition" title="Pokaż kod QR">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14h1v1h-1zM14 20h3v1h-3zM20 20h1v1h-1z"/></svg>
                 <span>QR</span>

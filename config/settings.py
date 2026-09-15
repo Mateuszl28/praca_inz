@@ -208,3 +208,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PLAN_IMAGE = os.getenv('PLAN_IMAGE', 'plan_cmentarza/scan_oznaczenia.jpg').strip()
 PLAN_BOUNDS_RAW = os.getenv('PLAN_BOUNDS', '').strip()
 PLAN_OPACITY = float(os.getenv('PLAN_OPACITY', '1.0'))
+# Skala skanu do wskazówek dojścia: sąsiednie groby leżą ~180 px od siebie (~2,2 m).
+# Po zmierzeniu odcinka w terenie warto nadpisać zmienną środowiskową.
+PLAN_METRY_NA_PIKSEL = float(os.getenv('PLAN_METRY_NA_PIKSEL', '0.0125'))

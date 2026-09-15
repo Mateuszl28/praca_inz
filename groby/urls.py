@@ -17,6 +17,7 @@ urlpatterns = [
     path('sektor/<int:pk>/', views.sektor_detail, name='sektor_detail'),
     path('grob/<int:pk>/', views.grob_detail, name='grob_detail'),
     path('grob/<int:pk>/qr.png', views.grob_qr, name='grob_qr'),
+    path('g/<int:pk>/', views.grob_krotki, name='grob_krotki'),
     path('grob/<int:pk>/karta.pdf', views.karta_grobu_pdf, name='karta_grobu_pdf'),
     path('osoba/<int:pk>/', views.osoba_detail, name='osoba_detail'),
     path('osoba/<int:pk>/drzewo/', views.drzewo, name='drzewo'),
@@ -40,6 +41,9 @@ urlpatterns = [
     path('widget/', views.widget, name='widget'),
     path('health/', views.health_check, name='health'),
     path('mapa/szukaj/', views.szukaj_na_mapie, name='szukaj_na_mapie'),
+    path('mapa/alejki/zapisz/', views.zapisz_alejke, name='zapisz_alejke'),
+    path('mapa/alejki/<int:pk>/usun/', views.usun_alejke, name='usun_alejke'),
+    path('mapa/bramy/zapisz/', views.zapisz_brame, name='zapisz_brame'),
     path('panoramy/', views.lista_panoram, name='panoramy'),
     path('panorama/<int:pk>/', views.panorama_detail, name='panorama_detail'),
     path('magic-link/', views.magic_link_zarzadaj, name='magic_link'),
@@ -175,6 +179,18 @@ urlpatterns = [
     path('grob/<int:pk>/oscz/', views.os_czasu_grobu, name='os_czasu_grobu'),
     path('kalendarz-swiat/', views.kalendarz_swiat, name='kalendarz_swiat'),
     path('api/kalendarz-swiat/', views.kalendarz_swiat_json, name='kalendarz_swiat_json'),
+
+    # Batch 95
+    path('transkrypcje/', views.transkrypcje_lista, name='transkrypcje'),
+    path('transkrypcje/dodaj/', views.transkrypcja_dodaj, name='transkrypcja_dodaj'),
+    path('transkrypcje/<int:pk>/', views.transkrypcja_detail, name='transkrypcja_detail'),
+    path('transkrypcje/<int:pk>/propozycja/', views.transkrypcja_propozycja, name='transkrypcja_propozycja'),
+    path('transkrypcje/glos/<int:propozycja_id>/', views.transkrypcja_glosuj, name='transkrypcja_glosuj'),
+    path('osoba/<int:osoba_id>/archiwalne/', views.archiwalne_dodaj, name='archiwalne_dodaj'),
+    path('genealogia/', views.tablica_genealogiczna, name='tablica_genealogiczna'),
+    path('genealogia/dodaj/', views.tablica_dodaj, name='tablica_dodaj'),
+    path('leaderboard/', views.leaderboard, name='leaderboard'),
+    path('api/ticker/', views.ticker_zmian_json, name='ticker_zmian_json'),
 
     # Zgłoszenia poprawek
     path('zglos/<str:cel>/<int:pk>/', views.zglos_poprawke, name='zglos_poprawke'),
